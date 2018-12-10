@@ -5,12 +5,16 @@ import re
 from dateutil.parser import parse
 
 
+start_date = '2018-10-22'
+end_date = '2018-10-26'
+start_time = '00:01:00'
+end_time = '23:59:00'
 
 root_url = 'https://internal-apis.nrel.gov/intelligentcampus/hisRead?id='
 reference_id = ['@p:nrel:r:225918db-bfbda16a','@p:nrel:r:20ed5e0a-275dbdc2','@p:nrel:r:20ed5e0a-53e174aa',
                 '@p:nrel:r:20ed5e0a-fe755c80','@p:nrel:r:20ed5df2-2c0e126b','@p:nrel:r:20ed5e0a-acc8beff',
                 '@p:nrel:r:20ed5df2-fd2eecc5']
-date_range = '&range=\"2018-08-31%2c2018-09-06\"'
+date_range = '&range=\"'+start_date+'%2c'+end_date+'\"'
 feat_name = ['EC','RH','BP','DBT','GHI','TCC','WS']
 
 response_dict = {}
