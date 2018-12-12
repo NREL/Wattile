@@ -1,4 +1,5 @@
 import argparse
+from datetime import datetime
 
 def get_arguments():
 
@@ -15,6 +16,8 @@ def get_arguments():
     parser.add_argument('test_ed', default='2018-11-28', type=str,
                         help="end date for the test dataset"+
                         "the input format is \'YYYY-MM-DD\', a string")
+    parser.add_argument('transform', default='norm', type=str,
+                        help="normalize or standardize or minmaxscale data")
     parser.add_argument('t',
                         help='True or False, To train the model or not. If False, the test will be run on the existing model')
     parser.add_argument('--num-epochs', default=1000, type=int,
@@ -22,25 +25,24 @@ def get_arguments():
     args, _ = parser.parse_known_args()
 
     # Sanity check the arguments
-    train_start_date = args.train_sd
-    if not isinstance(train_start_date, str):
-        print("Enter a valid train start date, the default is 2018-10-22")
-        parser.print_help()
+    dates = {"train_start_date": args.train_sd,
+             "train_end_date": args.train_ed,
+             "test_start_date":args.test_sd,
+             "test_end_date":args.test_ed}
 
-    train_end_date = args.train_ed
-    if not isinstance(train_end_date, str):
-        print("Enter a valid train end date, the default is 2018-11-22")
-        parser.print_help()
+    for key, value in dates.items():
+        if not isinstance(value, str):
+            print("Enter a valid {}. Exiting...".format(key))
+            parser.print_help()
+            exit()
+        if not datetime.strptime(value, "%Y-%m-%d"):
+            print("Enter a valid {}.Exiting...".format(key))
+            parser.print_help()
+            exit()
 
-    test_start_date = args.test_sd
-    if not isinstance(test_start_date, str):
-        print("Enter a valid test start date, the default is 2018-11-23")
-        parser.print_help()
-
-    test_end_date = args.test_ed
-    if not isinstance(test_end_date, str):
-        print("Enter a valid test end date, the default is 2018-11-28")
-        parser.print_help()
+    # args.transform
+    if args.transform.lower() in ["standardize", "normalize", "minmaxscale"]:
+        transformation_method = args.transform.lower()
 
     # args.t
     if args.t in ["True", "true"]:
@@ -55,7 +57,7 @@ def get_arguments():
     # args.num_epochs
     num_epochs = args.num_epochs
 
-    return train_start_date, train_end_date, test_start_date, test_end_date, run_train, num_epochs
+    return dates['train_start_date'], dates['train_end_date'], dates['test_start_date'], dates['test_end_date'], transformation_method, run_train, num_epochs
 
 
 

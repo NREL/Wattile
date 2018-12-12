@@ -6,7 +6,6 @@ import requests
 import re
 from dateutil.parser import parse
 from functools import reduce
-import argparser
 from util import prtime
 
 
@@ -14,13 +13,15 @@ from util import prtime
 # train_end_date = '2018-11-22'
 # test_start_date = '2018-11-23'
 # test_end_date = '2018-11-28'
-exp_num = 1
-train_start_date, train_end_date, test_start_date, test_end_date, run_train, num_epochs = argparser.get_arguments()
+
+train_exp_num = 1  # increment this number everytime a new model is trained
+test_exp_num = 1   # increment this number when the tests are run on an existing model (run_train = False)
+
 
 # Define the Directories to save the trained model and results.
 # Create the dir if it does not exist using pathlib
-MODEL_DIR = 'LoadForecasting_Results/Exp' + str(exp_num)
-RESULTS_DIR = 'LoadForecasting_Results/Exp' + str(exp_num) + '/' +  test_start_date
+MODEL_DIR = 'LoadForecasting_Results/Model_' + str(train_exp_num)
+RESULTS_DIR = 'LoadForecasting_Results/Model_' + str(train_exp_num) + '/Test_num_' +  str(test_exp_num)
 pathlib.Path(RESULTS_DIR).mkdir(parents=True, exist_ok=True)
 log_file = RESULTS_DIR + '/' + 'console.log'
 #print("Writing print statements to ", log_file)
@@ -104,7 +105,7 @@ def parse_data(train_response_dict, test_response_dict, feat_name, run_train):
     return train_parsed_dict, test_parsed_dict
 
 
-def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_train):
+def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_train, train_start_date, train_end_date, test_start_date, test_end_date):
 
     # creating a dictionary of input features dataframes with the parsed lists generated in the parsing module
     train_df_dict = {}
@@ -117,7 +118,7 @@ def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_tra
 
             df_temp = train_df_dict["df_" + input_feat_name[i]]
             df_temp.name = "df_" + input_feat_name[i]
-            print("raw_train dataframe = {}, shape = {}".format(df_temp.name, df_temp.shape))
+            prtime("raw_train dataframe = {}, shape = {}".format(df_temp.name, df_temp.shape))
             df_temp['datetime_str'] = pd.to_datetime(df_temp['datetime_str'])
 
             if not (df_temp.loc[0, 'datetime_str'] == pd.to_datetime(train_start_date + ' ' + start_time)):
@@ -130,7 +131,7 @@ def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_tra
             df_temp[cols] = df_temp[cols].ffill()
             df_temp[input_feat_name[i]] = df_temp[input_feat_name[i]].fillna(
                 ((df_temp[input_feat_name[i]].shift() + df_temp[input_feat_name[i]].shift(-1)) / 2))
-            print("shape of processed train dataframe: {}".format(df_temp.shape))
+            prtime("shape of processed train dataframe: {}".format(df_temp.shape))
 
             train_df_dict["df_" + input_feat_name[i]] = df_temp
             del df_temp
@@ -143,7 +144,7 @@ def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_tra
 
         df_temp = test_df_dict["df_" + input_feat_name[i]]
         df_temp.name = "df_" + input_feat_name[i]
-        print("raw_test dataframe = {}, shape = {}".format(df_temp.name, df_temp.shape))
+        prtime("raw_test dataframe = {}, shape = {}".format(df_temp.name, df_temp.shape))
         df_temp['datetime_str'] = pd.to_datetime(df_temp['datetime_str'])
 
         if not (df_temp.loc[0, 'datetime_str'] == pd.to_datetime(test_start_date + ' ' + start_time)):
@@ -157,7 +158,7 @@ def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_tra
         df_temp[cols] = df_temp[cols].ffill()
         df_temp[input_feat_name[i]] = df_temp[input_feat_name[i]].fillna(
             ((df_temp[input_feat_name[i]].shift() + df_temp[input_feat_name[i]].shift(-1)) / 2))
-        print("shape of processed test dataframe: {}".format(df_temp.shape))
+        prtime("shape of processed test dataframe: {}".format(df_temp.shape))
 
         test_df_dict["df_" + input_feat_name[i]] = df_temp
         del df_temp
@@ -165,12 +166,12 @@ def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_tra
     return train_df_dict, test_df_dict
 
 
-def target_df(train_parsed_dict, test_parsed_dict, run_train):
+def target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, train_end_date, test_start_date, test_end_date):
     # processing Energy Consumption values separately
     if run_train:
         train_df_EC = pd.DataFrame({'datetime_str': train_parsed_dict['EC_dt_parsed'][0], 'EC': train_parsed_dict['EC'][1]},
                          columns=['datetime_str', 'EC'])
-        print("shape of raw EC dataframe: {}".format(train_df_EC.shape))
+        prtime("shape of raw EC dataframe: {}".format(train_df_EC.shape))
 
         train_df_EC['datetime_str'] = pd.to_datetime(train_df_EC['datetime_str'])
         if not (train_df_EC.loc[0, 'datetime_str'] == pd.to_datetime(train_start_date + ' ' + EC_start_time)):
@@ -182,12 +183,12 @@ def target_df(train_parsed_dict, test_parsed_dict, run_train):
         cols = train_df_EC.columns.difference(['EC'])
         train_df_EC[cols] = train_df_EC[cols].ffill()
         train_df_EC['EC'] = train_df_EC['EC'].fillna(((train_df_EC['EC'].shift() + train_df_EC['EC'].shift(-1)) / 2))
-        print("shape of processed train EC dataframe: {}".format(train_df_EC.shape))
+        prtime("shape of processed train EC dataframe: {}".format(train_df_EC.shape))
 
 
     test_df_EC = pd.DataFrame({'datetime_str': test_parsed_dict['EC_dt_parsed'][0], 'EC': test_parsed_dict['EC'][1]},
                               columns=['datetime_str', 'EC'])
-    print("shape of raw EC dataframe: {}".format(test_df_EC.shape))
+    prtime("shape of raw EC dataframe: {}".format(test_df_EC.shape))
 
     test_df_EC['datetime_str'] = pd.to_datetime(test_df_EC['datetime_str'])
     if not (test_df_EC.loc[0, 'datetime_str'] == pd.to_datetime(test_start_date + ' ' + EC_start_time)):
@@ -201,7 +202,7 @@ def target_df(train_parsed_dict, test_parsed_dict, run_train):
     cols = test_df_EC.columns.difference(['EC'])
     test_df_EC[cols] = test_df_EC[cols].ffill()
     test_df_EC['EC'] = test_df_EC['EC'].fillna(((test_df_EC['EC'].shift() + test_df_EC['EC'].shift(-1)) / 2))
-    print("shape of processed test EC dataframe: {}".format(test_df_EC.shape))
+    prtime("shape of processed test EC dataframe: {}".format(test_df_EC.shape))
 
     return train_df_EC, test_df_EC
 
@@ -394,7 +395,7 @@ def fill_nan(train_df, test_df, run_train):
     return train_df, test_df
 
 
-def main():
+def main(train_start_date, train_end_date, test_start_date, test_end_date, run_train):
     root_url = 'https://internal-apis.nrel.gov/intelligentcampus/hisRead?id='
     reference_id = ['@p:nrel:r:225918db-bfbda16a', '@p:nrel:r:20ed5e0a-275dbdc2', '@p:nrel:r:20ed5e0a-53e174aa',
                     '@p:nrel:r:20ed5e0a-fe755c80', '@p:nrel:r:20ed5df2-2c0e126b', '@p:nrel:r:20ed5e0a-acc8beff',
@@ -410,15 +411,15 @@ def main():
     train_parsed_dict, test_parsed_dict = parse_data(train_response_dict, test_response_dict, feat_name, run_train)
     prtime("data parsed in a dictionary successfully, constructing input feature dataframes")
 
-    train_df_dict, test_df_dict = input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_train)
+    train_df_dict, test_df_dict = input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_train, train_start_date, train_end_date, test_start_date, test_end_date)
 
-    train_df_EC, test_df_EC = target_df(train_parsed_dict, test_parsed_dict, run_train)
-    print("feature and target data strucuted successfully into dataframe, further processing...")
+    train_df_EC, test_df_EC = target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, train_end_date, test_start_date, test_end_date)
+    prtime("feature and target data strucuted successfully into dataframe, further processing...")
 
     train_df, test_df = merge_n_resample(train_df_dict, test_df_dict, train_df_EC, test_df_EC, run_train)
     train_df, test_df = get_static_features(train_df, test_df, run_train)
     train_df, test_df = fill_nan(train_df, test_df, run_train)
-    print("train and test dataframes merged and resampled. Exiting data_preprocessing module")
+    prtime("train and test dataframes merged and resampled. Exiting data_preprocessing module")
 
     return train_df, test_df
 
