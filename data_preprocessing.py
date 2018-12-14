@@ -129,8 +129,7 @@ def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_tra
             df_temp = df_temp.set_index('datetime_str').resample("1min").first().reset_index().reindex(columns=df_temp.columns)
             cols = df_temp.columns.difference([input_feat_name[i]])
             df_temp[cols] = df_temp[cols].ffill()
-            df_temp[input_feat_name[i]] = df_temp[input_feat_name[i]].fillna(
-                ((df_temp[input_feat_name[i]].shift() + df_temp[input_feat_name[i]].shift(-1)) / 2))
+            df_temp[input_feat_name[i]] = df_temp[input_feat_name[i]].fillna(method='ffill')
             prtime("shape of processed train dataframe: {}".format(df_temp.shape))
 
             train_df_dict["df_" + input_feat_name[i]] = df_temp
@@ -156,8 +155,7 @@ def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_tra
             columns=df_temp.columns)
         cols = df_temp.columns.difference([input_feat_name[i]])
         df_temp[cols] = df_temp[cols].ffill()
-        df_temp[input_feat_name[i]] = df_temp[input_feat_name[i]].fillna(
-            ((df_temp[input_feat_name[i]].shift() + df_temp[input_feat_name[i]].shift(-1)) / 2))
+        df_temp[input_feat_name[i]] = df_temp[input_feat_name[i]].fillna(method='ffill')
         prtime("shape of processed test dataframe: {}".format(df_temp.shape))
 
         test_df_dict["df_" + input_feat_name[i]] = df_temp
@@ -182,8 +180,13 @@ def target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, 
         train_df_EC = train_df_EC.set_index('datetime_str').resample("15min").first().reset_index().reindex(columns=train_df_EC.columns)
         cols = train_df_EC.columns.difference(['EC'])
         train_df_EC[cols] = train_df_EC[cols].ffill()
-        train_df_EC['EC'] = train_df_EC['EC'].fillna(((train_df_EC['EC'].shift() + train_df_EC['EC'].shift(-1)) / 2))
+        #train_df_EC['EC'] = train_df_EC['EC'].fillna(((train_df_EC['EC'].shift() + train_df_EC['EC'].shift(-1)) / 2))
+        train_df_EC['EC'] = train_df_EC['EC'].fillna(method='ffill')
         prtime("shape of processed train EC dataframe: {}".format(train_df_EC.shape))
+
+    else:
+        # if run_train = False, then return empty train dataframe
+        train_df_EC = pd.DataFrame()
 
 
     test_df_EC = pd.DataFrame({'datetime_str': test_parsed_dict['EC_dt_parsed'][0], 'EC': test_parsed_dict['EC'][1]},
@@ -201,7 +204,9 @@ def target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, 
         columns=test_df_EC.columns)
     cols = test_df_EC.columns.difference(['EC'])
     test_df_EC[cols] = test_df_EC[cols].ffill()
-    test_df_EC['EC'] = test_df_EC['EC'].fillna(((test_df_EC['EC'].shift() + test_df_EC['EC'].shift(-1)) / 2))
+    #test_df_EC['EC'] = test_df_EC['EC'].fillna(((test_df_EC['EC'].shift() + test_df_EC['EC'].shift(-1)) / 2))
+    test_df_EC['EC'] = test_df_EC['EC'].fillna(method='ffill')
+
     prtime("shape of processed test EC dataframe: {}".format(test_df_EC.shape))
 
     return train_df_EC, test_df_EC
@@ -221,6 +226,8 @@ def merge_n_resample(train_df_dict, test_df_dict, train_df_EC, test_df_EC, run_t
         # merging input_df (dataframe with input features) with df_EC (target dataframe)
         train_df = train_input_df.merge(train_df_EC, how='outer', on='datetime_str')
 
+    else:
+        train_df = pd.DataFrame()
 
     test_df_list = []
     for key, value in test_df_dict.items():
@@ -421,7 +428,7 @@ def main(train_start_date, train_end_date, test_start_date, test_end_date, run_t
     train_df, test_df = fill_nan(train_df, test_df, run_train)
     prtime("train and test dataframes merged and resampled. Exiting data_preprocessing module")
 
-    return train_df, test_df
+    return train_df, test_df, train_exp_num
 
 
 
