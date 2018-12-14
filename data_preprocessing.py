@@ -191,7 +191,7 @@ def target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, 
 
     test_df_EC = pd.DataFrame({'datetime_str': test_parsed_dict['EC_dt_parsed'][0], 'EC': test_parsed_dict['EC'][1]},
                               columns=['datetime_str', 'EC'])
-    prtime("shape of raw EC dataframe: {}".format(test_df_EC.shape))
+    prtime("shape of raw test EC dataframe: {}".format(test_df_EC.shape))
 
     test_df_EC['datetime_str'] = pd.to_datetime(test_df_EC['datetime_str'])
     if not (test_df_EC.loc[0, 'datetime_str'] == pd.to_datetime(test_start_date + ' ' + EC_start_time)):
@@ -428,7 +428,7 @@ def main(train_start_date, train_end_date, test_start_date, test_end_date, run_t
     train_df, test_df = fill_nan(train_df, test_df, run_train)
     prtime("train and test dataframes merged and resampled. Exiting data_preprocessing module")
 
-    return train_df, test_df, train_exp_num
+    return train_df, test_df
 
 
 
