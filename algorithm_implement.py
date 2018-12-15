@@ -3,6 +3,7 @@ import pandas as pd
 from sklearn import preprocessing
 from util import prtime
 import ffnn
+import rnn
 
 import torch
 from torch.utils.data.dataloader import DataLoader
@@ -85,6 +86,8 @@ def process(train_loader, test_loader, num_epochs, run_train):
     input_dim = 14  # Fixed
     hidden_dim = 28
     output_dim = 1  # one prediction - energy consumption
+    layer_dim = 1
+    seq_dim = 1
 
 
     # initializing lists to store losses over epochs:
@@ -97,8 +100,9 @@ def process(train_loader, test_loader, num_epochs, run_train):
 
     if run_train:
 
-        model = ffnn.FeedforwardNeuralNetModel(input_dim, hidden_dim, output_dim)
-        prtime("ffnn model module executed to instantiate the FFNN model, with run_train=True")
+        #model = ffnn.FeedforwardNeuralNetModel(input_dim, hidden_dim, output_dim)
+        model = rnn.RNNModel(input_dim, hidden_dim, layer_dim, output_dim)
+        prtime("{} model module executed to instantiate the FFNN model, with run_train=True".format("rnn"))
 
         # Instantiating Loss Class
         criterion = nn.MSELoss()
@@ -111,14 +115,18 @@ def process(train_loader, test_loader, num_epochs, run_train):
         prtime("starting to train the model for {} epochs!".format(num_epochs))
 
         n_iter = 0
+        y_at_t = torch.FloatTensor()
         for epoch in range(num_epochs):
             for i, (feats, values) in enumerate(train_loader):
 
-                features = Variable(feats.view(-1, 14))
+                features = Variable(feats.view(-1, seq_dim, input_dim))
                 target = Variable(values)
 
                 # Forward pass to get output/logits
-                outputs = model(features)
+                outputs = model(torch.cat((features, y_at_t), dim=2))
+
+                #
+                y_at_t = outputs.unsqueeze(2)
 
                 # Calculate Loss: softmax --> cross entropy loss
                 loss = criterion(outputs.squeeze(), target)
@@ -152,13 +160,13 @@ def process(train_loader, test_loader, num_epochs, run_train):
 
                         test_iter.append(n_iter)
                         test_loss.append(mse)
-                        preds = outputs.data.numpy().squeeze()
+                        preds.append(outputs.data.numpy().squeeze())
                         writer.add_scalar("/test_loss", mse, n_iter)
 
                     print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}'.format(epoch, n_iter, loss.data.item(), mse))
+        semifinal_preds = np.concatenate(preds).ravel()
 
-
-            torch.save(model, 'LoadForecasting_Results/Model_' + str(train_exp_num) + '/torch_model')
+        torch.save(model, 'LoadForecasting_Results/Model_' + str(train_exp_num) + '/torch_model')
 
 
 
@@ -208,6 +216,7 @@ def main(train_df, test_df, transformation_method, run_train, num_epochs):
     prtime("data converted to iterable dataset")
 
     test_loss, train_loss, preds = process(train_loader, test_loader, num_epochs, run_train)
+    print(preds)
 
 
 
