@@ -16,7 +16,9 @@ from tensorboardX import SummaryWriter
 
 train_exp_num = 1  # increment this number everytime a new model is trained
 test_exp_num = 1   # increment this number when the tests are run on an existing model (run_train = False)
-writer = SummaryWriter('LoadForecasting_Results/Model_' + str(train_exp_num) + '/Test_num_' +  str(test_exp_num)+'/logs/FFNN_test')
+test_type = 'RNN_test' # 'FFNN_test, 'RNN_test', 'LSTM_test', 'GRU_test'
+writer = SummaryWriter('LoadForecasting_Results/Model_' + str(train_exp_num) + '/Test_num_' +
+                       str(test_exp_num)+'/logs/'+ test_type)
 
 
 def seq_pad(a, window):
@@ -136,7 +138,7 @@ def process(train_loader, test_loader, num_epochs, run_train):
 
         #model = ffnn.FeedforwardNeuralNetModel(input_dim, hidden_dim, output_dim)
         model = rnn.RNNModel(input_dim, hidden_dim, layer_dim, output_dim)
-        prtime("{} model module executed to instantiate the FFNN model, with run_train=True".format("rnn"))
+        prtime("{} model module executed to instantiate the model, with run_train=True".format("rnn"))
 
         # Instantiating Loss Class
         criterion = nn.MSELoss()
