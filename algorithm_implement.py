@@ -1,16 +1,13 @@
 import numpy as np
 import pandas as pd
 from sklearn import preprocessing
-from util import prtime
-import ffnn
+from util import prtime, factors, tile
 import rnn
 
 import torch
 from torch.utils.data.dataloader import DataLoader
-from torch.utils.data.dataset import Dataset
 import torch.utils.data as data_utils
 import torch.nn as nn
-from torchvision import transforms, utils
 from torch.autograd import Variable
 from tensorboardX import SummaryWriter
 
@@ -39,18 +36,20 @@ def seq_pad(a, window):
 
     return b
 
-def tile(a, dim, n_tile):
-    init_dim = a.size(dim)
-    repeat_idx = [1] * a.dim()
-    repeat_idx[dim] = n_tile
-    a = a.repeat(*(repeat_idx))
-    order_index = torch.LongTensor(np.concatenate([init_dim * np.arange(n_tile) + i for i in range(init_dim)]))
-    return torch.index_select(a, dim, order_index)
+def size_the_batches(train_data, test_data, desired_batch_size):
+
+    train_bth = factors(train_data.shape[0])
+    train_bt_size = min(train_bth, key=lambda x:abs(x-desired_batch_size))
+
+    test_bth = factors(test_data.shape[0])
+    test_bt_size = min(test_bth, key=lambda x:abs(x-desired_batch_size))
+
+    return train_bt_size, test_bt_size
 
 def data_transform(train_data, test_data, transformation_method, run_train):
 
     if run_train:
-        if transformation_method == "minmaxscaling":
+        if transformation_method == "minmaxscale":
             min_max_scaler = preprocessing.MinMaxScaler()
             temp_cols1 = train_data.columns.values
             train_data = pd.DataFrame(min_max_scaler.fit_transform(train_data.values), columns=temp_cols1)
@@ -64,7 +63,7 @@ def data_transform(train_data, test_data, transformation_method, run_train):
             temp_cols1 = train_data.columns.values
             train_data = pd.DataFrame(preprocessing.normalize(train_data.values), columns=temp_cols1)
 
-    if transformation_method == "minmaxscaling":
+    if transformation_method == "minmaxscale":
         min_max_scaler = preprocessing.MinMaxScaler()
         temp_cols1 = test_data.columns.values
         test_data = pd.DataFrame(min_max_scaler.fit_transform(test_data.values), columns=temp_cols1)
@@ -82,7 +81,9 @@ def data_transform(train_data, test_data, transformation_method, run_train):
 
 def data_iterable(train_data, test_data, run_train, window):
 
-    batch_size = 100
+    desired_batch_size = 100
+    train_batch_size, test_batch_size = size_the_batches(train_data, test_data, desired_batch_size)
+
     if run_train:
         X_train = train_data.drop('EC', axis=1).values.astype(dtype='float32')
         X_train = seq_pad(X_train, window)
@@ -94,7 +95,7 @@ def data_iterable(train_data, test_data, run_train, window):
         train_target_tensor = torch.from_numpy(y_train).type(torch.FloatTensor)
 
         train = data_utils.TensorDataset(train_feat_tensor, train_target_tensor)
-        train_loader = data_utils.DataLoader(train, batch_size=batch_size, shuffle=False)
+        train_loader = data_utils.DataLoader(train, batch_size=train_batch_size, shuffle=False)
         print("data train made iterable")
 
     else:
@@ -110,11 +111,11 @@ def data_iterable(train_data, test_data, run_train, window):
     test_target_tensor = torch.from_numpy(y_test).type(torch.FloatTensor)
 
     test = data_utils.TensorDataset(test_feat_tensor, test_target_tensor)
-    test_loader = DataLoader(dataset=test, batch_size=batch_size, shuffle=False)
+    test_loader = DataLoader(dataset=test, batch_size=test_batch_size, shuffle=False)
 
-    return train_loader, test_loader
+    return train_loader, test_loader, train_batch_size, test_batch_size
 
-def process(train_loader, test_loader, num_epochs, run_train):
+def process(train_loader, test_loader, num_epochs, run_train, train_batch_size, test_batch_size):
 
     # hyper-parameters
     num_epochs = num_epochs
@@ -152,7 +153,7 @@ def process(train_loader, test_loader, num_epochs, run_train):
 
         n_iter = 0
         #y_at_t = torch.FloatTensor()
-        y_at_t = torch.zeros(100,seq_dim,1)
+        train_y_at_t = torch.zeros(train_batch_size, seq_dim,1)
         for epoch in range(num_epochs):
             for i, (feats, values) in enumerate(train_loader):
 
@@ -163,10 +164,10 @@ def process(train_loader, test_loader, num_epochs, run_train):
                 optimizer.zero_grad()
 
                 # Forward pass to get output/logits
-                outputs = model(torch.cat((features, y_at_t), dim=2))
+                outputs = model(torch.cat((features, train_y_at_t), dim=2))
 
-                #
-                y_at_t = tile(outputs.unsqueeze(2), 1,5)
+                # tiling the 2nd axis of y_at_t from 1 to 5
+                train_y_at_t = tile(outputs.unsqueeze(2), 1, 5)
 
                 # Calculate Loss: softmax --> cross entropy loss
                 loss = criterion(outputs.squeeze(), target)
@@ -186,11 +187,14 @@ def process(train_loader, test_loader, num_epochs, run_train):
                 n_iter += 1
 
                 if n_iter % 200 == 0:
+                    test_y_at_t = torch.zeros(test_batch_size, seq_dim, 1)
                     for i, (feats, values) in enumerate(test_loader):
-                        features = Variable(feats).view(-1, 14)
+                        features = Variable(feats.view(-1, seq_dim, input_dim-1))
                         target = Variable(values)
 
-                        outputs = model(features)
+                        outputs = model(torch.cat((features, test_y_at_t), dim=2))
+
+                        test_y_at_t = tile(outputs.unsqueeze(2), 1, 5)
 
                         mse = np.sqrt(
                             np.mean((target.data.numpy() - outputs.data.numpy().squeeze()) ** 2) / len(target))
@@ -211,11 +215,14 @@ def process(train_loader, test_loader, num_epochs, run_train):
         model = torch.load('LoadForecasting_Results/Model_' + str(train_exp_num) + '/torch_model')
         prtime("Loaded model from file, given run_train=False\n")
 
+        y_at_t = torch.zeros(100, seq_dim, 1)
         for i, (feats, values) in enumerate(test_loader):
-            features = Variable(feats).view(-1, 14)
+            features = Variable(feats.view(-1, seq_dim, input_dim-1))
             target = Variable(values)
 
-            outputs = model(features)
+            outputs = model(torch.cat((features, y_at_t), dim=2))
+
+            y_at_t = tile(outputs.unsqueeze(2), 1, 5)
 
             mse = np.sqrt(np.mean((target.data.numpy() - outputs.data.numpy().squeeze()) ** 2) / len(target))
 
@@ -227,9 +234,7 @@ def process(train_loader, test_loader, num_epochs, run_train):
 
         prtime('Test_MSE: {}'.format(mse))
 
-    return train_loss, test_loss, preds
-
-
+    return train_loss, test_loss, semifinal_preds
 
 
 def main(train_df, test_df, transformation_method, run_train, num_epochs):
@@ -237,24 +242,27 @@ def main(train_df, test_df, transformation_method, run_train, num_epochs):
 
     # dropping the datetime_str column. Causes problem with normalization
     if run_train:
-        train_data = train_df.copy()
+        train_data = train_df.copy(deep=True)
         train_data = train_data.drop('datetime_str', axis=1)
 
     else:
         train_data = train_df
 
-    test_data = test_df.copy()
+    test_data = test_df.copy(deep=True)
     test_data = test_data.drop('datetime_str', axis=1)
 
     train_data, test_data = data_transform(train_data, test_data, transformation_method, run_train)
     prtime("data transformed using {} as transformation method".format(transformation_method))
 
     window = 5    # window is synonomus to the "sequence length" dimension
-    train_loader, test_loader = data_iterable(train_data, test_data, run_train, window)
+    train_loader, test_loader, train_batch_size, test_batch_size = data_iterable(train_data, test_data, run_train, window)
     prtime("data converted to iterable dataset")
 
-    test_loss, train_loss, preds = process(train_loader, test_loader, num_epochs, run_train)
-    print(preds)
+    test_loss, train_loss, semifinal_preds = process(train_loader, test_loader, num_epochs, run_train, train_batch_size, test_batch_size)
+    #print(preds)
+    final_preds = (((test_df.EC.max() - test_df.EC.min()) * semifinal_preds) + test_df.EC.min()).tolist()
+    predictions = pd.DataFrame(np.array(final_preds))
+    predictions.to_csv('results.csv')
 
 
 
