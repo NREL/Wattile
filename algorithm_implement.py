@@ -115,7 +115,7 @@ def data_iterable(train_data, test_data, run_train, window):
 
     return train_loader, test_loader, train_batch_size, test_batch_size
 
-def process(train_loader, test_loader, num_epochs, run_train, train_batch_size, test_batch_size):
+def process(train_loader, test_loader, num_epochs, run_train, train_batch_size, test_batch_size, run_resume):
 
     # hyper-parameters
     num_epochs = num_epochs
@@ -138,8 +138,14 @@ def process(train_loader, test_loader, num_epochs, run_train, train_batch_size, 
     if run_train:
 
         #model = ffnn.FeedforwardNeuralNetModel(input_dim, hidden_dim, output_dim)
-        model = rnn.RNNModel(input_dim, hidden_dim, layer_dim, output_dim)
-        prtime("{} model module executed to instantiate the model, with run_train=True".format("rnn"))
+
+        if run_resume:
+            model = torch.load('LoadForecasting_Results/Model_' + str(train_exp_num) + '/torch_model')
+            prtime("model {} loaded, with run_resume=True and run_train=True".format('Model_' + str(train_exp_num)))
+        else:
+            model = rnn.RNNModel(input_dim, hidden_dim, layer_dim, output_dim)
+            prtime("A new {} model instantiated, with run_train=True".format("rnn"))
+
 
         # Instantiating Loss Class
         criterion = nn.MSELoss()
@@ -185,6 +191,10 @@ def process(train_loader, test_loader, num_epochs, run_train, train_batch_size, 
                 optimizer.step()
 
                 n_iter += 1
+
+                # block to save the model every few iterations iteration
+                if n_iter %10 == 0:
+                    torch.save(model, 'LoadForecasting_Results/Model_' + str(train_exp_num) + '/torch_model')
 
                 if n_iter % 200 == 0:
                     test_y_at_t = torch.zeros(test_batch_size, seq_dim, 1)
@@ -237,7 +247,7 @@ def process(train_loader, test_loader, num_epochs, run_train, train_batch_size, 
     return train_loss, test_loss, semifinal_preds
 
 
-def main(train_df, test_df, transformation_method, run_train, num_epochs):
+def main(train_df, test_df, transformation_method, run_train, num_epochs, run_resume):
 
 
     # dropping the datetime_str column. Causes problem with normalization
@@ -258,7 +268,7 @@ def main(train_df, test_df, transformation_method, run_train, num_epochs):
     train_loader, test_loader, train_batch_size, test_batch_size = data_iterable(train_data, test_data, run_train, window)
     prtime("data converted to iterable dataset")
 
-    test_loss, train_loss, semifinal_preds = process(train_loader, test_loader, num_epochs, run_train, train_batch_size, test_batch_size)
+    test_loss, train_loss, semifinal_preds = process(train_loader, test_loader, num_epochs, run_train, train_batch_size, test_batch_size, run_resume)
     #print(preds)
     final_preds = (((test_df.EC.max() - test_df.EC.min()) * semifinal_preds) + test_df.EC.min()).tolist()
     predictions = pd.DataFrame(np.array(final_preds))

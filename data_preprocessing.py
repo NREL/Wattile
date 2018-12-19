@@ -79,8 +79,8 @@ def parse_data(train_response_dict, test_response_dict, feat_name, run_train):
             train_parsed_dict[feat_name[i]] = list(map(str_split, train_parsed_dict[feat_name[i]]))
 
 
-            # the following line gives list (len 2) of lists (i.e. EC_dt and EC_value)
-            # i.e. EC_dt, EC_value = EC[0], EC[1]
+            # the following line gives list (len 2) of lists (i.e. GHI_dt and GHI_value)
+            # i.e. GHI_dt, GHI_value = GHI[0], GHI[1]
             train_parsed_dict[feat_name[i]] = list(zip(*train_parsed_dict[feat_name[i]]))
 
             # parsing the datetimeinfo obtained in above list into datetime string, date and time
@@ -421,7 +421,7 @@ def main(train_start_date, train_end_date, test_start_date, test_end_date, run_t
     train_df_dict, test_df_dict = input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_train, train_start_date, train_end_date, test_start_date, test_end_date)
 
     train_df_EC, test_df_EC = target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, train_end_date, test_start_date, test_end_date)
-    prtime("feature and target data strucuted successfully into dataframe, further processing...")
+    prtime("feature and target data structured successfully into dataframe, further processing...")
 
     train_df, test_df = merge_n_resample(train_df_dict, test_df_dict, train_df_EC, test_df_EC, run_train)
     train_df, test_df = get_static_features(train_df, test_df, run_train)

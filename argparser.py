@@ -22,6 +22,8 @@ def get_arguments():
                         help='True or False, To train the model or not. If False, the test will be run on the existing model')
     parser.add_argument('--num-epochs', default=1000, type=int,
                         help="Number of training, testing epochs")
+    parser.add_argument('r',
+                        help='True or False, To resume from the previous model. If False, a new model will be instantiated and trained')
     args, _ = parser.parse_known_args()
 
     # Sanity check the arguments
@@ -59,7 +61,17 @@ def get_arguments():
     # args.num_epochs
     num_epochs = args.num_epochs
 
-    return dates['train_start_date'], dates['train_end_date'], dates['test_start_date'], dates['test_end_date'], transformation_method, run_train, num_epochs
+    # args.r
+    if args.r in ["True", "true"]:
+        run_resume = True
+    elif args.r in ["False", "false"]:
+        run_resume = False
+    else:
+        print("Resume flag is invalid. It should be True or false. Exiting...")
+        parser.print_help()
+        exit()
+
+    return dates['train_start_date'], dates['train_end_date'], dates['test_start_date'], dates['test_end_date'], transformation_method, run_train, num_epochs, run_resume
 
 
 
