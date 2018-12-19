@@ -115,11 +115,27 @@ def data_iterable(train_data, test_data, run_train, window):
 
     return train_loader, test_loader, train_batch_size, test_batch_size
 
-def process(train_loader, test_loader, num_epochs, run_train, train_batch_size, test_batch_size, run_resume):
+def save_model(model):
+    torch.save(model, 'LoadForecasting_Results/Model_' + str(train_exp_num) + '/torch_model')
+    prtime("Model checkpoint saved")
+
+def predictions(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim):
+    model.eval()
+    preds = []
+    for i, (feats, values) in enumerate(test_loader):
+        features = Variable(feats.view(-1, seq_dim, input_dim - 1))
+        output = model(torch.cat((features, test_y_at_t), dim=2))
+        preds.append(output.data.numpy().squeeze())
+    semifinal_preds = np.concatenate(preds).ravel()
+    final_preds = (((test_df.EC.max() - test_df.EC.min()) * semifinal_preds) + test_df.EC.min()).tolist()
+    predictions = pd.DataFrame(np.array(final_preds))
+    predictions.to_csv('results.csv')
+
+def process(train_loader, test_loader, test_df, num_epochs, run_train, train_batch_size, test_batch_size, run_resume):
 
     # hyper-parameters
     num_epochs = num_epochs
-    learning_rate = 0.00005
+    learning_rate = 0.0005
     input_dim = 15  # Fixed
     hidden_dim = 28
     output_dim = 1  # one prediction - energy consumption
@@ -132,7 +148,6 @@ def process(train_loader, test_loader, num_epochs, run_train, train_batch_size, 
     train_iter = []
     test_loss = []
     test_iter = []
-    preds = []
 
 
     if run_train:
@@ -146,6 +161,8 @@ def process(train_loader, test_loader, num_epochs, run_train, train_batch_size, 
             model = rnn.RNNModel(input_dim, hidden_dim, layer_dim, output_dim)
             prtime("A new {} model instantiated, with run_train=True".format("rnn"))
 
+        # Check if gpu support is available
+        cuda_avail = torch.cuda.is_available()
 
         # Instantiating Loss Class
         criterion = nn.MSELoss()
@@ -161,6 +178,7 @@ def process(train_loader, test_loader, num_epochs, run_train, train_batch_size, 
         #y_at_t = torch.FloatTensor()
         train_y_at_t = torch.zeros(train_batch_size, seq_dim,1)
         for epoch in range(num_epochs):
+            model.train()
             for i, (feats, values) in enumerate(train_loader):
 
                 features = Variable(feats.view(-1, seq_dim, input_dim-1))
@@ -192,11 +210,12 @@ def process(train_loader, test_loader, num_epochs, run_train, train_batch_size, 
 
                 n_iter += 1
 
-                # block to save the model every few iterations iteration
+                # save the model every few iterations
                 if n_iter %10 == 0:
-                    torch.save(model, 'LoadForecasting_Results/Model_' + str(train_exp_num) + '/torch_model')
+                    save_model(model)
 
                 if n_iter % 200 == 0:
+                    model.eval()
                     test_y_at_t = torch.zeros(test_batch_size, seq_dim, 1)
                     for i, (feats, values) in enumerate(test_loader):
                         features = Variable(feats.view(-1, seq_dim, input_dim-1))
@@ -211,13 +230,14 @@ def process(train_loader, test_loader, num_epochs, run_train, train_batch_size, 
 
                         test_iter.append(n_iter)
                         test_loss.append(mse)
-                        preds.append(outputs.data.numpy().squeeze())
                         writer.add_scalar("/test_loss", mse, n_iter)
 
                     print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}'.format(epoch, n_iter, loss.data.item(), mse))
-        semifinal_preds = np.concatenate(preds).ravel()
 
         torch.save(model, 'LoadForecasting_Results/Model_' + str(train_exp_num) + '/torch_model')
+
+        predictions(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim)
+
 
 
 
@@ -225,26 +245,25 @@ def process(train_loader, test_loader, num_epochs, run_train, train_batch_size, 
         model = torch.load('LoadForecasting_Results/Model_' + str(train_exp_num) + '/torch_model')
         prtime("Loaded model from file, given run_train=False\n")
 
-        y_at_t = torch.zeros(100, seq_dim, 1)
+        test_y_at_t = torch.zeros(100, seq_dim, 1)
         for i, (feats, values) in enumerate(test_loader):
             features = Variable(feats.view(-1, seq_dim, input_dim-1))
             target = Variable(values)
 
-            outputs = model(torch.cat((features, y_at_t), dim=2))
+            outputs = model(torch.cat((features, test_y_at_t), dim=2))
 
-            y_at_t = tile(outputs.unsqueeze(2), 1, 5)
+            test_y_at_t = tile(outputs.unsqueeze(2), 1, 5)
 
             mse = np.sqrt(np.mean((target.data.numpy() - outputs.data.numpy().squeeze()) ** 2) / len(target))
 
             test_loss.append(mse)
 
             writer.add_scalar("/test_loss", mse)
-            preds.append(outputs.data.numpy().squeeze())
-        semifinal_preds = np.concatenate(preds).ravel()
+
 
         prtime('Test_MSE: {}'.format(mse))
+        predictions(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim)
 
-    return train_loss, test_loss, semifinal_preds
 
 
 def main(train_df, test_df, transformation_method, run_train, num_epochs, run_resume):
@@ -268,11 +287,9 @@ def main(train_df, test_df, transformation_method, run_train, num_epochs, run_re
     train_loader, test_loader, train_batch_size, test_batch_size = data_iterable(train_data, test_data, run_train, window)
     prtime("data converted to iterable dataset")
 
-    test_loss, train_loss, semifinal_preds = process(train_loader, test_loader, num_epochs, run_train, train_batch_size, test_batch_size, run_resume)
-    #print(preds)
-    final_preds = (((test_df.EC.max() - test_df.EC.min()) * semifinal_preds) + test_df.EC.min()).tolist()
-    predictions = pd.DataFrame(np.array(final_preds))
-    predictions.to_csv('results.csv')
+    process(train_loader, test_loader, test_df, num_epochs, run_train, train_batch_size, test_batch_size, run_resume)
+
+
 
 
 
