@@ -14,8 +14,9 @@ from tensorboardX import SummaryWriter
 train_exp_num = 1  # increment this number everytime a new model is trained
 test_exp_num = 1   # increment this number when the tests are run on an existing model (run_train = False)
 test_type = 'RNN_test' # 'FFNN_test, 'RNN_test', 'LSTM_test', 'GRU_test'
-writer = SummaryWriter('LoadForecasting_Results/Model_' + str(train_exp_num) + '/Test_num_' +
-                       str(test_exp_num)+'/logs/'+ test_type)
+writer_path = 'LoadForecasting_Results/Model_' + str(train_exp_num) + '/Test_num_' +str(test_exp_num)+'/logs/'+ test_type
+writer = SummaryWriter(writer_path)
+print(writer_path)
 
 
 def seq_pad(a, window):
