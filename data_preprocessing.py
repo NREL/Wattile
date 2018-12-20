@@ -404,9 +404,9 @@ def fill_nan(train_df, test_df, run_train):
 
 def main(train_start_date, train_end_date, test_start_date, test_end_date, run_train):
     root_url = 'https://internal-apis.nrel.gov/intelligentcampus/hisRead?id='
-    reference_id = ['@p:nrel:r:225918db-bfbda16a', '@p:nrel:r:20ed5e0a-275dbdc2', '@p:nrel:r:20ed5e0a-53e174aa',
-                    '@p:nrel:r:20ed5e0a-fe755c80', '@p:nrel:r:20ed5df2-2c0e126b', '@p:nrel:r:20ed5e0a-acc8beff',
-                    '@p:nrel:r:20ed5df2-fd2eecc5']
+    reference_id = ['@p:stm_campus:r:225918db-bfbda16a', '@p:stm_campus:r:20ed5e0a-275dbdc2', '@p:stm_campus:r:20ed5e0a-53e174aa',
+                    '@p:stm_campus:r:20ed5e0a-fe755c80', '@p:stm_campus:r:20ed5df2-2c0e126b', '@p:stm_campus:r:20ed5e0a-acc8beff',
+                    '@p:stm_campus:r:20ed5df2-fd2eecc5']
     train_date_range = '&range=\"' + train_start_date + '%2c' + train_end_date + '\"'
     test_date_range = '&range=\"' + test_start_date + '%2c' + test_end_date + '\"'
     feat_name = ['EC', 'RH', 'BP', 'DBT', 'GHI', 'TCC', 'WS']
