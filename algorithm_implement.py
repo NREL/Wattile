@@ -119,17 +119,21 @@ def save_model(model):
     torch.save(model, 'LoadForecasting_Results/Model_' + str(train_exp_num) + '/torch_model')
     prtime("Model checkpoint saved")
 
-def predictions(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim):
+def post_processing(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim):
     model.eval()
     preds = []
     for i, (feats, values) in enumerate(test_loader):
         features = Variable(feats.view(-1, seq_dim, input_dim - 1))
         output = model(torch.cat((features, test_y_at_t), dim=2))
         preds.append(output.data.numpy().squeeze())
+    # concatenating the preds done in
     semifinal_preds = np.concatenate(preds).ravel()
     final_preds = (((test_df.EC.max() - test_df.EC.min()) * semifinal_preds) + test_df.EC.min()).tolist()
     predictions = pd.DataFrame(np.array(final_preds))
-    predictions.to_csv('results.csv')
+    denormalized_mse = np.array(np.mean((predictions.values.squeeze() - test_df.EC.values) ** 2) / len(predictions), ndmin=1)
+    predictions.to_csv('predictions.csv')
+    np.savetxt('result_mse.csv', denormalized_mse, delimiter=",")
+
 
 def process(train_loader, test_loader, test_df, num_epochs, run_train, train_batch_size, test_batch_size, run_resume):
 
@@ -236,7 +240,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
 
         torch.save(model, 'LoadForecasting_Results/Model_' + str(train_exp_num) + '/torch_model')
 
-        predictions(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim)
+        post_processing(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim)
 
 
 
@@ -262,7 +266,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
 
 
         prtime('Test_MSE: {}'.format(mse))
-        predictions(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim)
+        post_processing(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim)
 
 
 
