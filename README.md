@@ -1,6 +1,6 @@
 # README #
 
-This README would normally document whatever steps are necessary to get your application up and running.
+This repository contains the source code for forecasting energy consumption using deep learning.
 
 ### What is this repository for? ###
 
