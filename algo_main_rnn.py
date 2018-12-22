@@ -13,8 +13,8 @@ from tensorboardX import SummaryWriter
 
 train_exp_num = 1  # increment this number everytime a new model is trained
 test_exp_num = 1   # increment this number when the tests are run on an existing model (run_train = False)
-test_type = 'RNN_test' # 'FFNN_test, 'RNN_test', 'LSTM_test', 'GRU_test'
-writer_path = 'LoadForecasting_Results/Model_' + str(train_exp_num) + '/Test_num_' +str(test_exp_num)+'/logs/'+ test_type
+test_type = 'RNN' # 'FFNN, 'RNN', 'LSTM', 'GRU'
+writer_path = 'EnergyForecasting_Results/' + test_type + '/Model_' +str(train_exp_num)+ '/TestNum_' + str(test_exp_num)+ '/logs/'
 writer = SummaryWriter(writer_path)
 print(writer_path)
 
@@ -117,7 +117,7 @@ def data_iterable(train_data, test_data, run_train, window):
     return train_loader, test_loader, train_batch_size, test_batch_size
 
 def save_model(model):
-    torch.save(model, 'LoadForecasting_Results/Model_' + str(train_exp_num) + '/torch_model')
+    torch.save(model, 'EnergyForecasting_Results/' + test_type + '/Model_' + str(train_exp_num) + '/torch_model')
     prtime("Model checkpoint saved")
 
 def post_processing(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim):
@@ -131,7 +131,7 @@ def post_processing(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim
     semifinal_preds = np.concatenate(preds).ravel()
     final_preds = (((test_df.EC.max() - test_df.EC.min()) * semifinal_preds) + test_df.EC.min()).tolist()
     predictions = pd.DataFrame(np.array(final_preds))
-    denormalized_mse = np.array(np.mean((predictions.values.squeeze() - test_df.EC.values) ** 2) / len(predictions), ndmin=1)
+    denormalized_mse = np.array(np.mean((predictions.values.squeeze() - test_df.EC.values) ** 2), ndmin=1)
     predictions.to_csv('predictions.csv')
     np.savetxt('result_mse.csv', denormalized_mse, delimiter=",")
 
@@ -157,10 +157,9 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
 
     if run_train:
 
-        #model = ffnn.FeedforwardNeuralNetModel(input_dim, hidden_dim, output_dim)
-
         if run_resume:
-            model = torch.load('LoadForecasting_Results/Model_' + str(train_exp_num) + '/torch_model')
+            model = torch.load(
+                'EnergyForecasting_Results/' + test_type + '/Model_' + str(train_exp_num) + '/torch_model')
             prtime("model {} loaded, with run_resume=True and run_train=True".format('Model_' + str(train_exp_num)))
         else:
             model = rnn.RNNModel(input_dim, hidden_dim, layer_dim, output_dim)
@@ -231,7 +230,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
                         test_y_at_t = tile(outputs.unsqueeze(2), 1, 5)
 
                         mse = np.sqrt(
-                            np.mean((target.data.numpy() - outputs.data.numpy().squeeze()) ** 2) / len(target))
+                            np.mean((target.data.numpy() - outputs.data.numpy().squeeze()) ** 2))
 
                         test_iter.append(n_iter)
                         test_loss.append(mse)
@@ -239,7 +238,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
 
                     print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}'.format(epoch, n_iter, loss.data.item(), mse))
 
-        torch.save(model, 'LoadForecasting_Results/Model_' + str(train_exp_num) + '/torch_model')
+        save_model(model)
 
         post_processing(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim)
 
@@ -247,7 +246,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
 
 
     else:
-        model = torch.load('LoadForecasting_Results/Model_' + str(train_exp_num) + '/torch_model')
+        model = torch.load('EnergyForecasting_Results/' + test_type + '/Model_' + str(train_exp_num) + '/torch_model')
         prtime("Loaded model from file, given run_train=False\n")
 
         test_y_at_t = torch.zeros(100, seq_dim, 1)

@@ -16,12 +16,13 @@ from util import prtime
 
 train_exp_num = 1  # increment this number everytime a new model is trained
 test_exp_num = 1   # increment this number when the tests are run on an existing model (run_train = False)
-
+test_type = 'RNN' # 'FFNN, 'RNN', 'LSTM', 'GRU'
 
 # Define the Directories to save the trained model and results.
 # Create the dir if it does not exist using pathlib
-MODEL_DIR = 'LoadForecasting_Results/Model_' + str(train_exp_num)
-RESULTS_DIR = 'LoadForecasting_Results/Model_' + str(train_exp_num) + '/Test_num_' +  str(test_exp_num)
+MODEL_DIR = 'EnergyForecasting_Results/' + test_type + '/Model_' +str(train_exp_num)
+RESULTS_DIR = 'EnergyForecasting_Results/' + test_type + '/Model_' +str(train_exp_num)+ '/TestNum_' + str(test_exp_num)
+
 pathlib.Path(RESULTS_DIR).mkdir(parents=True, exist_ok=True)
 log_file = RESULTS_DIR + '/' + 'console.log'
 #print("Writing print statements to ", log_file)
