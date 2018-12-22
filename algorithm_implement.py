@@ -181,7 +181,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
 
         n_iter = 0
         #y_at_t = torch.FloatTensor()
-        train_y_at_t = torch.zeros(train_batch_size, seq_dim,1)
+        train_y_at_t = torch.zeros(train_batch_size, seq_dim, 1)
         for epoch in range(num_epochs):
             model.train()
             for i, (feats, values) in enumerate(train_loader):
