@@ -9,26 +9,6 @@ from functools import reduce
 from util import prtime
 
 
-# train_start_date = '2018-10-22'
-# train_end_date = '2018-11-22'
-# test_start_date = '2018-11-23'
-# test_end_date = '2018-11-28'
-
-train_exp_num = 1  # increment this number everytime a new model is trained
-test_exp_num = 1   # increment this number when the tests are run on an existing model (run_train = False)
-test_type = 'RNN' # 'FFNN, 'RNN', 'LSTM', 'GRU'
-
-# Define the Directories to save the trained model and results.
-# Create the dir if it does not exist using pathlib
-MODEL_DIR = 'EnergyForecasting_Results/' + test_type + '/Model_' +str(train_exp_num)
-RESULTS_DIR = 'EnergyForecasting_Results/' + test_type + '/Model_' +str(train_exp_num)+ '/TestNum_' + str(test_exp_num)
-
-pathlib.Path(RESULTS_DIR).mkdir(parents=True, exist_ok=True)
-log_file = RESULTS_DIR + '/' + 'console.log'
-#print("Writing print statements to ", log_file)
-#sys.stdout = open(log_file, 'w')  # Redirect print statement's outputs to file
-#print("Stdout:")
-
 start_time = '00:01:00'
 end_time = '23:59:00'
 EC_start_time = '00:00:00'
@@ -403,7 +383,29 @@ def fill_nan(train_df, test_df, run_train):
     return train_df, test_df
 
 
-def main(train_start_date, train_end_date, test_start_date, test_end_date, run_train):
+def main(configs):
+    train_start_date = configs['train_start_date']
+    train_end_date = configs['train_end_date']
+    test_start_date = configs['test_start_date']
+    test_end_date = configs['test_end_date']
+    run_train = configs['run_train']
+
+    train_exp_num = configs['train_exp_num']
+    test_exp_num = configs['test_exp_num']
+    arch_type = configs['arch_type']
+
+    # Define the Directories to save the trained model and results.
+    # Create the dir if it does not exist using pathlib
+    MODEL_DIR = 'EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num)
+    RESULTS_DIR = 'EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/TestNum_' + str(
+        test_exp_num)
+
+    pathlib.Path(RESULTS_DIR).mkdir(parents=True, exist_ok=True)
+    log_file = RESULTS_DIR + '/' + 'console.log'
+    # print("Writing print statements to ", log_file)
+    # sys.stdout = open(log_file, 'w')  # Redirect print statement's outputs to file
+    # print("Stdout:")
+
     root_url = 'https://internal-apis.nrel.gov/intelligentcampus/hisRead?id='
     reference_id = ['@p:stm_campus:r:225918db-bfbda16a', '@p:stm_campus:r:20ed5e0a-275dbdc2', '@p:stm_campus:r:20ed5e0a-53e174aa',
                     '@p:stm_campus:r:20ed5e0a-fe755c80', '@p:stm_campus:r:20ed5df2-2c0e126b', '@p:stm_campus:r:20ed5e0a-acc8beff',

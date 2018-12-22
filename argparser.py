@@ -28,6 +28,10 @@ def get_arguments():
                         help='True or False, To fetch data from API and pre-process. saved csvf files will be used for training and testing')
     parser.add_argument('--arch-type',
                         help='pick architecture type from \'FFNN\', \'RNN\',\'LSTM\',\'GRU\'')
+    parser.add_argument('--tr-exp-num',
+                        help='train experiment number for the given architecture type')
+    parser.add_argument('--te-exp-num',
+                        help='test experiment number for the given architecture type')
 
 
     args, _ = parser.parse_known_args()
@@ -95,4 +99,17 @@ def get_arguments():
         parser.print_help()
         exit()
 
-    return dates['train_start_date'], dates['train_end_date'], dates['test_start_date'], dates['test_end_date'], transformation_method, run_train, num_epochs, run_resume, preprocess, arch_type
+    # args.tr_exp_num and args.te_exp_num
+    train_exp_num = args.tr_exp_num
+    test_exp_num = args.te_exp_num
+
+    configs = {"train_start_date": dates['train_start_date'],
+               "train_end_date": dates['train_end_date'],
+               "test_start_date": dates['test_start_date'],
+               "test_end_date": dates['test_end_date'],
+               "transformation_method": transformation_method, "run_train": run_train,
+               "num_epochs": num_epochs, "run_resume": run_resume, "preprocess": preprocess, "arch_type": arch_type,
+               "train_exp_num": train_exp_num, "test_exp_num": test_exp_num
+               }
+
+    return configs

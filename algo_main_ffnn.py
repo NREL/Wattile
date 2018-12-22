@@ -11,13 +11,6 @@ import torch.nn as nn
 from torch.autograd import Variable
 from tensorboardX import SummaryWriter
 
-train_exp_num = 1  # increment this number everytime a new model is trained
-test_exp_num = 1   # increment this number when the tests are run on an existing model (run_train = False)
-test_type = 'FFNN' # 'FFNN, 'RNN', 'LSTM', 'GRU'
-writer_path = 'EnergyForecasting_Results/' + test_type + '/Model_' +str(train_exp_num)+ '/TestNum_' + str(test_exp_num)+ '/logs/'
-writer = SummaryWriter(writer_path)
-print(writer_path)
-
 
 def size_the_batches(train_data, test_data, desired_batch_size):
 
@@ -94,8 +87,8 @@ def data_iterable(train_data, test_data, run_train):
 
     return train_loader, test_loader, train_batch_size, test_batch_size
 
-def save_model(model):
-    torch.save(model, 'EnergyForecasting_Results/' + test_type + '/Model_' + str(train_exp_num) + '/torch_model')
+def save_model(model,arch_type, train_exp_num):
+    torch.save(model, 'EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/torch_model')
     prtime("FFNN Model checkpoint saved")
 
 def post_processing(test_df, test_loader, model, input_dim):
@@ -114,7 +107,7 @@ def post_processing(test_df, test_loader, model, input_dim):
     np.savetxt('result_mse.csv', denormalized_mse, delimiter=",")
 
 
-def process(train_loader, test_loader, test_df, num_epochs, run_train, train_batch_size, test_batch_size, run_resume):
+def process(train_loader, test_loader, test_df, num_epochs, run_train, train_batch_size, test_batch_size, run_resume, arch_type, train_exp_num, writer):
 
     # hyper-parameters
     num_epochs = num_epochs
@@ -137,7 +130,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
         #model = ffnn.FeedforwardNeuralNetModel(input_dim, hidden_dim, output_dim)
 
         if run_resume:
-            model = torch.load('EnergyForecasting_Results/' + test_type + '/Model_' + str(train_exp_num) + '/torch_model')
+            model = torch.load('EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/torch_model')
             prtime("model {} loaded, with run_resume=True and run_train=True".format('Model_' + str(train_exp_num)))
         else:
             model = ffnn.FeedforwardNeuralNetModel(input_dim, hidden_dim, output_dim)
@@ -189,7 +182,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
 
                 # save the model every few iterations
                 if n_iter %10 == 0:
-                    save_model(model)
+                    save_model(model, arch_type, train_exp_num)
 
                 if n_iter % 200 == 0:
                     model.eval()
@@ -208,7 +201,8 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
 
                     print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}'.format(epoch, n_iter, loss.data.item(), mse))
 
-        torch.save(model, 'EnergyForecasting_Results/' + test_type + '/Model_' + str(train_exp_num) + '/torch_model')
+        #torch.save(model, 'EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/torch_model')
+        save_model(model, arch_type, train_exp_num)
 
         post_processing(test_df, test_loader, model, input_dim)
 
@@ -216,7 +210,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
 
 
     else:
-        model = torch.load('EnergyForecasting_Results/' + test_type + '/Model_' + str(train_exp_num) + '/torch_model')
+        model = torch.load('EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/torch_model')
         prtime("Loaded model from file, given run_train=False\n")
 
         for i, (feats, values) in enumerate(test_loader):
@@ -237,7 +231,19 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
 
 
 
-def main(train_df, test_df, transformation_method, run_train, num_epochs, run_resume):
+def main(train_df, test_df, configs):
+    transformation_method = configs['transformation_method']
+    run_train = configs['run_train']
+    num_epochs = configs['num_epochs']
+    run_resume = configs['run_resume']
+
+    train_exp_num = configs['train_exp_num']
+    test_exp_num = configs['test_exp_num']
+    arch_type = configs['arch_type']
+    writer_path = 'EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/TestNum_' + str(
+        test_exp_num) + '/logs/'
+    writer = SummaryWriter(writer_path)
+    print(writer_path)
 
 
     # dropping the datetime_str column. Causes problem with normalization
@@ -254,8 +260,7 @@ def main(train_df, test_df, transformation_method, run_train, num_epochs, run_re
     train_data, test_data = data_transform(train_data, test_data, transformation_method, run_train)
     prtime("data transformed using {} as transformation method".format(transformation_method))
 
-    window = 5    # window is synonomus to the "sequence length" dimension
     train_loader, test_loader, train_batch_size, test_batch_size = data_iterable(train_data, test_data, run_train)
     prtime("data converted to iterable dataset")
 
-    process(train_loader, test_loader, test_df, num_epochs, run_train, train_batch_size, test_batch_size, run_resume)
+    process(train_loader, test_loader, test_df, num_epochs, run_train, train_batch_size, test_batch_size, run_resume, arch_type, train_exp_num, writer)
