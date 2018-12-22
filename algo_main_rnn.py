@@ -13,8 +13,8 @@ from tensorboardX import SummaryWriter
 
 train_exp_num = 1  # increment this number everytime a new model is trained
 test_exp_num = 1   # increment this number when the tests are run on an existing model (run_train = False)
-test_type = 'RNN' # 'FFNN, 'RNN', 'LSTM', 'GRU'
-writer_path = 'EnergyForecasting_Results/' + test_type + '/Model_' +str(train_exp_num)+ '/TestNum_' + str(test_exp_num)+ '/logs/'
+arch_type = 'RNN' # 'FFNN, 'RNN', 'LSTM', 'GRU'
+writer_path = 'EnergyForecasting_Results/' + arch_type + '/Model_' +str(train_exp_num)+ '/TestNum_' + str(test_exp_num)+ '/logs/'
 writer = SummaryWriter(writer_path)
 print(writer_path)
 
@@ -116,8 +116,8 @@ def data_iterable(train_data, test_data, run_train, window):
 
     return train_loader, test_loader, train_batch_size, test_batch_size
 
-def save_model(model):
-    torch.save(model, 'EnergyForecasting_Results/' + test_type + '/Model_' + str(train_exp_num) + '/torch_model')
+def save_model(model, arch_type, train_exp_num):
+    torch.save(model, 'EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/torch_model')
     prtime("Model checkpoint saved")
 
 def post_processing(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim):
@@ -136,7 +136,7 @@ def post_processing(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim
     np.savetxt('result_mse.csv', denormalized_mse, delimiter=",")
 
 
-def process(train_loader, test_loader, test_df, num_epochs, run_train, train_batch_size, test_batch_size, run_resume):
+def process(train_loader, test_loader, test_df, num_epochs, run_train, train_batch_size, test_batch_size, run_resume, arch_type, train_exp_num, writer):
 
     # hyper-parameters
     num_epochs = num_epochs
@@ -159,7 +159,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
 
         if run_resume:
             model = torch.load(
-                'EnergyForecasting_Results/' + test_type + '/Model_' + str(train_exp_num) + '/torch_model')
+                'EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/torch_model')
             prtime("model {} loaded, with run_resume=True and run_train=True".format('Model_' + str(train_exp_num)))
         else:
             model = rnn.RNNModel(input_dim, hidden_dim, layer_dim, output_dim)
@@ -216,7 +216,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
 
                 # save the model every few iterations
                 if n_iter %10 == 0:
-                    save_model(model)
+                    save_model(model, arch_type, train_exp_num)
 
                 if n_iter % 200 == 0:
                     model.eval()
@@ -246,7 +246,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
 
 
     else:
-        model = torch.load('EnergyForecasting_Results/' + test_type + '/Model_' + str(train_exp_num) + '/torch_model')
+        model = torch.load('EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/torch_model')
         prtime("Loaded model from file, given run_train=False\n")
 
         test_y_at_t = torch.zeros(100, seq_dim, 1)
@@ -270,8 +270,19 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
 
 
 
-def main(train_df, test_df, transformation_method, run_train, num_epochs, run_resume):
+def main(train_df, test_df, configs):
+    transformation_method = configs['transformation_method']
+    run_train = configs['run_train']
+    num_epochs = configs['num_epochs']
+    run_resume = configs['run_resume']
 
+    train_exp_num = configs['train_exp_num']
+    test_exp_num = configs['test_exp_num']
+    arch_type = configs['arch_type']
+    writer_path = 'EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/TestNum_' + str(
+        test_exp_num) + '/logs/'
+    writer = SummaryWriter(writer_path)
+    print(writer_path)
 
     # dropping the datetime_str column. Causes problem with normalization
     if run_train:
@@ -291,7 +302,7 @@ def main(train_df, test_df, transformation_method, run_train, num_epochs, run_re
     train_loader, test_loader, train_batch_size, test_batch_size = data_iterable(train_data, test_data, run_train, window)
     prtime("data converted to iterable dataset")
 
-    process(train_loader, test_loader, test_df, num_epochs, run_train, train_batch_size, test_batch_size, run_resume)
+    process(train_loader, test_loader, test_df, num_epochs, run_train, train_batch_size, test_batch_size, run_resume,arch_type, train_exp_num, writer)
 
 
 
