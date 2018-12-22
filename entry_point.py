@@ -3,11 +3,11 @@ import algo_main_rnn
 import algo_main_ffnn
 import algo_main_lstm
 import algo_main_gru
-import argparser
+from util import get_arguments
 import pandas as pd
 
 
-train_start_date, train_end_date, test_start_date, test_end_date, transformation_method, run_train, num_epochs, run_resume, preprocess, arch_type = argparser.get_arguments()
+train_start_date, train_end_date, test_start_date, test_end_date, transformation_method, run_train, num_epochs, run_resume, preprocess, arch_type = get_arguments()
 
 if preprocess:
     train_df, test_df= data_preprocessing.main(train_start_date, train_end_date, test_start_date, test_end_date, run_train)

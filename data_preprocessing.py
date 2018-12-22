@@ -8,12 +8,6 @@ from dateutil.parser import parse
 from functools import reduce
 from util import prtime
 
-
-# train_start_date = '2018-10-22'
-# train_end_date = '2018-11-22'
-# test_start_date = '2018-11-23'
-# test_end_date = '2018-11-28'
-
 train_exp_num = 1  # increment this number everytime a new model is trained
 test_exp_num = 1   # increment this number when the tests are run on an existing model (run_train = False)
 test_type = 'RNN' # 'FFNN, 'RNN', 'LSTM', 'GRU'
