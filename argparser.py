@@ -26,6 +26,8 @@ def get_arguments():
                         help='True or False, To resume from the previous model. If False, a new model will be instantiated and trained')
     parser.add_argument('--pp',
                         help='True or False, To fetch data from API and pre-process. saved csvf files will be used for training and testing')
+    parser.add_argument('--arch-type',
+                        help='pick architecture type from \'FFNN\', \'RNN\',\'LSTM\',\'GRU\'')
 
 
     args, _ = parser.parse_known_args()
@@ -85,4 +87,12 @@ def get_arguments():
         parser.print_help()
         exit()
 
-    return dates['train_start_date'], dates['train_end_date'], dates['test_start_date'], dates['test_end_date'], transformation_method, run_train, num_epochs, run_resume, preprocess
+    # args.arch_type
+    if args.arch_type.lower() in ['ffnn', 'rnn','lstm','gru']:
+        arch_type = args.arch_type.upper()
+    else:
+        print("Architecture type is invalid. See help for types of architecture available. Exiting...")
+        parser.print_help()
+        exit()
+
+    return dates['train_start_date'], dates['train_end_date'], dates['test_start_date'], dates['test_end_date'], transformation_method, run_train, num_epochs, run_resume, preprocess, arch_type
