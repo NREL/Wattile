@@ -11,14 +11,6 @@ import torch.nn as nn
 from torch.autograd import Variable
 from tensorboardX import SummaryWriter
 
-train_exp_num = 1  # increment this number everytime a new model is trained
-test_exp_num = 1   # increment this number when the tests are run on an existing model (run_train = False)
-arch_type = 'RNN' # 'FFNN, 'RNN', 'LSTM', 'GRU'
-writer_path = 'EnergyForecasting_Results/' + arch_type + '/Model_' +str(train_exp_num)+ '/TestNum_' + str(test_exp_num)+ '/logs/'
-writer = SummaryWriter(writer_path)
-print(writer_path)
-
-
 def seq_pad(a, window):
     rows = a.shape[0]
     cols = a.shape[1]
@@ -47,13 +39,22 @@ def size_the_batches(train_data, test_data, desired_batch_size):
 
     return train_bt_size, test_bt_size
 
-def data_transform(train_data, test_data, transformation_method, run_train):
+def data_transform(train_data, test_data, transformation_method, run_train, arch_type, train_exp_num):
 
     if run_train:
+
+        # for the result de-normalization purpose, saving the max and min values of the EC columns
+        train_max = train_data.EC.max()
+        train_min = train_data.EC.min()
+        min_max = pd.DataFrame({'train_min': train_min, 'train_max': train_max}, index=[1])
+        min_max.to_csv('EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/min_max.csv')
+
+
         if transformation_method == "minmaxscale":
             min_max_scaler = preprocessing.MinMaxScaler()
             temp_cols1 = train_data.columns.values
             train_data = pd.DataFrame(min_max_scaler.fit_transform(train_data.values), columns=temp_cols1)
+
 
         elif transformation_method == "standardize":
             stand_scaler = preprocessing.StandardScaler()
@@ -63,6 +64,8 @@ def data_transform(train_data, test_data, transformation_method, run_train):
         else:
             temp_cols1 = train_data.columns.values
             train_data = pd.DataFrame(preprocessing.normalize(train_data.values), columns=temp_cols1)
+
+
 
     if transformation_method == "minmaxscale":
         min_max_scaler = preprocessing.MinMaxScaler()
@@ -120,7 +123,7 @@ def save_model(model, arch_type, train_exp_num):
     torch.save(model, 'EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/torch_model')
     prtime("Model checkpoint saved")
 
-def post_processing(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim):
+def post_processing(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim, arch_type, train_exp_num):
     model.eval()
     preds = []
     for i, (feats, values) in enumerate(test_loader):
@@ -129,7 +132,10 @@ def post_processing(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim
         preds.append(output.data.numpy().squeeze())
     # concatenating the preds done in
     semifinal_preds = np.concatenate(preds).ravel()
-    final_preds = (((test_df.EC.max() - test_df.EC.min()) * semifinal_preds) + test_df.EC.min()).tolist()
+
+    # loading the min and max values of the energy consumption column of the train data
+    min_max = pd.read_csv('EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/min_max.csv')
+    final_preds = (((min_max['train_max'].values[0] - min_max['train_min'].values[0]) * semifinal_preds) + min_max['train_min'].values[0]).tolist()
     predictions = pd.DataFrame(np.array(final_preds))
     denormalized_mse = np.array(np.mean((predictions.values.squeeze() - test_df.EC.values) ** 2), ndmin=1)
     predictions.to_csv('predictions.csv')
@@ -218,7 +224,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
                 if n_iter %10 == 0:
                     save_model(model, arch_type, train_exp_num)
 
-                if n_iter % 200 == 0:
+                if n_iter % 150 == 0:
                     model.eval()
                     test_y_at_t = torch.zeros(test_batch_size, seq_dim, 1)
                     for i, (feats, values) in enumerate(test_loader):
@@ -240,7 +246,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
 
         save_model(model, arch_type, train_exp_num)
 
-        post_processing(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim)
+        post_processing(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim, arch_type, train_exp_num)
 
 
 
@@ -266,7 +272,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
 
 
         prtime('Test_MSE: {}'.format(mse))
-        post_processing(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim)
+        post_processing(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim, arch_type, train_exp_num)
 
 
 
@@ -295,7 +301,7 @@ def main(train_df, test_df, configs):
     test_data = test_df.copy(deep=True)
     test_data = test_data.drop('datetime_str', axis=1)
 
-    train_data, test_data = data_transform(train_data, test_data, transformation_method, run_train)
+    train_data, test_data = data_transform(train_data, test_data, transformation_method, run_train, arch_type, train_exp_num)
     prtime("data transformed using {} as transformation method".format(transformation_method))
 
     window = 5    # window is synonomus to the "sequence length" dimension
