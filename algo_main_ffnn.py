@@ -77,7 +77,7 @@ def data_iterable(train_data, test_data, run_train):
         train_target_tensor = torch.from_numpy(y_train).type(torch.FloatTensor)
 
         train = data_utils.TensorDataset(train_feat_tensor, train_target_tensor)
-        train_loader = data_utils.DataLoader(train, batch_size=train_batch_size, shuffle=False)
+        train_loader = data_utils.DataLoader(train, batch_size=train_batch_size, shuffle=True)
         print("data train made iterable")
 
     else:
