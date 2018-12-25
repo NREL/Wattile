@@ -238,7 +238,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
 
                     print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}'.format(epoch, n_iter, loss.data.item(), mse))
 
-        save_model(model)
+        save_model(model, arch_type, train_exp_num)
 
         post_processing(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim)
 

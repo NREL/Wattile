@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import requests
 import re
+from scipy import stats
 from dateutil.parser import parse
 from functools import reduce
 from util import prtime
@@ -100,8 +101,15 @@ def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_tra
             df_temp = train_df_dict["df_" + input_feat_name[i]]
             df_temp.name = "df_" + input_feat_name[i]
             prtime("raw_train dataframe = {}, shape = {}".format(df_temp.name, df_temp.shape))
-            df_temp['datetime_str'] = pd.to_datetime(df_temp['datetime_str'])
 
+            z_temp = np.abs(stats.zscore(df_temp[input_feat_name[i]]))
+            threshold = 3
+            mask = np.where(~(z_temp > threshold))
+            # print(len(mask))
+            df_temp = df_temp.iloc[mask]
+            prtime("shape of outlier-removed dataframe: {}".format(df_temp.shape))
+
+            df_temp['datetime_str'] = pd.to_datetime(df_temp['datetime_str'])
             if not (df_temp.loc[0, 'datetime_str'] == pd.to_datetime(train_start_date + ' ' + start_time)):
                 df_temp.loc[0, 'datetime_str'] = pd.to_datetime(train_start_date + ' ' + start_time)
             if not (df_temp.loc[df_temp.index[-1], 'datetime_str'] == pd.to_datetime(train_end_date + ' ' + end_time)):
@@ -125,8 +133,15 @@ def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_tra
         df_temp = test_df_dict["df_" + input_feat_name[i]]
         df_temp.name = "df_" + input_feat_name[i]
         prtime("raw_test dataframe = {}, shape = {}".format(df_temp.name, df_temp.shape))
-        df_temp['datetime_str'] = pd.to_datetime(df_temp['datetime_str'])
 
+        z_temp = np.abs(stats.zscore(df_temp[input_feat_name[i]]))
+        threshold = 3
+        mask = np.where(~(z_temp > threshold))
+        # print(len(mask))
+        df_temp = df_temp.iloc[mask]
+        prtime("shape of outlier-removed dataframe: {}".format(df_temp.shape))
+
+        df_temp['datetime_str'] = pd.to_datetime(df_temp['datetime_str'])
         if not (df_temp.loc[0, 'datetime_str'] == pd.to_datetime(test_start_date + ' ' + start_time)):
             df_temp.loc[0, 'datetime_str'] = pd.to_datetime(test_start_date + ' ' + start_time)
         if not (df_temp.loc[df_temp.index[-1], 'datetime_str'] == pd.to_datetime(test_end_date + ' ' + end_time)):
@@ -152,6 +167,13 @@ def target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, 
                          columns=['datetime_str', 'EC'])
         prtime("shape of raw EC dataframe: {}".format(train_df_EC.shape))
 
+        z_EC = np.abs(stats.zscore(train_df_EC['EC']))
+        threshold = 3.2
+        mask = np.where(~(z_EC > threshold))
+        # print(len(mask))
+        train_df_EC = train_df_EC.iloc[mask]
+        print("shape of outlier-removed EC_dataframe: {}".format(train_df_EC.shape))
+
         train_df_EC['datetime_str'] = pd.to_datetime(train_df_EC['datetime_str'])
         if not (train_df_EC.loc[0, 'datetime_str'] == pd.to_datetime(train_start_date + ' ' + EC_start_time)):
             train_df_EC.loc[0, 'datetime_str'] = pd.to_datetime(train_start_date + ' ' + EC_start_time)
@@ -173,6 +195,13 @@ def target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, 
     test_df_EC = pd.DataFrame({'datetime_str': test_parsed_dict['EC_dt_parsed'][0], 'EC': test_parsed_dict['EC'][1]},
                               columns=['datetime_str', 'EC'])
     prtime("shape of raw test EC dataframe: {}".format(test_df_EC.shape))
+
+    z_EC = np.abs(stats.zscore(test_df_EC['EC']))
+    threshold = 3.2
+    mask = np.where(~(z_EC > threshold))
+    # print(len(mask))
+    test_df_EC = test_df_EC.iloc[mask]
+    prtime("shape of outlier-removed EC_dataframe: {}".format(test_df_EC.shape))
 
     test_df_EC['datetime_str'] = pd.to_datetime(test_df_EC['datetime_str'])
     if not (test_df_EC.loc[0, 'datetime_str'] == pd.to_datetime(test_start_date + ' ' + EC_start_time)):
