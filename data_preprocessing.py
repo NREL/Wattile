@@ -116,9 +116,12 @@ def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_tra
                 df_temp.loc[df_temp.index[-1], 'datetime_str'] = pd.to_datetime(train_end_date + ' ' + end_time)
 
             df_temp = df_temp.set_index('datetime_str').resample("1min").first().reset_index().reindex(columns=df_temp.columns)
-            cols = df_temp.columns.difference([input_feat_name[i]])
-            df_temp[cols] = df_temp[cols].ffill()
-            df_temp[input_feat_name[i]] = df_temp[input_feat_name[i]].fillna(method='ffill')
+            df_temp[input_feat_name[i] + '_roll_mean'] = df_temp[input_feat_name[i]].rolling(12, center=True,
+                                                                                             min_periods=1).mean()
+            df_temp[input_feat_name[i] + '_roll_mean'].update(df_temp[input_feat_name[i]])
+            df_temp.drop([input_feat_name[i]], inplace=True, axis=1)
+            df_temp = df_temp.rename(columns={input_feat_name[i] + '_roll_mean': input_feat_name[i]})
+
             prtime("shape of processed train dataframe: {}".format(df_temp.shape))
 
             train_df_dict["df_" + input_feat_name[i]] = df_temp
@@ -149,9 +152,11 @@ def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_tra
 
         df_temp = df_temp.set_index('datetime_str').resample("1min").first().reset_index().reindex(
             columns=df_temp.columns)
-        cols = df_temp.columns.difference([input_feat_name[i]])
-        df_temp[cols] = df_temp[cols].ffill()
-        df_temp[input_feat_name[i]] = df_temp[input_feat_name[i]].fillna(method='ffill')
+        df_temp[input_feat_name[i] + '_roll_mean'] = df_temp[input_feat_name[i]].rolling(12, center=True,
+                                                                                         min_periods=1).mean()
+        df_temp[input_feat_name[i] + '_roll_mean'].update(df_temp[input_feat_name[i]])
+        df_temp.drop([input_feat_name[i]], inplace=True, axis=1)
+        df_temp = df_temp.rename(columns={input_feat_name[i] + '_roll_mean': input_feat_name[i]})
         prtime("shape of processed test dataframe: {}".format(df_temp.shape))
 
         test_df_dict["df_" + input_feat_name[i]] = df_temp
