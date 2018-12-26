@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import json
 from sklearn import preprocessing
 from util import prtime, factors, tile
 import ffnn
@@ -26,40 +27,44 @@ def data_transform(train_data, test_data, transformation_method, run_train, arch
 
     if run_train:
 
-        train_max = train_data.EC.max()
-        train_min = train_data.EC.min()
-        min_max = pd.DataFrame({'train_min': train_min, 'train_max': train_max}, index=[1])
-        min_max.to_csv('EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + + '/min_max.csv')
+        train_stats = {}
+        train_stats['train_max'] = train_data.max().to_dict()
+        train_stats['train_min'] = train_data.min().to_dict()
+        train_stats['train_mean'] = train_data.mean(axis=0).to_dict()
+        train_stats['train_std'] = train_data.std(axis=0).to_dict()
+
+        with open('EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/train_stats.json', 'w') as fp:
+            json.dump(train_stats, fp)
 
         if transformation_method == "minmaxscale":
-            min_max_scaler = preprocessing.MinMaxScaler()
-            temp_cols1 = train_data.columns.values
-            train_data = pd.DataFrame(min_max_scaler.fit_transform(train_data.values), columns=temp_cols1)
-
-        elif transformation_method == "standardize":
-            stand_scaler = preprocessing.StandardScaler()
-            temp_cols1 = train_data.columns.values
-            train_data = pd.DataFrame(stand_scaler.fit_transform(train_data.values), columns=temp_cols1)
+            #min_max_scaler = preprocessing.MinMaxScaler()
+            #temp_cols1 = train_data.columns.values
+            #train_data = pd.DataFrame(min_max_scaler.fit_transform(train_data.values), columns=temp_cols1)
+            train_data = (train_data - train_data.min()) / (train_data.max() - train_data.min())
 
         else:
-            temp_cols1 = train_data.columns.values
-            train_data = pd.DataFrame(preprocessing.normalize(train_data.values), columns=temp_cols1)
+            #stand_scaler = preprocessing.StandardScaler()
+            #temp_cols1 = train_data.columns.values
+            #train_data = pd.DataFrame(stand_scaler.fit_transform(train_data.values), columns=temp_cols1)
+            train_data = (train_data - train_data.mean(axis=0)) / train_data.std(axis=0)
 
 
+
+    # reading back the train stats for normalizing test data w.r.t to train data
+    file_loc = 'EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/train_stats.json'
+    with open(file_loc, 'r') as f:
+        train_stats = json.load(f)
+
+    train_max = pd.DataFrame(train_stats['train_max'], index=[1]).iloc[0]
+    train_min = pd.DataFrame(train_stats['train_min'], index=[1]).iloc[0]
+    train_mean = pd.DataFrame(train_stats['train_mean'], index=[1]).iloc[0]
+    train_std = pd.DataFrame(train_stats['train_std'], index=[1]).iloc[0]
 
     if transformation_method == "minmaxscale":
-        min_max_scaler = preprocessing.MinMaxScaler()
-        temp_cols1 = test_data.columns.values
-        test_data = pd.DataFrame(min_max_scaler.fit_transform(test_data.values), columns=temp_cols1)
-
-    elif transformation_method == "standardize":
-        stand_scaler = preprocessing.StandardScaler()
-        temp_cols1 = test_data.columns.values
-        test_data = pd.DataFrame(stand_scaler.fit_transform(test_data.values), columns=temp_cols1)
+        train_data = (test_data - train_min) / (train_max - train_min)
 
     else:
-        temp_cols1 = test_data.columns.values
-        test_data = pd.DataFrame(preprocessing.normalize(test_data.values), columns=temp_cols1)
+        train_data = ((test_data - train_mean) / train_std)
 
     return train_data, test_data
 
@@ -99,7 +104,7 @@ def save_model(model,arch_type, train_exp_num):
     torch.save(model, 'EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/torch_model')
     prtime("FFNN Model checkpoint saved")
 
-def post_processing(test_df, test_loader, model, input_dim, arch_type, train_exp_num):
+def post_processing(test_df, test_loader, model, input_dim, arch_type, train_exp_num, transformation_method):
     model.eval()
     preds = []
     for i, (feats, values) in enumerate(test_loader):
@@ -108,17 +113,32 @@ def post_processing(test_df, test_loader, model, input_dim, arch_type, train_exp
         preds.append(output.data.numpy().squeeze())
     # concatenating the preds done in
     semifinal_preds = np.concatenate(preds).ravel()
-    # loading the min and max values of the energy consumption column of the train data
-    min_max = pd.read_csv('EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/min_max.csv')
 
-    final_preds = (((min_max['train_max'].values[0] - min_max['train_min'].values[0]) * semifinal_preds) + min_max['train_min'].values[0]).tolist()
-    predictions = pd.DataFrame(np.array(final_preds))
+    # loading the training data stats for de-normalization purpose
+    file_loc = 'EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/train_stats.json'
+    with open(file_loc, 'r') as f:
+        train_stats = json.load(f)
+
+    train_max = pd.DataFrame(train_stats['train_max'], index=[1]).iloc[0]
+    train_min = pd.DataFrame(train_stats['train_min'], index=[1]).iloc[0]
+    train_mean = pd.DataFrame(train_stats['train_mean'], index=[1]).iloc[0]
+    train_std = pd.DataFrame(train_stats['train_std'], index=[1]).iloc[0]
+
+    if transformation_method == "minmaxscale":
+        final_preds = ((train_max['EC'] - train_min['EC']) * semifinal_preds) / (train_max['EC'] - train_min['EC'])
+
+    else:
+        final_preds = ((semifinal_preds * train_std['EC']) + train_mean['EC'])
+
+
+
+    predictions = pd.DataFrame(final_preds)
     denormalized_mse = np.array(np.mean((predictions.values.squeeze() - test_df.EC.values) ** 2), ndmin=1)
     predictions.to_csv('predictions.csv')
     np.savetxt('result_mse.csv', denormalized_mse, delimiter=",")
 
 
-def process(train_loader, test_loader, test_df, num_epochs, run_train, train_batch_size, test_batch_size, run_resume, arch_type, train_exp_num, writer):
+def process(train_loader, test_loader, test_df, num_epochs, run_train, train_batch_size, test_batch_size, run_resume, arch_type, train_exp_num, writer, transformation_method):
 
     # hyper-parameters
     num_epochs = num_epochs
@@ -215,7 +235,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
         #torch.save(model, 'EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/torch_model')
         save_model(model, arch_type, train_exp_num)
 
-        post_processing(test_df, test_loader, model, input_dim, arch_type, train_exp_num)
+        post_processing(test_df, test_loader, model, input_dim, arch_type, train_exp_num, transformation_method)
 
 
 
@@ -274,4 +294,4 @@ def main(train_df, test_df, configs):
     train_loader, test_loader, train_batch_size, test_batch_size = data_iterable(train_data, test_data, run_train)
     prtime("data converted to iterable dataset")
 
-    process(train_loader, test_loader, test_df, num_epochs, run_train, train_batch_size, test_batch_size, run_resume, arch_type, train_exp_num, writer)
+    process(train_loader, test_loader, test_df, num_epochs, run_train, train_batch_size, test_batch_size, run_resume, arch_type, train_exp_num, writer, transformation_method)
