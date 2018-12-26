@@ -77,7 +77,7 @@ def data_iterable(train_data, test_data, run_train):
         train_target_tensor = torch.from_numpy(y_train).type(torch.FloatTensor)
 
         train = data_utils.TensorDataset(train_feat_tensor, train_target_tensor)
-        train_loader = data_utils.DataLoader(train, batch_size=train_batch_size, shuffle=True)
+        train_loader = data_utils.DataLoader(train, batch_size=train_batch_size, shuffle=False)
         print("data train made iterable")
 
     else:
@@ -192,7 +192,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
                 n_iter += 1
 
                 # save the model every few iterations
-                if n_iter %10 == 0:
+                if n_iter %25 == 0:
                     save_model(model, arch_type, train_exp_num)
 
                 if n_iter % 150 == 0:

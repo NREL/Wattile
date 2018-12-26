@@ -221,7 +221,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
                 n_iter += 1
 
                 # save the model every few iterations
-                if n_iter %10 == 0:
+                if n_iter %25 == 0:
                     save_model(model, arch_type, train_exp_num)
 
                 if n_iter % 150 == 0:
