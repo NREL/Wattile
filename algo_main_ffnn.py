@@ -222,7 +222,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
 
                 # save the model every few iterations
                 if n_iter %25 == 0:
-                    save_model(model, arch_type, train_exp_num)
+                    save_model(model, arch_type, train_exp_num, epoch)
 
                 if n_iter % 150 == 0:
                     model.eval()
