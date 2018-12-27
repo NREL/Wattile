@@ -115,12 +115,18 @@ def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_tra
             if not (df_temp.loc[df_temp.index[-1], 'datetime_str'] == pd.to_datetime(train_end_date + ' ' + end_time)):
                 df_temp.loc[df_temp.index[-1], 'datetime_str'] = pd.to_datetime(train_end_date + ' ' + end_time)
 
-            df_temp = df_temp.set_index('datetime_str').resample("1min").first().reset_index().reindex(columns=df_temp.columns)
-            df_temp[input_feat_name[i] + '_roll_mean'] = df_temp[input_feat_name[i]].rolling(12, center=True,
-                                                                                             min_periods=1).mean()
-            df_temp[input_feat_name[i] + '_roll_mean'].update(df_temp[input_feat_name[i]])
-            df_temp.drop([input_feat_name[i]], inplace=True, axis=1)
-            df_temp = df_temp.rename(columns={input_feat_name[i] + '_roll_mean': input_feat_name[i]})
+
+            #df_temp = df_temp.set_index('datetime_str').resample("1min").first().reset_index().reindex(columns=df_temp.columns)
+            # df_temp[input_feat_name[i] + '_roll_mean'] = df_temp[input_feat_name[i]].rolling(12, center=True,
+            #                                                                                  min_periods=1).mean()
+            # df_temp[input_feat_name[i] + '_roll_mean'].update(df_temp[input_feat_name[i]])
+            # df_temp.drop([input_feat_name[i]], inplace=True, axis=1)
+            # df_temp = df_temp.rename(columns={input_feat_name[i] + '_roll_mean': input_feat_name[i]})
+
+            cols = df_temp.columns
+            df_temp = df_temp.set_index('datetime_str').resample("1min").first()
+            df_temp.interpolate(inplace=True)
+            df_temp = df_temp.reset_index().reindex(columns=cols)
 
             prtime("shape of processed train df: {}".format(df_temp.shape))
 
@@ -150,13 +156,19 @@ def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_tra
         if not (df_temp.loc[df_temp.index[-1], 'datetime_str'] == pd.to_datetime(test_end_date + ' ' + end_time)):
             df_temp.loc[df_temp.index[-1], 'datetime_str'] = pd.to_datetime(test_end_date + ' ' + end_time)
 
-        df_temp = df_temp.set_index('datetime_str').resample("1min").first().reset_index().reindex(
-            columns=df_temp.columns)
-        df_temp[input_feat_name[i] + '_roll_mean'] = df_temp[input_feat_name[i]].rolling(12, center=True,
-                                                                                         min_periods=1).mean()
-        df_temp[input_feat_name[i] + '_roll_mean'].update(df_temp[input_feat_name[i]])
-        df_temp.drop([input_feat_name[i]], inplace=True, axis=1)
-        df_temp = df_temp.rename(columns={input_feat_name[i] + '_roll_mean': input_feat_name[i]})
+        # df_temp = df_temp.set_index('datetime_str').resample("1min").first().reset_index().reindex(
+        #     columns=df_temp.columns)
+        # df_temp[input_feat_name[i] + '_roll_mean'] = df_temp[input_feat_name[i]].rolling(12, center=True,
+        #                                                                                  min_periods=1).mean()
+        # df_temp[input_feat_name[i] + '_roll_mean'].update(df_temp[input_feat_name[i]])
+        # df_temp.drop([input_feat_name[i]], inplace=True, axis=1)
+        # df_temp = df_temp.rename(columns={input_feat_name[i] + '_roll_mean': input_feat_name[i]})
+
+        cols = df_temp.columns
+        df_temp = df_temp.set_index('datetime_str').resample("1min").first()
+        df_temp.interpolate(inplace=True)
+        df_temp = df_temp.reset_index().reindex(columns=cols)
+
         prtime("shape of processed test dataframe: {}".format(df_temp.shape))
 
         test_df_dict["df_" + input_feat_name[i]] = df_temp
@@ -185,12 +197,16 @@ def target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, 
         if not (train_df_EC.loc[train_df_EC.index[-1], 'datetime_str'] == pd.to_datetime(train_end_date + ' ' + EC_end_time)):
             train_df_EC.loc[train_df_EC.index[-1], 'datetime_str'] = pd.to_datetime(train_end_date + ' ' + EC_end_time)
 
-        train_df_EC = train_df_EC.set_index('datetime_str').resample("15min").first().reset_index().reindex(columns=train_df_EC.columns)
+        # train_df_EC = train_df_EC.set_index('datetime_str').resample("15min").first().reset_index().reindex(columns=train_df_EC.columns)
+        # train_df_EC['EC_roll_mean'] = train_df_EC['EC'].rolling(12, center=True, min_periods=1).mean()
+        # train_df_EC['EC_roll_mean'].update(train_df_EC['EC'])
+        # train_df_EC.drop(['EC'], inplace=True, axis=1)
+        # train_df_EC = train_df_EC.rename(columns={'EC_roll_mean': 'EC'})
 
-        train_df_EC['EC_roll_mean'] = train_df_EC['EC'].rolling(12, center=True, min_periods=1).mean()
-        train_df_EC['EC_roll_mean'].update(train_df_EC['EC'])
-        train_df_EC.drop(['EC'], inplace=True, axis=1)
-        train_df_EC = train_df_EC.rename(columns={'EC_roll_mean': 'EC'})
+        cols = train_df_EC.columns
+        train_df_EC = train_df_EC.set_index('datetime_str').resample("1min").first()
+        train_df_EC.interpolate(inplace=True)
+        train_df_EC = train_df_EC.reset_index().reindex(columns=cols)
 
         prtime("shape of processed train EC dataframe: {}".format(train_df_EC.shape))
 
@@ -217,12 +233,17 @@ def target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, 
             test_end_date + ' ' + EC_end_time)):
         test_df_EC.loc[test_df_EC.index[-1], 'datetime_str'] = pd.to_datetime(test_end_date + ' ' + EC_end_time)
 
-    test_df_EC = test_df_EC.set_index('datetime_str').resample("15min").first().reset_index().reindex(
-        columns=test_df_EC.columns)
-    test_df_EC['EC_roll_mean'] = test_df_EC['EC'].rolling(12, center=True, min_periods=1).mean()
-    test_df_EC['EC_roll_mean'].update(test_df_EC['EC'])
-    test_df_EC.drop(['EC'], inplace=True, axis=1)
-    test_df_EC = test_df_EC.rename(columns={'EC_roll_mean': 'EC'})
+    # test_df_EC = test_df_EC.set_index('datetime_str').resample("15min").first().reset_index().reindex(
+    #     columns=test_df_EC.columns)
+    # test_df_EC['EC_roll_mean'] = test_df_EC['EC'].rolling(12, center=True, min_periods=1).mean()
+    # test_df_EC['EC_roll_mean'].update(test_df_EC['EC'])
+    # test_df_EC.drop(['EC'], inplace=True, axis=1)
+    # test_df_EC = test_df_EC.rename(columns={'EC_roll_mean': 'EC'})
+
+    cols = test_df_EC.columns
+    test_df_EC = test_df_EC.set_index('datetime_str').resample("1min").first()
+    test_df_EC.interpolate(inplace=True)
+    test_df_EC = test_df_EC.reset_index().reindex(columns=cols)
 
     prtime("shape of processed test EC dataframe: {}".format(test_df_EC.shape))
 

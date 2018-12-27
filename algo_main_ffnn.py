@@ -61,10 +61,10 @@ def data_transform(train_data, test_data, transformation_method, run_train, arch
     train_std = pd.DataFrame(train_stats['train_std'], index=[1]).iloc[0]
 
     if transformation_method == "minmaxscale":
-        train_data = (test_data - train_min) / (train_max - train_min)
+        test_data = (test_data - train_min) / (train_max - train_min)
 
     else:
-        train_data = ((test_data - train_mean) / train_std)
+        test_data = ((test_data - train_mean) / train_std)
 
     return train_data, test_data
 
