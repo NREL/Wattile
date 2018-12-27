@@ -22,6 +22,8 @@ def get_arguments():
                         help='True or False, To train the model or not. If False, the test will be run on the existing model')
     parser.add_argument('--num-epochs', default=1000, type=int,
                         help="Number of training, testing epochs")
+    parser.add_argument('--batch-size', default=1000, type=int,
+                        help="train batch size")
     parser.add_argument('--resume',
                         help='True or False, To resume from the previous model. If False, a new model will be instantiated and trained')
     parser.add_argument('--pp',
@@ -71,6 +73,9 @@ def get_arguments():
     # args.num_epochs
     num_epochs = args.num_epochs #--num-epochs
 
+    # args.batch_size
+    batch_size = args.batch_size  # --batch-size
+
     # args.resume
     if args.resume in ["True", "true"]:
         run_resume = True
@@ -108,7 +113,8 @@ def get_arguments():
                "test_start_date": dates['test_start_date'],
                "test_end_date": dates['test_end_date'],
                "transformation_method": transformation_method, "run_train": run_train,
-               "num_epochs": num_epochs, "run_resume": run_resume, "preprocess": preprocess, "arch_type": arch_type,
+               "num_epochs": num_epochs, "batch_size":batch_size,"run_resume": run_resume,
+               "preprocess": preprocess, "arch_type": arch_type,
                "train_exp_num": train_exp_num, "test_exp_num": test_exp_num
                }
 

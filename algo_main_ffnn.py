@@ -68,10 +68,10 @@ def data_transform(train_data, test_data, transformation_method, run_train, arch
 
     return train_data, test_data
 
-def data_iterable(train_data, test_data, run_train):
+def data_iterable(train_data, test_data, run_train, desired_batch_size):
 
-    desired_batch_size = 100
     train_batch_size, test_batch_size = size_the_batches(train_data, test_data, desired_batch_size)
+    test_batch_size = 200
 
     if run_train:
         X_train = train_data.drop('EC', axis=1).values.astype(dtype='float32')
@@ -278,6 +278,7 @@ def main(train_df, test_df, configs):
     run_train = configs['run_train']
     num_epochs = configs['num_epochs']
     run_resume = configs['run_resume']
+    desired_batch_size = configs['batch_size']
 
     train_exp_num = configs['train_exp_num']
     test_exp_num = configs['test_exp_num']
@@ -302,7 +303,7 @@ def main(train_df, test_df, configs):
     train_data, test_data = data_transform(train_data, test_data, transformation_method, run_train, arch_type, train_exp_num)
     prtime("data transformed using {} as transformation method".format(transformation_method))
 
-    train_loader, test_loader, train_batch_size, test_batch_size = data_iterable(train_data, test_data, run_train)
+    train_loader, test_loader, train_batch_size, test_batch_size = data_iterable(train_data, test_data, run_train, desired_batch_size)
     prtime("data converted to iterable dataset")
 
     process(train_loader, test_loader, test_df, num_epochs, run_train, train_batch_size, test_batch_size, run_resume, arch_type, train_exp_num, writer, transformation_method)
