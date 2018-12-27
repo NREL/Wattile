@@ -119,8 +119,10 @@ def data_iterable(train_data, test_data, run_train, window):
 
     return train_loader, test_loader, train_batch_size, test_batch_size
 
-def save_model(model, arch_type, train_exp_num):
-    torch.save(model, 'EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/torch_model')
+def save_model(model,arch_type, train_exp_num, epoch):
+    model_dict = {'epoch_num': epoch, 'torch_model':model}
+    torch.save(model_dict, 'EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/torch_model')
+
     prtime("Model checkpoint saved")
 
 def post_processing(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim, arch_type, train_exp_num, transformation_method):
@@ -177,11 +179,18 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
     if run_train:
 
         if run_resume:
-            model = torch.load(
-                'EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/torch_model')
+            try:
+                torch_model = torch.load('EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/torch_model')
+                model = torch_model['torch_model']
+                resume_num_epoch = torch_model['epoch_num']
+                epoch_range = np.arange(resume_num_epoch + 1, num_epochs + 1)
+            except FileNotFoundError:
+                print("model does not exist in the given folder for resuming the training. Exiting...")
+                exit()
             prtime("model {} loaded, with run_resume=True and run_train=True".format('Model_' + str(train_exp_num)))
         else:
             model = rnn.RNNModel(input_dim, hidden_dim, layer_dim, output_dim)
+            epoch_range = np.arange(num_epochs)
             prtime("A new {} model instantiated, with run_train=True".format("rnn"))
 
         # Check if gpu support is available
@@ -193,14 +202,18 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
         # Instantiate Optimizer Class
         optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
 
-
         prtime("Preparing model to train")
         prtime("starting to train the model for {} epochs!".format(num_epochs))
+
+        if (len(epoch_range) == 0):
+                epoch = resume_num_epoch + 1
+                prtime("the previously saved model was at epoch= {}, which is same as num_epochs. So, not training"
+                        .format(resume_num_epoch))
 
         n_iter = 0
         #y_at_t = torch.FloatTensor()
         train_y_at_t = torch.zeros(train_batch_size, seq_dim, 1)
-        for epoch in range(num_epochs):
+        for epoch in epoch_range:
             model.train()
             for i, (feats, values) in enumerate(train_loader):
 
@@ -235,7 +248,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
 
                 # save the model every few iterations
                 if n_iter %25 == 0:
-                    save_model(model, arch_type, train_exp_num)
+                    save_model(model, arch_type, train_exp_num, epoch)
 
                 if n_iter % 80 == 0:
                     model.eval()
@@ -257,7 +270,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
 
                     print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}'.format(epoch, n_iter, loss.data.item(), mse))
 
-        save_model(model, arch_type, train_exp_num)
+        save_model(model, arch_type, train_exp_num, epoch)
 
         post_processing(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim, arch_type, train_exp_num, transformation_method)
 
@@ -265,7 +278,8 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
 
 
     else:
-        model = torch.load('EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/torch_model')
+        torch_model = torch.load('EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/torch_model')
+        model = torch_model['torch_model']
         prtime("Loaded model from file, given run_train=False\n")
 
         test_y_at_t = torch.zeros(100, seq_dim, 1)

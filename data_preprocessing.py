@@ -122,7 +122,7 @@ def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_tra
             df_temp.drop([input_feat_name[i]], inplace=True, axis=1)
             df_temp = df_temp.rename(columns={input_feat_name[i] + '_roll_mean': input_feat_name[i]})
 
-            prtime("shape of processed train dataframe: {}".format(df_temp.shape))
+            prtime("shape of processed train df: {}".format(df_temp.shape))
 
             train_df_dict["df_" + input_feat_name[i]] = df_temp
             del df_temp
@@ -186,10 +186,12 @@ def target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, 
             train_df_EC.loc[train_df_EC.index[-1], 'datetime_str'] = pd.to_datetime(train_end_date + ' ' + EC_end_time)
 
         train_df_EC = train_df_EC.set_index('datetime_str').resample("15min").first().reset_index().reindex(columns=train_df_EC.columns)
-        cols = train_df_EC.columns.difference(['EC'])
-        train_df_EC[cols] = train_df_EC[cols].ffill()
-        #train_df_EC['EC'] = train_df_EC['EC'].fillna(((train_df_EC['EC'].shift() + train_df_EC['EC'].shift(-1)) / 2))
-        train_df_EC['EC'] = train_df_EC['EC'].fillna(method='ffill')
+
+        train_df_EC['EC_roll_mean'] = train_df_EC['EC'].rolling(12, center=True, min_periods=1).mean()
+        train_df_EC['EC_roll_mean'].update(train_df_EC['EC'])
+        train_df_EC.drop(['EC'], inplace=True, axis=1)
+        train_df_EC = train_df_EC.rename(columns={'EC_roll_mean': 'EC'})
+
         prtime("shape of processed train EC dataframe: {}".format(train_df_EC.shape))
 
     else:
@@ -217,10 +219,10 @@ def target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, 
 
     test_df_EC = test_df_EC.set_index('datetime_str').resample("15min").first().reset_index().reindex(
         columns=test_df_EC.columns)
-    cols = test_df_EC.columns.difference(['EC'])
-    test_df_EC[cols] = test_df_EC[cols].ffill()
-    #test_df_EC['EC'] = test_df_EC['EC'].fillna(((test_df_EC['EC'].shift() + test_df_EC['EC'].shift(-1)) / 2))
-    test_df_EC['EC'] = test_df_EC['EC'].fillna(method='ffill')
+    test_df_EC['EC_roll_mean'] = test_df_EC['EC'].rolling(12, center=True, min_periods=1).mean()
+    test_df_EC['EC_roll_mean'].update(test_df_EC['EC'])
+    test_df_EC.drop(['EC'], inplace=True, axis=1)
+    test_df_EC = test_df_EC.rename(columns={'EC_roll_mean': 'EC'})
 
     prtime("shape of processed test EC dataframe: {}".format(test_df_EC.shape))
 

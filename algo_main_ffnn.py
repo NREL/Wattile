@@ -100,8 +100,9 @@ def data_iterable(train_data, test_data, run_train):
 
     return train_loader, test_loader, train_batch_size, test_batch_size
 
-def save_model(model,arch_type, train_exp_num):
-    torch.save(model, 'EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/torch_model')
+def save_model(model,arch_type, train_exp_num, epoch):
+    model_dict = {'epoch_num': epoch, 'torch_model':model}
+    torch.save(model_dict, 'EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/torch_model')
     prtime("FFNN Model checkpoint saved")
 
 def post_processing(test_df, test_loader, model, input_dim, arch_type, train_exp_num, transformation_method):
@@ -158,13 +159,16 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
 
     if run_train:
 
-        #model = ffnn.FeedforwardNeuralNetModel(input_dim, hidden_dim, output_dim)
-
         if run_resume:
-            model = torch.load('EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/torch_model')
+            torch_model = torch.load('EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/torch_model')
+            model = torch_model['torch_model']
+            resume_num_epoch = torch_model['epoch_num']
+
+            epoch_range = np.arange(resume_num_epoch+1, num_epochs+1)
             prtime("model {} loaded, with run_resume=True and run_train=True".format('Model_' + str(train_exp_num)))
         else:
             model = ffnn.FeedforwardNeuralNetModel(input_dim, hidden_dim, output_dim)
+            epoch_range = np.arange(num_epochs)
             prtime("A new {} model instantiated, with run_train=True".format("ffnn"))
 
         # Check if gpu support is available
@@ -180,9 +184,14 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
         prtime("Preparing model to train")
         prtime("starting to train the model for {} epochs!".format(num_epochs))
 
+        if (len(epoch_range) == 0):
+            epoch = resume_num_epoch + 1
+            prtime("the previously saved model was at epoch= {}, which is same as num_epochs. So, not training"
+                   .format(resume_num_epoch))
         n_iter = 0
-        for epoch in range(num_epochs):
+        for epoch in epoch_range:
             model.train()
+
             for i, (feats, values) in enumerate(train_loader):
 
                 features = Variable(feats.view(-1, input_dim))
@@ -233,7 +242,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
                     print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}'.format(epoch, n_iter, loss.data.item(), mse))
 
         #torch.save(model, 'EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/torch_model')
-        save_model(model, arch_type, train_exp_num)
+        save_model(model, arch_type, train_exp_num, epoch)
 
         post_processing(test_df, test_loader, model, input_dim, arch_type, train_exp_num, transformation_method)
 
@@ -241,7 +250,9 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
 
 
     else:
-        model = torch.load('EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/torch_model')
+        torch_model = torch.load(
+            'EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/torch_model')
+        model = torch_model['torch_model']
         prtime("Loaded model from file, given run_train=False\n")
 
         for i, (feats, values) in enumerate(test_loader):

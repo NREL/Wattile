@@ -17,7 +17,7 @@ def get_arguments():
                         help="end date for the test dataset"+
                         "the input format is \'YYYY-MM-DD\', a string")
     parser.add_argument('transform', default='minmaxscale', type=str,
-                        help="normalize or standardize or minmaxscale data, defaults to minmaxscale")
+                        help="standardize or minmaxscale data, defaults to minmaxscale")
     parser.add_argument('--train',
                         help='True or False, To train the model or not. If False, the test will be run on the existing model')
     parser.add_argument('--num-epochs', default=1000, type=int,
