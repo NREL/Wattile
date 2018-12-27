@@ -119,8 +119,8 @@ def data_iterable(train_data, test_data, run_train, window, desired_batch_size):
 
     return train_loader, test_loader, train_batch_size, test_batch_size
 
-def save_model(model,arch_type, train_exp_num, epoch):
-    model_dict = {'epoch_num': epoch, 'torch_model':model}
+def save_model(model,arch_type, train_exp_num, epoch, n_iter):
+    model_dict = {'epoch_num': epoch, 'n_iter':n_iter,'torch_model':model}
     torch.save(model_dict, 'EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/torch_model')
 
     prtime("Model checkpoint saved")
@@ -183,6 +183,8 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
                 torch_model = torch.load('EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/torch_model')
                 model = torch_model['torch_model']
                 resume_num_epoch = torch_model['epoch_num']
+                resume_n_iter = torch_model['n_iter']
+
                 epoch_range = np.arange(resume_num_epoch + 1, num_epochs + 1)
             except FileNotFoundError:
                 print("model does not exist in the given folder for resuming the training. Exiting...")
@@ -210,7 +212,11 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
                 prtime("the previously saved model was at epoch= {}, which is same as num_epochs. So, not training"
                         .format(resume_num_epoch))
 
-        n_iter = 0
+        if run_resume:
+            n_iter = resume_n_iter
+        else:
+            n_iter = 0
+
         #y_at_t = torch.FloatTensor()
         train_y_at_t = torch.zeros(train_batch_size, seq_dim, 1)
         for epoch in epoch_range:
@@ -248,7 +254,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
 
                 # save the model every few iterations
                 if n_iter %25 == 0:
-                    save_model(model, arch_type, train_exp_num, epoch)
+                    save_model(model, arch_type, train_exp_num, epoch, n_iter)
 
                 if n_iter % 80 == 0:
                     model.eval()
@@ -270,7 +276,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
 
                     print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}'.format(epoch, n_iter, loss.data.item(), mse))
 
-        save_model(model, arch_type, train_exp_num, epoch)
+        save_model(model, arch_type, train_exp_num, epoch, n_iter)
 
         post_processing(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim, arch_type, train_exp_num, transformation_method)
 
