@@ -204,7 +204,7 @@ def target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, 
         # train_df_EC = train_df_EC.rename(columns={'EC_roll_mean': 'EC'})
 
         cols = train_df_EC.columns
-        train_df_EC = train_df_EC.set_index('datetime_str').resample("1min").first()
+        train_df_EC = train_df_EC.set_index('datetime_str').resample("15min").first()
         train_df_EC.interpolate(inplace=True)
         train_df_EC = train_df_EC.reset_index().reindex(columns=cols)
 
@@ -241,7 +241,7 @@ def target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, 
     # test_df_EC = test_df_EC.rename(columns={'EC_roll_mean': 'EC'})
 
     cols = test_df_EC.columns
-    test_df_EC = test_df_EC.set_index('datetime_str').resample("1min").first()
+    test_df_EC = test_df_EC.set_index('datetime_str').resample("15min").first()
     test_df_EC.interpolate(inplace=True)
     test_df_EC = test_df_EC.reset_index().reindex(columns=cols)
 
@@ -453,8 +453,7 @@ def main(configs):
 
     # Define the Directories to save the trained model and results.
     # Create the dir if it does not exist using pathlib
-    MODEL_DIR = 'EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num)
-    RESULTS_DIR = 'EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/TestNum_' + str(
+    RESULTS_DIR = 'EnergyForecasting_Results/' + arch_type + '_M' + str(train_exp_num) + '_T' + str(
         test_exp_num)
 
     pathlib.Path(RESULTS_DIR).mkdir(parents=True, exist_ok=True)

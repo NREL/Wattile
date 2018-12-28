@@ -30,17 +30,17 @@ def seq_pad(a, window):
 
     return b
 
-def size_the_batches(train_data, test_data, desired_batch_size):
+def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_batch_size):
 
     train_bth = factors(train_data.shape[0])
-    train_bt_size = min(train_bth, key=lambda x:abs(x-desired_batch_size))
+    train_bt_size = min(train_bth, key=lambda x:abs(x-tr_desired_batch_size))
 
     test_bth = factors(test_data.shape[0])
-    test_bt_size = min(test_bth, key=lambda x:abs(x-desired_batch_size))
+    test_bt_size = min(test_bth, key=lambda x:abs(x-te_desired_batch_size))
 
     return train_bt_size, test_bt_size
 
-def data_transform(train_data, test_data, transformation_method, run_train, arch_type, train_exp_num):
+def data_transform(train_data, test_data, transformation_method, run_train, arch_type, train_exp_num, test_exp_num):
 
     if run_train:
 
@@ -50,8 +50,9 @@ def data_transform(train_data, test_data, transformation_method, run_train, arch
         train_stats['train_min'] = train_data.min().to_dict()
         train_stats['train_mean'] = train_data.mean(axis=0).to_dict()
         train_stats['train_std'] = train_data.std(axis=0).to_dict()
-        with open('EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/train_stats.json',
-                  'w') as fp:
+        path = 'EnergyForecasting_Results/' + arch_type + '_M' + str(train_exp_num) + '_T' + str(
+            test_exp_num) + '/train_stats.json'
+        with open(path, 'w') as fp:
             json.dump(train_stats, fp)
 
 
@@ -66,7 +67,8 @@ def data_transform(train_data, test_data, transformation_method, run_train, arch
 
 
     # reading back the train stats for normalizing test data w.r.t to train data
-    file_loc = 'EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/train_stats.json'
+        file_loc = 'EnergyForecasting_Results/' + arch_type + '_M' + str(train_exp_num) + '_T' + str(
+            test_exp_num) + '/train_stats.json'
     with open(file_loc, 'r') as f:
         train_stats = json.load(f)
 
@@ -83,10 +85,9 @@ def data_transform(train_data, test_data, transformation_method, run_train, arch
 
     return train_data, test_data
 
-def data_iterable(train_data, test_data, run_train, window, desired_batch_size):
+def data_iterable(train_data, test_data, run_train, window, tr_desired_batch_size, te_desired_batch_size):
 
-    train_batch_size, test_batch_size = size_the_batches(train_data, test_data, desired_batch_size)
-    test_batch_size = 200
+    train_batch_size, test_batch_size = size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_batch_size)
 
     if run_train:
         X_train = train_data.drop('EC', axis=1).values.astype(dtype='float32')
@@ -119,13 +120,13 @@ def data_iterable(train_data, test_data, run_train, window, desired_batch_size):
 
     return train_loader, test_loader, train_batch_size, test_batch_size
 
-def save_model(model,arch_type, train_exp_num, epoch, n_iter):
+def save_model(model,arch_type, train_exp_num, epoch, n_iter, test_exp_num):
     model_dict = {'epoch_num': epoch, 'n_iter':n_iter,'torch_model':model}
-    torch.save(model_dict, 'EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/torch_model')
+    torch.save(model_dict, 'EnergyForecasting_Results/' + arch_type + '_M' + str(train_exp_num) + '_T' + str(test_exp_num) + '/torch_model')
 
     prtime("Model checkpoint saved")
 
-def post_processing(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim, arch_type, train_exp_num, transformation_method):
+def post_processing(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim, arch_type, train_exp_num, transformation_method, test_exp_num):
     model.eval()
     preds = []
     for i, (feats, values) in enumerate(test_loader):
@@ -136,7 +137,7 @@ def post_processing(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim
     semifinal_preds = np.concatenate(preds).ravel()
 
     # loading the training data stats for de-normalization purpose
-    file_loc = 'EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/train_stats.json'
+    file_loc = 'EnergyForecasting_Results/' + arch_type + '_M' + str(train_exp_num) + '_T' + str(test_exp_num) + '/train_stats.json'
     with open(file_loc, 'r') as f:
         train_stats = json.load(f)
 
@@ -157,13 +158,13 @@ def post_processing(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim
     np.savetxt('result_mse.csv', denormalized_mse, delimiter=",")
 
 
-def process(train_loader, test_loader, test_df, num_epochs, run_train, train_batch_size, test_batch_size, run_resume, arch_type, train_exp_num, writer, transformation_method):
+def process(train_loader, test_loader, test_df, num_epochs, run_train, train_batch_size, test_batch_size, run_resume, arch_type, train_exp_num, writer, transformation_method, test_exp_num):
 
     # hyper-parameters
     num_epochs = num_epochs
     learning_rate = 0.0005
     input_dim = 15  # Fixed
-    hidden_dim = 28
+    hidden_dim = 56
     output_dim = 1  # one prediction - energy consumption
     layer_dim = 1
     seq_dim = 5
@@ -180,7 +181,8 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
 
         if run_resume:
             try:
-                torch_model = torch.load('EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/torch_model')
+                torch_model = torch.load('EnergyForecasting_Results/' + arch_type + '_M' + str(train_exp_num) + '_T' + str(
+                        test_exp_num) + '/torch_model')
                 model = torch_model['torch_model']
                 resume_num_epoch = torch_model['epoch_num']
                 resume_n_iter = torch_model['n_iter']
@@ -254,9 +256,9 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
 
                 # save the model every few iterations
                 if n_iter %25 == 0:
-                    save_model(model, arch_type, train_exp_num, epoch, n_iter)
+                    save_model(model, arch_type, train_exp_num, epoch, n_iter, test_exp_num)
 
-                if n_iter % 80 == 0:
+                if n_iter % 100 == 0:
                     model.eval()
                     test_y_at_t = torch.zeros(test_batch_size, seq_dim, 1)
                     for i, (feats, values) in enumerate(test_loader):
@@ -276,15 +278,16 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
 
                     print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}'.format(epoch, n_iter, loss.data.item(), mse))
 
-        save_model(model, arch_type, train_exp_num, epoch, n_iter)
+        save_model(model, arch_type, train_exp_num, epoch, n_iter, test_exp_num)
 
-        post_processing(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim, arch_type, train_exp_num, transformation_method)
+        post_processing(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim, arch_type, train_exp_num, transformation_method, test_exp_num)
 
 
 
 
     else:
-        torch_model = torch.load('EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/torch_model')
+        torch_model = torch.load('EnergyForecasting_Results/' + arch_type + '_M' + str(train_exp_num) + '_T' + str(
+            test_exp_num) + '/torch_model')
         model = torch_model['torch_model']
         prtime("Loaded model from file, given run_train=False\n")
 
@@ -305,7 +308,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
 
 
         prtime('Test_MSE: {}'.format(mse))
-        post_processing(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim, arch_type, train_exp_num, transformation_method)
+        post_processing(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim, arch_type, train_exp_num, transformation_method, test_exp_num)
 
 
 
@@ -314,13 +317,13 @@ def main(train_df, test_df, configs):
     run_train = configs['run_train']
     num_epochs = configs['num_epochs']
     run_resume = configs['run_resume']
-    desired_batch_size = configs['batch_size']
+    tr_desired_batch_size = configs['tr_batch_size']
+    te_desired_batch_size = configs['te_batch_size']
 
     train_exp_num = configs['train_exp_num']
     test_exp_num = configs['test_exp_num']
     arch_type = configs['arch_type']
-    writer_path = 'EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/TestNum_' + str(
-        test_exp_num) + '/logs/'
+    writer_path = 'EnergyForecasting_Results/' + arch_type + '_M' + str(train_exp_num) + '_T' + str(test_exp_num)
     writer = SummaryWriter(writer_path)
     print(writer_path)
 
@@ -335,14 +338,14 @@ def main(train_df, test_df, configs):
     test_data = test_df.copy(deep=True)
     test_data = test_data.drop('datetime_str', axis=1)
 
-    train_data, test_data = data_transform(train_data, test_data, transformation_method, run_train, arch_type, train_exp_num)
+    train_data, test_data = data_transform(train_data, test_data, transformation_method, run_train, arch_type, train_exp_num, test_exp_num)
     prtime("data transformed using {} as transformation method".format(transformation_method))
 
     window = 5    # window is synonomus to the "sequence length" dimension
-    train_loader, test_loader, train_batch_size, test_batch_size = data_iterable(train_data, test_data, run_train, window, desired_batch_size)
+    train_loader, test_loader, train_batch_size, test_batch_size = data_iterable(train_data, test_data, run_train, window, tr_desired_batch_size, te_desired_batch_size)
     prtime("data converted to iterable dataset")
 
-    process(train_loader, test_loader, test_df, num_epochs, run_train, train_batch_size, test_batch_size, run_resume,arch_type, train_exp_num, writer, transformation_method)
+    process(train_loader, test_loader, test_df, num_epochs, run_train, train_batch_size, test_batch_size, run_resume,arch_type, train_exp_num, writer, transformation_method, test_exp_num)
 
 
 
