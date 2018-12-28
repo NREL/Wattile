@@ -84,7 +84,7 @@ def data_iterable(train_data, test_data, run_train, tr_desired_batch_size, te_de
         train_target_tensor = torch.from_numpy(y_train).type(torch.FloatTensor)
 
         train = data_utils.TensorDataset(train_feat_tensor, train_target_tensor)
-        train_loader = data_utils.DataLoader(train, batch_size=train_batch_size, shuffle=False)
+        train_loader = data_utils.DataLoader(train, batch_size=train_batch_size, shuffle=True)
         print("data train made iterable")
 
     else:
@@ -150,7 +150,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
     num_epochs = num_epochs
     learning_rate = 0.0005
     input_dim = 14  # Fixed
-    hidden_dim = 56
+    hidden_dim = 28
     output_dim = 1  # one prediction - energy consumption
     layer_dim = 1
 
