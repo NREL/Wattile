@@ -85,7 +85,7 @@ def data_iterable(train_data, test_data, run_train, tr_desired_batch_size, te_de
         train_target_tensor = torch.from_numpy(y_train).type(torch.FloatTensor)
 
         train = data_utils.TensorDataset(train_feat_tensor, train_target_tensor)
-        train_loader = data_utils.DataLoader(train, batch_size=train_batch_size, shuffle=False)
+        train_loader = data_utils.DataLoader(train, batch_size=train_batch_size, shuffle=True)
         print("data train made iterable")
 
     else:
@@ -175,7 +175,6 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     test_iter = []
     test_rmse = []
 
-
     if run_train:
 
         if run_resume:
@@ -199,8 +198,6 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
         # Instantiate Optimizer Class
         optimizer = torch.optim.Adam(model.parameters(),lr=learning_rate,weight_decay=weight_decay)
-
-
 
         prtime("Preparing model to train")
         prtime("starting to train the model for {} epochs!".format(num_epochs))
@@ -230,6 +227,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
                 # Calculate Loss: softmax --> cross entropy loss
                 loss = criterion(outputs.squeeze(), target)
+                #my_loss = np.mean((outputs.data.numpy().squeeze() - target.data.numpy())**2)
 
                 train_loss.append(loss.data.item())
                 train_iter.append(n_iter)
@@ -253,10 +251,9 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                     predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, input_dim, transformation_method)
                     test_iter.append(n_iter)
                     test_loss.append(mse)
-                    writer.add_scalar("/test_loss", mse, n_iter)
-
-                    test_iter.append(n_iter)
                     test_rmse.append(denorm_rmse)
+
+                    writer.add_scalar("/test_loss", mse, n_iter)
                     writer.add_scalar("/denorm_test_rmse", denorm_rmse, n_iter)
 
                     print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}'.format(epoch, n_iter, loss.data.item(), mse))
@@ -268,8 +265,6 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
         predictions.to_csv(file_prefix + '/predictions.csv', index=False)
         np.savetxt(file_prefix + '/final_rmse.csv', denorm_rmse, delimiter=",")
-
-
 
 
     else:
