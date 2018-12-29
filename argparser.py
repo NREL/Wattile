@@ -36,7 +36,10 @@ def get_arguments():
                         help='train experiment number for the given architecture type')
     parser.add_argument('--te-exp-num',
                         help='test experiment number for the given architecture type')
-
+    parser.add_argument('--hidden-nodes',
+                        help='number of hidden nodes in each hidden layer')
+    parser.add_argument('--weight-decay',
+                        help='lambda for regularization')
 
     args, _ = parser.parse_known_args()
 
@@ -81,6 +84,12 @@ def get_arguments():
     # args.te_batch_size
     te_batch_size = args.te_batch_size  # --te-batch-size
 
+    # args.hidden_nodes
+    hidden_nodes = args.hidden_nodes
+
+    # args.weight_decay
+    weight_decay = args.weight_decay
+
     # args.resume
     if args.resume in ["True", "true"]:
         run_resume = True
@@ -120,7 +129,8 @@ def get_arguments():
                "transformation_method": transformation_method, "run_train": run_train,
                "num_epochs": num_epochs, "tr_batch_size":tr_batch_size,"te_batch_size":te_batch_size,"run_resume": run_resume,
                "preprocess": preprocess, "arch_type": arch_type,
-               "train_exp_num": train_exp_num, "test_exp_num": test_exp_num
+               "train_exp_num": train_exp_num, "test_exp_num": test_exp_num,
+               "hidden_nodes": hidden_nodes, 'weight_decay': weight_decay
                }
 
     return configs

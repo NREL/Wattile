@@ -180,10 +180,10 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
     configs['learning_rate'] = learning_rate
     configs['input_dim'] = input_dim
-    configs['hidden_dim'] = hidden_dim
-    configs['output_dim'] = output_dim
-    configs['layer_dim'] = layer_dim
-    configs['weight_decay'] = weight_decay
+    hidden_dim = int(configs['hidden_nodes'])
+    output_dim = 1  # one prediction - energy consumption
+    layer_dim = 1
+    weight_decay = float(configs['weight_decay'])
 
     path = file_prefix + '/configs.json'
     with open(path, 'w') as fp:

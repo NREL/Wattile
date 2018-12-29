@@ -152,10 +152,10 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     num_epochs = num_epochs
     learning_rate = 0.0005
     input_dim = 14  # Fixed
-    hidden_dim = 28
+    hidden_dim = int(configs['hidden_nodes'])
     output_dim = 1  # one prediction - energy consumption
     layer_dim = 1
-    weight_decay = 1e-2
+    weight_decay = float(configs['weight_decay'])
 
     configs['learning_rate'] = learning_rate
     configs['input_dim'] = input_dim
