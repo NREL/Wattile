@@ -253,8 +253,8 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                     test_loss.append(mse)
                     test_rmse.append(denorm_rmse)
 
-                    writer.add_scalar("/test_loss", mse, n_iter)
-                    writer.add_scalar("/denorm_test_rmse", denorm_rmse, n_iter)
+                    writer.add_scalar("test_loss", mse, n_iter)
+                    writer.add_scalar("denorm_test_rmse", denorm_rmse, n_iter)
 
                     print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}'.format(epoch, n_iter, loss.data.item(), mse))
 

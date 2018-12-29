@@ -282,12 +282,9 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                     predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method)
                     test_iter.append(n_iter)
                     test_loss.append(mse)
-                    writer.add_scalar("/test_loss", mse, n_iter)
-
-                    test_iter.append(n_iter)
                     test_rmse.append(denorm_rmse)
-                    writer.add_scalar("/denorm_test_rmse", denorm_rmse, n_iter)
-
+                    writer.add_scalar("test_loss", mse, n_iter)
+                    writer.add_scalar("denorm_test_rmse", denorm_rmse, n_iter)
                     print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}'.format(epoch, n_iter, loss.data.item(), mse))
 
         save_model(model, epoch, n_iter)
