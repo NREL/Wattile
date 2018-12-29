@@ -1,8 +1,7 @@
 import numpy as np
 import pandas as pd
 import json
-from sklearn import preprocessing
-from util import prtime, factors, tile
+from util import prtime, factors
 import ffnn
 
 import torch
@@ -12,6 +11,7 @@ import torch.nn as nn
 from torch.autograd import Variable
 from tensorboardX import SummaryWriter
 
+file_prefix = "default/"
 
 def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_batch_size):
 
@@ -23,7 +23,7 @@ def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_ba
 
     return train_bt_size, test_bt_size
 
-def data_transform(train_data, test_data, transformation_method, run_train, arch_type, train_exp_num,test_exp_num):
+def data_transform(train_data, test_data, transformation_method, run_train):
 
     if run_train:
 
@@ -33,7 +33,7 @@ def data_transform(train_data, test_data, transformation_method, run_train, arch
         train_stats['train_mean'] = train_data.mean(axis=0).to_dict()
         train_stats['train_std'] = train_data.std(axis=0).to_dict()
 
-        path = 'EnergyForecasting_Results/' + arch_type + '_M' + str(train_exp_num) + '_T' + str(test_exp_num) + '/train_stats.json'
+        path = file_prefix+ '/train_stats.json'
         with open(path, 'w') as fp:
             json.dump(train_stats, fp)
 
@@ -52,7 +52,7 @@ def data_transform(train_data, test_data, transformation_method, run_train, arch
 
 
     # reading back the train stats for normalizing test data w.r.t to train data
-    file_loc = 'EnergyForecasting_Results/' + arch_type + '_M' + str(train_exp_num) + '_T' + str(test_exp_num) + '/train_stats.json'
+    file_loc = file_prefix + '/train_stats.json'
     with open(file_loc, 'r') as f:
         train_stats = json.load(f)
 
@@ -103,25 +103,27 @@ def data_iterable(train_data, test_data, run_train, tr_desired_batch_size, te_de
 
     return train_loader, test_loader, train_batch_size, test_batch_size
 
-def save_model(model,arch_type, train_exp_num, epoch, n_iter, test_exp_num):
+def save_model(model, epoch, n_iter):
     model_dict = {'epoch_num': epoch, 'n_iter':n_iter, 'torch_model':model}
-    torch.save(model_dict, 'EnergyForecasting_Results/' + arch_type + '_M' + str(train_exp_num) + '_T' + str(
-        test_exp_num) + '/torch_model')
+    torch.save(model_dict, file_prefix + '/torch_model')
     prtime("FFNN Model checkpoint saved")
 
-def post_processing(test_df, test_loader, model, input_dim, arch_type, train_exp_num, transformation_method, test_exp_num):
+def test_processing(test_df, test_loader, model, input_dim, transformation_method):
     model.eval()
     preds = []
+    targets = []
     for i, (feats, values) in enumerate(test_loader):
         features = Variable(feats.view(-1, input_dim))
-        output = model(features)
-        preds.append(output.data.numpy().squeeze())
-    # concatenating the preds done in
+        outputs = model(features)
+        preds.append(outputs.data.numpy().squeeze())
+        targets.append(values.data.numpy())
+
+    # concatenating the preds and targets for the whole epoch (iterating over test_loader once)
     semifinal_preds = np.concatenate(preds).ravel()
+    semifinal_targs = np.concatenate(targets).ravel()
+    mse = np.mean((semifinal_targs - semifinal_preds) ** 2) / len(semifinal_targs)
 
     # loading the training data stats for de-normalization purpose
-    file_prefix = 'EnergyForecasting_Results/' + arch_type + '_M' + str(train_exp_num) + '_T' + str(
-        test_exp_num)
     file_loc = file_prefix + '/train_stats.json'
     with open(file_loc, 'r') as f:
         train_stats = json.load(f)
@@ -137,15 +139,13 @@ def post_processing(test_df, test_loader, model, input_dim, arch_type, train_exp
     else:
         final_preds = ((semifinal_preds * train_std['EC']) + train_mean['EC'])
 
-
-
     predictions = pd.DataFrame(final_preds)
     denormalized_rmse = np.array(np.sqrt(np.mean((predictions.values.squeeze() - test_df.EC.values) ** 2)), ndmin=1)
-    predictions.to_csv(file_prefix + 'predictions.csv')
-    np.savetxt(file_prefix + 'final_rmse.csv', denormalized_rmse, delimiter=",")
+
+    return predictions, denormalized_rmse, mse
 
 
-def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, arch_type, train_exp_num, writer, transformation_method, test_exp_num, configs):
+def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method, configs):
 
     # hyper-parameters
     num_epochs = num_epochs
@@ -163,8 +163,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     configs['layer_dim']= layer_dim
     configs['weight_decay'] = weight_decay
 
-    path = 'EnergyForecasting_Results/' + arch_type + '_M' + str(train_exp_num) + '_T' + str(
-        test_exp_num) + '/configs.json'
+    path = file_prefix + '/configs.json'
     with open(path, 'w') as fp:
         json.dump(configs, fp)
 
@@ -173,18 +172,19 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     train_iter = []
     test_loss = []
     test_iter = []
+    test_rmse = []
 
 
     if run_train:
 
         if run_resume:
-            torch_model = torch.load('EnergyForecasting_Results/' + arch_type + '_M' + str(train_exp_num) + '_T' + str(test_exp_num) + '/torch_model')
+            torch_model = torch.load(file_prefix + '/torch_model')
             model = torch_model['torch_model']
             resume_num_epoch = torch_model['epoch_num']
             resume_n_iter = torch_model['n_iter']
 
             epoch_range = np.arange(resume_num_epoch+1, num_epochs+1)
-            prtime("model {} loaded, with run_resume=True and run_train=True".format('Model_' + str(train_exp_num)))
+            prtime("rune_resume=True, model loaded from: {}".format(file_prefix))
         else:
             model = ffnn.FeedforwardNeuralNetModel(input_dim, hidden_dim, output_dim)
             epoch_range = np.arange(num_epochs)
@@ -246,53 +246,47 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
                 # save the model every few iterations
                 if n_iter %25 == 0:
-                    save_model(model, arch_type, train_exp_num, epoch, n_iter, test_exp_num)
+                    save_model(model, epoch, n_iter)
 
-                if n_iter % 150 == 0:
-                    model.eval()
-                    for i, (feats, values) in enumerate(test_loader):
-                        features = Variable(feats.view(-1, input_dim))
-                        target = Variable(values)
+                if n_iter % 100 == 0:
+                    predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, input_dim, transformation_method)
+                    test_iter.append(n_iter)
+                    test_loss.append(mse)
+                    writer.add_scalar("/test_loss", mse, n_iter)
 
-                        outputs = model(features)
-
-                        mse = np.sqrt(
-                            np.mean((target.data.numpy() - outputs.data.numpy().squeeze()) ** 2))
-
-                        test_iter.append(n_iter)
-                        test_loss.append(mse)
-                        writer.add_scalar("/test_loss", mse, n_iter)
+                    test_iter.append(n_iter)
+                    test_rmse.append(denorm_rmse)
+                    writer.add_scalar("/denorm_test_rmse", denorm_rmse, n_iter)
 
                     print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}'.format(epoch, n_iter, loss.data.item(), mse))
 
-        #torch.save(model, 'EnergyForecasting_Results/' + arch_type + '/Model_' + str(train_exp_num) + '/torch_model')
-        save_model(model, arch_type, train_exp_num, epoch, n_iter, test_exp_num)
 
-        post_processing(test_df, test_loader, model, input_dim, arch_type, train_exp_num, transformation_method, test_exp_num)
+        save_model(model, epoch, n_iter)
+
+        predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, input_dim, transformation_method)
+
+        predictions.to_csv(file_prefix + '/predictions.csv', index=False)
+        np.savetxt(file_prefix + '/final_rmse.csv', denorm_rmse, delimiter=",")
 
 
 
 
     else:
-        torch_model = torch.load('EnergyForecasting_Results/' + arch_type + '_M' + str(train_exp_num) + '_T' + str(test_exp_num) + '/torch_model')
+        torch_model = torch.load(file_prefix + '/torch_model')
         model = torch_model['torch_model']
         prtime("Loaded model from file, given run_train=False\n")
 
-        for i, (feats, values) in enumerate(test_loader):
-            features = Variable(feats.view(-1,input_dim))
-            target = Variable(values)
 
-            outputs = model(features)
-
-            mse = np.sqrt(np.mean((target.data.numpy() - outputs.data.numpy().squeeze()) ** 2) / len(target))
-
-            test_loss.append(mse)
-
-            writer.add_scalar("/test_loss", mse)
-
+        predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, input_dim, transformation_method)
+        test_loss.append(mse)
+        test_rmse.append(denorm_rmse)
+        writer.add_scalar("/test_loss", mse)
+        writer.add_scalar("/denorm_test_rmse", denorm_rmse)
 
         prtime('Test_MSE: {}'.format(mse))
-        post_processing(test_df, test_loader, model, input_dim, arch_type, train_exp_num, transformation_method, test_exp_num)
+
+        predictions.to_csv(file_prefix + '/predictions.csv', index=False)
+        np.savetxt(file_prefix + '/final_rmse.csv', denorm_rmse, delimiter=",")
 
 
 
@@ -307,10 +301,13 @@ def main(train_df, test_df, configs):
     train_exp_num = configs['train_exp_num']
     test_exp_num = configs['test_exp_num']
     arch_type = configs['arch_type']
-    writer_path = 'EnergyForecasting_Results/' + arch_type + '_M' + str(train_exp_num) + '_T' + str(
-        test_exp_num)
+    writer_path = file_prefix
     writer = SummaryWriter(writer_path)
     print(writer_path)
+
+    global file_prefix
+    file_prefix = 'EnergyForecasting_Results/' + arch_type + '_M' + str(train_exp_num) + '_T' + str(
+        test_exp_num)
 
 
     # dropping the datetime_str column. Causes problem with normalization
@@ -324,10 +321,10 @@ def main(train_df, test_df, configs):
     test_data = test_df.copy(deep=True)
     test_data = test_data.drop('datetime_str', axis=1)
 
-    train_data, test_data = data_transform(train_data, test_data, transformation_method, run_train, arch_type, train_exp_num, test_exp_num)
+    train_data, test_data = data_transform(train_data, test_data, transformation_method, run_train)
     prtime("data transformed using {} as transformation method".format(transformation_method))
 
     train_loader, test_loader, train_batch_size, test_batch_size = data_iterable(train_data, test_data, run_train, tr_desired_batch_size, te_desired_batch_size)
     prtime("data converted to iterable dataset")
 
-    process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, arch_type, train_exp_num, writer, transformation_method, test_exp_num, configs)
+    process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method, configs)
