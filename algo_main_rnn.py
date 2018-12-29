@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 import json
@@ -327,9 +328,12 @@ def main(train_df, test_df, configs):
     test_exp_num = configs['test_exp_num']
     arch_type = configs['arch_type']
 
+    results_dir = "EnergyForecasting_Results"
+    if not os.path.exists(results_dir):
+        os.mkdir(results_dir)
     global file_prefix
-    file_prefix = 'EnergyForecasting_Results/' + arch_type + '_M' + str(train_exp_num) + '_T' + str(
-        test_exp_num)
+    file_prefix = os.path.join(results_dir, arch_type + '_M' + str(train_exp_num) + '_T' + str(
+        test_exp_num))
 
     writer_path = file_prefix
     writer = SummaryWriter(writer_path)
@@ -356,23 +360,3 @@ def main(train_df, test_df, configs):
     prtime("data converted to iterable dataset")
 
     process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume,writer, transformation_method, configs, train_batch_size, test_batch_size)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

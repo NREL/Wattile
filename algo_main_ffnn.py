@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 import json
@@ -289,7 +290,6 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         np.savetxt(file_prefix + '/final_rmse.csv', denorm_rmse, delimiter=",")
 
 
-
 def main(train_df, test_df, configs):
     transformation_method = configs['transformation_method']
     run_train = configs['run_train']
@@ -301,14 +301,17 @@ def main(train_df, test_df, configs):
     train_exp_num = configs['train_exp_num']
     test_exp_num = configs['test_exp_num']
     arch_type = configs['arch_type']
+
+    results_dir = "EnergyForecasting_Results"
+    if not os.path.exists(results_dir):
+        os.mkdir(results_dir)
+    global file_prefix
+    file_prefix = os.path.join(results_dir, arch_type + '_M' + str(train_exp_num) + '_T' + str(
+        test_exp_num))
+
     writer_path = file_prefix
     writer = SummaryWriter(writer_path)
     print(writer_path)
-
-    global file_prefix
-    file_prefix = 'EnergyForecasting_Results/' + arch_type + '_M' + str(train_exp_num) + '_T' + str(
-        test_exp_num)
-
 
     # dropping the datetime_str column. Causes problem with normalization
     if run_train:
