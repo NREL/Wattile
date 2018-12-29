@@ -166,7 +166,7 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     return predictions, denormalized_rmse, mse
 
 
-def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method, configs, train_batch_size, test_batch_size):
+def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method, configs, train_batch_size, test_batch_size, seq_dim):
 
     # hyper-parameters
     num_epochs = num_epochs
@@ -355,4 +355,4 @@ def main(train_df, test_df, configs):
     train_loader, test_loader, train_batch_size, test_batch_size = data_iterable(train_data, test_data, run_train, window, tr_desired_batch_size, te_desired_batch_size)
     prtime("data converted to iterable dataset")
 
-    process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume,writer, transformation_method, configs, train_batch_size, test_batch_size)
+    process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume,writer, transformation_method, configs, train_batch_size, test_batch_size, seq_dim=window)
