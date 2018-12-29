@@ -120,8 +120,9 @@ def post_processing(test_df, test_loader, model, input_dim, arch_type, train_exp
     semifinal_preds = np.concatenate(preds).ravel()
 
     # loading the training data stats for de-normalization purpose
-    file_loc = 'EnergyForecasting_Results/' + arch_type + '_M' + str(train_exp_num) + '_T' + str(
-        test_exp_num) + '/train_stats.json'
+    file_prefix = 'EnergyForecasting_Results/' + arch_type + '_M' + str(train_exp_num) + '_T' + str(
+        test_exp_num)
+    file_loc = file_prefix + '/train_stats.json'
     with open(file_loc, 'r') as f:
         train_stats = json.load(f)
 
@@ -140,8 +141,8 @@ def post_processing(test_df, test_loader, model, input_dim, arch_type, train_exp
 
     predictions = pd.DataFrame(final_preds)
     denormalized_mse = np.array(np.mean((predictions.values.squeeze() - test_df.EC.values) ** 2), ndmin=1)
-    predictions.to_csv('predictions.csv')
-    np.savetxt('result_mse.csv', denormalized_mse, delimiter=",")
+    predictions.to_csv(file_prefix + 'predictions.csv')
+    np.savetxt(file_prefix + 'result_mse.csv', denormalized_mse, delimiter=",")
 
 
 def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, arch_type, train_exp_num, writer, transformation_method, test_exp_num, configs):

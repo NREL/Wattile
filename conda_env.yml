@@ -15,7 +15,6 @@ dependencies:
   - attrs=18.2.0=py35h28b3542_0
   - automat=0.7.0=py35_0
   - backcall=0.1.0=py35_0
-  - basemap=1.0.7=np113py35_0
   - blas=1.0=mkl
   - bleach=2.1.4=py35_0
   - ca-certificates=2018.03.07=0
