@@ -124,7 +124,7 @@ def save_model(model, epoch, n_iter):
     model_dict = {'epoch_num': epoch, 'n_iter':n_iter,'torch_model':model}
     torch.save(model_dict, file_prefix + '/torch_model')
 
-    prtime("Model checkpoint saved")
+    prtime("RNN model checkpoint saved")
 
 def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method):
     #test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method
