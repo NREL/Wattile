@@ -171,19 +171,18 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     # hyper-parameters
     num_epochs = num_epochs
     learning_rate = 0.0005
-    input_dim = 15  # Fixed
-    hidden_dim = 56
-    output_dim = 1  # one prediction - energy consumption
-    layer_dim = 1
-    seq_dim = 5
-    weight_decay = 1e-2
-
-    configs['learning_rate'] = learning_rate
-    configs['input_dim'] = input_dim
+    input_dim = 14  # Fixed
     hidden_dim = int(configs['hidden_nodes'])
     output_dim = 1  # one prediction - energy consumption
     layer_dim = 1
     weight_decay = float(configs['weight_decay'])
+
+    configs['learning_rate'] = learning_rate
+    configs['input_dim'] = input_dim
+    configs['hidden_dim'] = hidden_dim
+    configs['output_dim'] = output_dim
+    configs['layer_dim'] = layer_dim
+    configs['weight_decay'] = weight_decay
 
     path = file_prefix + '/configs.json'
     with open(path, 'w') as fp:
