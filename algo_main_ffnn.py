@@ -144,7 +144,7 @@ def post_processing(test_df, test_loader, model, input_dim, arch_type, train_exp
     np.savetxt('result_mse.csv', denormalized_mse, delimiter=",")
 
 
-def process(train_loader, test_loader, test_df, num_epochs, run_train, train_batch_size, test_batch_size, run_resume, arch_type, train_exp_num, writer, transformation_method, test_exp_num):
+def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, arch_type, train_exp_num, writer, transformation_method, test_exp_num, configs):
 
     # hyper-parameters
     num_epochs = num_epochs
@@ -153,7 +153,19 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
     hidden_dim = 56
     output_dim = 1  # one prediction - energy consumption
     layer_dim = 1
+    weight_decay = 1e-2
 
+    configs['learning_rate'] = learning_rate
+    configs['input_dim'] = input_dim
+    configs['hidden_dim'] = hidden_dim
+    configs['output_dim'] = output_dim
+    configs['layer_dim']= layer_dim
+    configs['weight_decay'] = weight_decay
+
+    path = 'EnergyForecasting_Results/' + arch_type + '_M' + str(train_exp_num) + '_T' + str(
+        test_exp_num) + '/configs.json'
+    with open(path, 'w') as fp:
+        json.dump(configs, fp)
 
     # initializing lists to store losses over epochs:
     train_loss = []
@@ -184,7 +196,8 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
         criterion = nn.MSELoss()
 
         # Instantiate Optimizer Class
-        optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+        optimizer = torch.optim.Adam(model.parameters(),lr=learning_rate,weight_decay=weight_decay)
+
 
 
         prtime("Preparing model to train")
@@ -316,4 +329,4 @@ def main(train_df, test_df, configs):
     train_loader, test_loader, train_batch_size, test_batch_size = data_iterable(train_data, test_data, run_train, tr_desired_batch_size, te_desired_batch_size)
     prtime("data converted to iterable dataset")
 
-    process(train_loader, test_loader, test_df, num_epochs, run_train, train_batch_size, test_batch_size, run_resume, arch_type, train_exp_num, writer, transformation_method, test_exp_num)
+    process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, arch_type, train_exp_num, writer, transformation_method, test_exp_num, configs)

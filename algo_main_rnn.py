@@ -158,7 +158,7 @@ def post_processing(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim
     np.savetxt('result_mse.csv', denormalized_mse, delimiter=",")
 
 
-def process(train_loader, test_loader, test_df, num_epochs, run_train, train_batch_size, test_batch_size, run_resume, arch_type, train_exp_num, writer, transformation_method, test_exp_num):
+def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, arch_type, train_exp_num, writer, transformation_method, test_exp_num, configs):
 
     # hyper-parameters
     num_epochs = num_epochs
@@ -168,6 +168,19 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
     output_dim = 1  # one prediction - energy consumption
     layer_dim = 1
     seq_dim = 5
+    weight_decay = 1e-2
+
+    configs['learning_rate'] = learning_rate
+    configs['input_dim'] = input_dim
+    configs['hidden_dim'] = hidden_dim
+    configs['output_dim'] = output_dim
+    configs['layer_dim'] = layer_dim
+    configs['weight_decay'] = weight_decay
+
+    path = 'EnergyForecasting_Results/' + arch_type + '_M' + str(train_exp_num) + '_T' + str(
+        test_exp_num) + '/configs.json'
+    with open(path, 'w') as fp:
+        json.dump(configs, fp)
 
 
     # initializing lists to store losses over epochs:
@@ -204,7 +217,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, train_bat
         criterion = nn.MSELoss()
 
         # Instantiate Optimizer Class
-        optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
         prtime("Preparing model to train")
         prtime("starting to train the model for {} epochs!".format(num_epochs))
@@ -345,7 +358,7 @@ def main(train_df, test_df, configs):
     train_loader, test_loader, train_batch_size, test_batch_size = data_iterable(train_data, test_data, run_train, window, tr_desired_batch_size, te_desired_batch_size)
     prtime("data converted to iterable dataset")
 
-    process(train_loader, test_loader, test_df, num_epochs, run_train, train_batch_size, test_batch_size, run_resume,arch_type, train_exp_num, writer, transformation_method, test_exp_num)
+    process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume,arch_type, train_exp_num, writer, transformation_method, test_exp_num, configs)
 
 
 
