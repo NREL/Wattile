@@ -122,7 +122,7 @@ def test_processing(test_df, test_loader, model, input_dim, transformation_metho
     # concatenating the preds and targets for the whole epoch (iterating over test_loader once)
     semifinal_preds = np.concatenate(preds).ravel()
     semifinal_targs = np.concatenate(targets).ravel()
-    mse = np.mean((semifinal_targs - semifinal_preds) ** 2) / len(semifinal_targs)
+    mse = np.mean((semifinal_targs - semifinal_preds) ** 2) 
 
     # loading the training data stats for de-normalization purpose
     file_loc = file_prefix + '/train_stats.json'
