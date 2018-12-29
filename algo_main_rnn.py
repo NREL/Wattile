@@ -137,7 +137,9 @@ def post_processing(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim
     semifinal_preds = np.concatenate(preds).ravel()
 
     # loading the training data stats for de-normalization purpose
-    file_loc = 'EnergyForecasting_Results/' + arch_type + '_M' + str(train_exp_num) + '_T' + str(test_exp_num) + '/train_stats.json'
+    file_prefix = 'EnergyForecasting_Results/' + arch_type + '_M' + str(train_exp_num) + '_T' + str(
+        test_exp_num)
+    file_loc = file_prefix + '/train_stats.json'
     with open(file_loc, 'r') as f:
         train_stats = json.load(f)
 
@@ -147,15 +149,15 @@ def post_processing(test_df, test_loader, test_y_at_t, model, seq_dim, input_dim
     train_std = pd.DataFrame(train_stats['train_std'], index=[1]).iloc[0]
 
     if transformation_method == "minmaxscale":
-        final_preds = ((train_max['EC'] - train_min['EC']) * semifinal_preds)/ (train_max['EC'] - train_min['EC'])
+        final_preds = ((train_max['EC'] - train_min['EC']) * semifinal_preds) + train_min['EC']
 
     else:
         final_preds = ((semifinal_preds* train_std['EC'])+ train_mean['EC'])
 
     predictions = pd.DataFrame(final_preds)
-    denormalized_mse = np.array(np.mean((predictions.values.squeeze() - test_df.EC.values) ** 2), ndmin=1)
-    predictions.to_csv('predictions.csv')
-    np.savetxt('result_mse.csv', denormalized_mse, delimiter=",")
+    denormalized_rmse = np.array(np.sqrt(np.mean((predictions.values.squeeze() - test_df.EC.values) ** 2)), ndmin=1)
+    predictions.to_csv(file_prefix + 'predictions.csv')
+    np.savetxt(file_prefix + 'final_rmse.csv', denormalized_rmse, delimiter=",")
 
 
 def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, arch_type, train_exp_num, writer, transformation_method, test_exp_num, configs):

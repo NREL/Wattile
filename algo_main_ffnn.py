@@ -132,7 +132,7 @@ def post_processing(test_df, test_loader, model, input_dim, arch_type, train_exp
     train_std = pd.DataFrame(train_stats['train_std'], index=[1]).iloc[0]
 
     if transformation_method == "minmaxscale":
-        final_preds = ((train_max['EC'] - train_min['EC']) * semifinal_preds) / (train_max['EC'] - train_min['EC'])
+        final_preds = ((train_max['EC'] - train_min['EC']) * semifinal_preds) + train_min['EC']
 
     else:
         final_preds = ((semifinal_preds * train_std['EC']) + train_mean['EC'])
@@ -140,9 +140,9 @@ def post_processing(test_df, test_loader, model, input_dim, arch_type, train_exp
 
 
     predictions = pd.DataFrame(final_preds)
-    denormalized_mse = np.array(np.mean((predictions.values.squeeze() - test_df.EC.values) ** 2), ndmin=1)
+    denormalized_rmse = np.array(np.sqrt(np.mean((predictions.values.squeeze() - test_df.EC.values) ** 2)), ndmin=1)
     predictions.to_csv(file_prefix + 'predictions.csv')
-    np.savetxt(file_prefix + 'result_mse.csv', denormalized_mse, delimiter=",")
+    np.savetxt(file_prefix + 'final_rmse.csv', denormalized_rmse, delimiter=",")
 
 
 def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, arch_type, train_exp_num, writer, transformation_method, test_exp_num, configs):
