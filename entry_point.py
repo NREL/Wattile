@@ -33,4 +33,7 @@ elif configs['arch_type'] == 'LSTM':
 elif configs['arch_type'] == 'RNN':
     algo_main_gru.main(train_df, test_df, configs)
 
-print('done!')
+train_exp_num = configs['train_exp_num']
+test_exp_num = configs['test_exp_num']
+arch_type = configs['arch_type']
+print('Run with arch: {}, train_num= {} and test_num= {} is done!'.format(arch_type, train_exp_num, test_exp_num))
