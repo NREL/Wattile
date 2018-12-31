@@ -12,8 +12,8 @@ from util import prtime
 
 start_time = '00:01:00'
 end_time = '23:59:00'
-EC_start_time = '00:00:00'
-EC_end_time = '23:45:00'
+tar_start_time = '00:00:00'
+tar_end_time = '23:45:00'
 
 def fetch_data(root_url, reference_id, train_date_range, test_date_range, feat_name, run_train):
     train_response_dict = {}
@@ -95,8 +95,7 @@ def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_tra
     if run_train:
 
         for i in range(len(input_feat_name)):
-            train_df_dict["df_" + input_feat_name[i]] = pd.DataFrame({'datetime_str': train_parsed_dict[input_feat_name[i] + '_dt_parsed'][0],
-                 input_feat_name[i]: train_parsed_dict[input_feat_name[i]][1]},columns=['datetime_str', input_feat_name[i]])
+            train_df_dict["df_" + input_feat_name[i]] = pd.DataFrame({'datetime_str': train_parsed_dict[input_feat_name[i] + '_dt_parsed'][0], input_feat_name[i]: train_parsed_dict[input_feat_name[i]][1]},columns=['datetime_str', input_feat_name[i]])
 
             df_temp = train_df_dict["df_" + input_feat_name[i]]
             df_temp.name = "df_" + input_feat_name[i]
@@ -177,79 +176,93 @@ def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_tra
     return train_df_dict, test_df_dict
 
 
-def target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, train_end_date, test_start_date, test_end_date):
+def target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, train_end_date, test_start_date,
+              test_end_date, target_feat_name):
     # processing Energy Consumption values separately
+    train_df_target = {}
+    test_df_target = {}
     if run_train:
-        train_df_EC = pd.DataFrame({'datetime_str': train_parsed_dict['EC_dt_parsed'][0], 'EC': train_parsed_dict['EC'][1]},
-                         columns=['datetime_str', 'EC'])
-        prtime("shape of raw EC dataframe: {}".format(train_df_EC.shape))
+        for i in range(len(target_feat_name)):
 
-        z_EC = np.abs(stats.zscore(train_df_EC['EC']))
-        threshold = 3.2
-        mask = np.where(~(z_EC > threshold))
-        # print(len(mask))
-        train_df_EC = train_df_EC.iloc[mask]
-        print("shape of outlier-removed EC_dataframe: {}".format(train_df_EC.shape))
+            train_df_target["df_"+target_feat_name[i]] = pd.DataFrame({'datetime_str': train_parsed_dict[target_feat_name[i]+'_dt_parsed'][0], target_feat_name[i]: train_parsed_dict[target_feat_name[i]][1]},
+                             columns=['datetime_str', target_feat_name[i]])
 
-        train_df_EC['datetime_str'] = pd.to_datetime(train_df_EC['datetime_str'])
-        if not (train_df_EC.loc[0, 'datetime_str'] == pd.to_datetime(train_start_date + ' ' + EC_start_time)):
-            train_df_EC.loc[0, 'datetime_str'] = pd.to_datetime(train_start_date + ' ' + EC_start_time)
-        if not (train_df_EC.loc[train_df_EC.index[-1], 'datetime_str'] == pd.to_datetime(train_end_date + ' ' + EC_end_time)):
-            train_df_EC.loc[train_df_EC.index[-1], 'datetime_str'] = pd.to_datetime(train_end_date + ' ' + EC_end_time)
+            df_temp = train_df_target["df_" + target_feat_name[i]]
+            df_temp.name = "df_" + target_feat_name[i]
+            prtime("raw_train target dataframe = {}, shape = {}".format(df_temp.name, df_temp.shape))
 
-        # train_df_EC = train_df_EC.set_index('datetime_str').resample("15min").first().reset_index().reindex(columns=train_df_EC.columns)
-        # train_df_EC['EC_roll_mean'] = train_df_EC['EC'].rolling(12, center=True, min_periods=1).mean()
-        # train_df_EC['EC_roll_mean'].update(train_df_EC['EC'])
-        # train_df_EC.drop(['EC'], inplace=True, axis=1)
-        # train_df_EC = train_df_EC.rename(columns={'EC_roll_mean': 'EC'})
+            z_temp = np.abs(stats.zscore(df_temp[target_feat_name[i]]))
+            threshold = 3.2
+            mask = np.where(~(z_temp > threshold))
+            # print(len(mask))
+            df_temp = df_temp.iloc[mask]
+            prtime("shape of outlier-removed dataframe: {}".format(df_temp.shape))
 
-        cols = train_df_EC.columns
-        train_df_EC = train_df_EC.set_index('datetime_str').resample("15min").first()
-        train_df_EC.interpolate(inplace=True)
-        train_df_EC = train_df_EC.reset_index().reindex(columns=cols)
+            df_temp['datetime_str'] = pd.to_datetime(df_temp['datetime_str'])
+            if not (df_temp.loc[0, 'datetime_str'] == pd.to_datetime(train_start_date + ' ' + tar_start_time)):
+                df_temp.loc[0, 'datetime_str'] = pd.to_datetime(train_start_date + ' ' + tar_start_time)
+            if not (df_temp.loc[df_temp.index[-1], 'datetime_str'] == pd.to_datetime(train_end_date + ' ' + tar_end_time)):
+                df_temp.loc[df_temp.index[-1], 'datetime_str'] = pd.to_datetime(train_end_date + ' ' + tar_end_time)
 
-        prtime("shape of processed train EC dataframe: {}".format(train_df_EC.shape))
+            # train_df_target = train_df_target.set_index('datetime_str').resample("15min").first().reset_index().reindex(columns=train_df_target.columns)
+            # train_df_target['EC_roll_mean'] = train_df_target['EC'].rolling(12, center=True, min_periods=1).mean()
+            # train_df_target['EC_roll_mean'].update(train_df_target['EC'])
+            # train_df_target.drop(['EC'], inplace=True, axis=1)
+            # train_df_target = train_df_target.rename(columns={'EC_roll_mean': 'EC'})
+
+            cols = df_temp.columns
+            df_temp = df_temp.set_index('datetime_str').resample("15min").first()
+            df_temp.interpolate(inplace=True)
+            df_temp = df_temp.reset_index().reindex(columns=cols)
+            prtime("shape of processed train {} dataframe: {}".format(target_feat_name[i], df_temp.shape))
+
+            train_df_target["df_" + target_feat_name[i]] = df_temp
+            prtime("shape of processed train target {} dataframe: {}".format(target_feat_name[i], df_temp.shape))
+            del df_temp
 
     else:
         # if run_train = False, then return empty train dataframe
-        train_df_EC = pd.DataFrame()
+        train_df_target = pd.DataFrame()
 
+    for i in range(len(target_feat_name)):
+        test_df_target["df_"+target_feat_name[i]] = pd.DataFrame({'datetime_str': test_parsed_dict[target_feat_name[i]+'_dt_parsed'][0], target_feat_name[i]: test_parsed_dict[target_feat_name[i]][1]},
+                                 columns=['datetime_str', target_feat_name[i]])
 
-    test_df_EC = pd.DataFrame({'datetime_str': test_parsed_dict['EC_dt_parsed'][0], 'EC': test_parsed_dict['EC'][1]},
-                              columns=['datetime_str', 'EC'])
-    prtime("shape of raw test EC dataframe: {}".format(test_df_EC.shape))
+        df_temp = test_df_target["df_" + target_feat_name[i]]
+        df_temp.name = "df_" + target_feat_name[i]
+        prtime("raw_train target dataframe = {}, shape = {}".format(df_temp.name, df_temp.shape))
 
-    z_EC = np.abs(stats.zscore(test_df_EC['EC']))
-    threshold = 3.2
-    mask = np.where(~(z_EC > threshold))
-    # print(len(mask))
-    test_df_EC = test_df_EC.iloc[mask]
-    prtime("shape of outlier-removed EC_dataframe: {}".format(test_df_EC.shape))
+        z_temp = np.abs(stats.zscore(df_temp[target_feat_name[i]]))
+        threshold = 3.2
+        mask = np.where(~(z_temp > threshold))
+        # print(len(mask))
+        df_temp = df_temp.iloc[mask]
+        prtime("shape of outlier-removed test target: {} dataframe: {}".format(target_feat_name[i],df_temp.shape))
 
-    test_df_EC['datetime_str'] = pd.to_datetime(test_df_EC['datetime_str'])
-    if not (test_df_EC.loc[0, 'datetime_str'] == pd.to_datetime(test_start_date + ' ' + EC_start_time)):
-        test_df_EC.loc[0, 'datetime_str'] = pd.to_datetime(test_start_date + ' ' + EC_start_time)
-    if not (test_df_EC.loc[test_df_EC.index[-1], 'datetime_str'] == pd.to_datetime(
-            test_end_date + ' ' + EC_end_time)):
-        test_df_EC.loc[test_df_EC.index[-1], 'datetime_str'] = pd.to_datetime(test_end_date + ' ' + EC_end_time)
+        df_temp['datetime_str'] = pd.to_datetime(df_temp['datetime_str'])
+        if not (df_temp.loc[0, 'datetime_str'] == pd.to_datetime(test_start_date + ' ' + tar_start_time)):
+            df_temp.loc[0, 'datetime_str'] = pd.to_datetime(test_start_date + ' ' + tar_start_time)
+        if not (df_temp.loc[df_temp.index[-1], 'datetime_str'] == pd.to_datetime(test_end_date + ' ' + tar_end_time)):
+            df_temp.loc[df_temp.index[-1], 'datetime_str'] = pd.to_datetime(test_end_date + ' ' + tar_end_time)
 
-    # test_df_EC = test_df_EC.set_index('datetime_str').resample("15min").first().reset_index().reindex(
-    #     columns=test_df_EC.columns)
-    # test_df_EC['EC_roll_mean'] = test_df_EC['EC'].rolling(12, center=True, min_periods=1).mean()
-    # test_df_EC['EC_roll_mean'].update(test_df_EC['EC'])
-    # test_df_EC.drop(['EC'], inplace=True, axis=1)
-    # test_df_EC = test_df_EC.rename(columns={'EC_roll_mean': 'EC'})
+        # test_df_target = test_df_target.set_index('datetime_str').resample("15min").first().reset_index().reindex(
+        #     columns=test_df_target.columns)
+        # test_df_target['EC_roll_mean'] = test_df_target['EC'].rolling(12, center=True, min_periods=1).mean()
+        # test_df_target['EC_roll_mean'].update(test_df_target['EC'])
+        # test_df_target.drop(['EC'], inplace=True, axis=1)
+        # test_df_target = test_df_target.rename(columns={'EC_roll_mean': 'EC'})
+        cols = df_temp.columns
+        df_temp = df_temp.set_index('datetime_str').resample("15min").first()
+        df_temp.interpolate(inplace=True)
+        df_temp = df_temp.reset_index().reindex(columns=cols)
 
-    cols = test_df_EC.columns
-    test_df_EC = test_df_EC.set_index('datetime_str').resample("15min").first()
-    test_df_EC.interpolate(inplace=True)
-    test_df_EC = test_df_EC.reset_index().reindex(columns=cols)
+        test_df_target["df_" + target_feat_name[i]] = df_temp
+        prtime("shape of processed test target {} dataframe: {}".format(target_feat_name[i], df_temp.shape))
+        del df_temp
 
-    prtime("shape of processed test EC dataframe: {}".format(test_df_EC.shape))
+    return train_df_target, test_df_target
 
-    return train_df_EC, test_df_EC
-
-def merge_n_resample(train_df_dict, test_df_dict, train_df_EC, test_df_EC, run_train):
+def merge_n_resample(train_df_dict, test_df_dict, train_df_target, test_df_target, run_train):
     # merging the multiple dataframes (in the dictionary) containing input features
     if run_train:
         train_df_list = []
@@ -262,7 +275,7 @@ def merge_n_resample(train_df_dict, test_df_dict, train_df_EC, test_df_EC, run_t
         train_input_df =train_input_df.set_index('datetime_str').resample("15min").mean().reset_index().reindex(columns=train_input_df.columns)
 
         # merging input_df (dataframe with input features) with df_EC (target dataframe)
-        train_df = train_input_df.merge(train_df_EC, how='outer', on='datetime_str')
+        train_df = train_input_df.merge(train_df_target, how='outer', on='datetime_str')
 
     else:
         train_df = pd.DataFrame()
@@ -278,7 +291,7 @@ def merge_n_resample(train_df_dict, test_df_dict, train_df_EC, test_df_EC, run_t
         columns=test_input_df.columns)
 
     # merging input_df (dataframe with input features) with df_EC (target dataframe)
-    test_df = test_input_df.merge(test_df_EC, how='outer', on='datetime_str')
+    test_df = test_input_df.merge(test_df_target, how='outer', on='datetime_str')
 
     return train_df, test_df
 
@@ -462,14 +475,18 @@ def main(configs):
     # sys.stdout = open(log_file, 'w')  # Redirect print statement's outputs to file
     # print("Stdout:")
 
+    # exlcuding Xcel Energy Meter's EnergyConsumption data (since it is not available for the given date range)
+    # reference_id for EC = '@p:stm_campus:r:225918db-bfbda16a'
+
     root_url = 'https://internal-apis.nrel.gov/intelligentcampus/hisRead?id='
-    reference_id = ['@p:stm_campus:r:225918db-bfbda16a', '@p:stm_campus:r:20ed5e0a-275dbdc2', '@p:stm_campus:r:20ed5e0a-53e174aa',
+    reference_id = ['@p:stm_campus:r:20ed5e0a-275dbdc2', '@p:stm_campus:r:20ed5e0a-53e174aa',
                     '@p:stm_campus:r:20ed5e0a-fe755c80', '@p:stm_campus:r:20ed5df2-2c0e126b', '@p:stm_campus:r:20ed5e0a-acc8beff',
-                    '@p:stm_campus:r:20ed5df2-fd2eecc5']
+                    '@p:stm_campus:r:20ed5df2-fd2eecc5','@p:stm_campus:r:23752630-794c8dba','@p:stm_campus:r:1faa61e0-fca6c387']
     train_date_range = '&range=\"' + train_start_date + '%2c' + train_end_date + '\"'
     test_date_range = '&range=\"' + test_start_date + '%2c' + test_end_date + '\"'
-    feat_name = ['EC', 'RH', 'BP', 'DBT', 'GHI', 'TCC', 'WS']
+    feat_name = ['RH', 'BP', 'DBT', 'GHI', 'TCC', 'WS','ESIF_Energy_Net','ESIF_Real_Power_Total']
     input_feat_name = ['RH', 'BP', 'DBT', 'GHI', 'TCC', 'WS']
+    target_feat_name = ['ESIF_Energy_Net','ESIF_Real_Power_Total']
 
     train_response_dict, test_response_dict = fetch_data(root_url, reference_id, train_date_range, test_date_range, feat_name, run_train)
     prtime("data fetched from the API successfully, now parsing...")
@@ -479,10 +496,10 @@ def main(configs):
 
     train_df_dict, test_df_dict = input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_train, train_start_date, train_end_date, test_start_date, test_end_date)
 
-    train_df_EC, test_df_EC = target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, train_end_date, test_start_date, test_end_date)
+    train_df_target, test_df_target = target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, train_end_date, test_start_date, test_end_date, target_feat_name)
     prtime("feature and target data structured successfully into dataframe, further processing...")
 
-    train_df, test_df = merge_n_resample(train_df_dict, test_df_dict, train_df_EC, test_df_EC, run_train)
+    train_df, test_df = merge_n_resample(train_df_dict, test_df_dict, train_df_target, test_df_target, run_train)
     train_df, test_df = get_static_features(train_df, test_df, run_train)
     train_df, test_df = fill_nan(train_df, test_df, run_train)
     prtime("train and test dataframes merged and resampled. Exiting data_preprocessing module")
