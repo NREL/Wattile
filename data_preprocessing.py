@@ -3,11 +3,14 @@ import pathlib
 import numpy as np
 import pandas as pd
 import requests
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 import re
 from scipy import stats
 from dateutil.parser import parse
 from functools import reduce
 from util import prtime
+import time
 
 
 start_time = '00:01:00'
@@ -15,23 +18,80 @@ end_time = '23:59:00'
 tar_start_time = '00:00:00'
 tar_end_time = '23:45:00'
 
+
+def requests_retry_session(retries=5,
+                           backoff_factor=0.3,
+                           status_forcelist=(500, 502, 504, 404),
+                           session=None,):
+    session = session or requests.Session()
+    retry = Retry(
+        total=retries,
+        read=retries,
+        connect=retries,
+        backoff_factor=backoff_factor,
+        status_forcelist=status_forcelist,
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
+
+    return session
+
 def fetch_data(root_url, reference_id, train_date_range, test_date_range, feat_name, run_train):
     train_response_dict = {}
     test_response_dict = {}
     if run_train:
         for i in range(len(reference_id)):
-            train_response_dict['resp_'+feat_name[i]] = requests.get(root_url+reference_id[i]+train_date_range)
-            if train_response_dict['resp_'+feat_name[i]].status_code == 200:
-                pass
+
+            """
+            while True:
+                train_response_dict['resp_'+feat_name[i]] = requests.get(root_url+reference_id[i]+train_date_range)
+                if train_response_dict['resp_'+feat_name[i]].status_code == 200:
+                    break
+                else:
+                    print("response from {} is not getting fetched from API for training data, status code: {}, retrying".format(
+                        feat_name[i], train_response_dict['resp_' + feat_name[i]].status_code))
+            """
+
+            t0 = time.time()
+            try:
+                train_response_dict['resp_' + feat_name[i]] = requests_retry_session().get(
+                    root_url+reference_id[i]+train_date_range,
+                )
+            except Exception as x:
+                print('It failed :(', x.__class__.__name__)
             else:
-                print("response from {} is not getting fetched from API for training data".format(feat_name[i]))
+                print('It eventually worked', train_response_dict['resp_' + feat_name[i]].status_code)
+            finally:
+                t1 = time.time()
+                time_took = t1-t0
+                print('Train data fetch took {} seconds for {}'.format(time_took, feat_name[i]))
 
     for i in range(len(reference_id)):
-        test_response_dict['resp_' + feat_name[i]] = requests.get(root_url + reference_id[i] + test_date_range)
-        if test_response_dict['resp_' + feat_name[i]].status_code == 200:
-            pass
+
+        """
+        while True:
+            test_response_dict['resp_' + feat_name[i]] = requests.get(root_url + reference_id[i] + test_date_range)
+            if test_response_dict['resp_' + feat_name[i]].status_code == 200:
+                break
+            else:
+                print("response from {} is not getting fetched from API for test data, status code: {}, retrying".format(
+                        feat_name[i], test_response_dict['resp_' + feat_name[i]].status_code))
+        """
+
+        t0 = time.time()
+        try:
+            test_response_dict['resp_' + feat_name[i]] = requests_retry_session().get(
+                root_url + reference_id[i] + test_date_range,
+            )
+        except Exception as x:
+            print('It failed :(', x.__class__.__name__)
         else:
-            print("response from {} is not getting fetched from API for testing data".format(feat_name[i]))
+            print('It eventually worked', test_response_dict['resp_' + feat_name[i]].status_code)
+        finally:
+            t1 = time.time()
+            time_took = t1 - t0
+            print('Train data fetch took {} seconds for {}'.format(time_took, feat_name[i]))
 
     return train_response_dict, test_response_dict
 
@@ -274,7 +334,13 @@ def merge_n_resample(train_df_dict, test_df_dict, train_df_target, test_df_targe
         # re-sampling (downsampling 1-min data to 15-min, since target values are for 15-min)
         train_input_df =train_input_df.set_index('datetime_str').resample("15min").mean().reset_index().reindex(columns=train_input_df.columns)
 
-        # merging input_df (dataframe with input features) with df_EC (target dataframe)
+        train_df_target_list = []
+        for key, value in train_df_target.items():
+            train_df_target_list.append(train_df_target[key])
+
+        train_df_target = reduce(lambda left, right: pd.merge(left, right, on=['datetime_str'], how='outer'), train_df_target_list)
+
+        # merging input_df (dataframe with input features) with target dataframe
         train_df = train_input_df.merge(train_df_target, how='outer', on='datetime_str')
 
     else:
@@ -290,6 +356,13 @@ def merge_n_resample(train_df_dict, test_df_dict, train_df_target, test_df_targe
     test_input_df = test_input_df.set_index('datetime_str').resample("15min").mean().reset_index().reindex(
         columns=test_input_df.columns)
 
+    test_df_target_list = []
+    for key, value in test_df_target.items():
+        test_df_target_list.append(test_df_target[key])
+
+    test_df_target = reduce(lambda left, right: pd.merge(left, right, on=['datetime_str'], how='outer'),
+                             test_df_target_list)
+
     # merging input_df (dataframe with input features) with df_EC (target dataframe)
     test_df = test_input_df.merge(test_df_target, how='outer', on='datetime_str')
 
@@ -303,6 +376,10 @@ def get_static_features(train_df, test_df, run_train):
         idx = 7
         new_col = train_df.datetime_str.dt.dayofyear.astype(np.float32)
         train_df.insert(loc=idx, column='doy', value=new_col)
+
+        idx = idx + 1
+        new_col = train_df.datetime_str.dt.dayofweek.astype(np.float32)
+        train_df.insert(loc=idx, column='dow', value=new_col)
 
         idx = idx + 1
         new_col = pd.to_timedelta(train_df.datetime_str.dt.strftime('%H:%M:%S')).dt.total_seconds().astype(int)
@@ -478,15 +555,19 @@ def main(configs):
     # exlcuding Xcel Energy Meter's EnergyConsumption data (since it is not available for the given date range)
     # reference_id for EC = '@p:stm_campus:r:225918db-bfbda16a'
 
+    # 'Garage_Energy_Net'
+    # #Garage_Real_Power_Total data fetching is returning 404 status code for year 2017, this dropping it
+    # 'Garage_Energy_Net : '@p:stm_campus:r:23752630-b115b3c7'
+
     root_url = 'https://internal-apis.nrel.gov/intelligentcampus/hisRead?id='
     reference_id = ['@p:stm_campus:r:20ed5e0a-275dbdc2', '@p:stm_campus:r:20ed5e0a-53e174aa',
                     '@p:stm_campus:r:20ed5e0a-fe755c80', '@p:stm_campus:r:20ed5df2-2c0e126b', '@p:stm_campus:r:20ed5e0a-acc8beff',
-                    '@p:stm_campus:r:20ed5df2-fd2eecc5','@p:stm_campus:r:23752630-794c8dba','@p:stm_campus:r:1faa61e0-fca6c387']
+                    '@p:stm_campus:r:20ed5df2-fd2eecc5', '@p:stm_campus:r:23295bf9-933c18ac']
     train_date_range = '&range=\"' + train_start_date + '%2c' + train_end_date + '\"'
     test_date_range = '&range=\"' + test_start_date + '%2c' + test_end_date + '\"'
-    feat_name = ['RH', 'BP', 'DBT', 'GHI', 'TCC', 'WS','ESIF_Energy_Net','ESIF_Real_Power_Total']
+    feat_name = ['RH', 'BP', 'DBT', 'GHI', 'TCC', 'WS','Garage_Real_Power_Total']
     input_feat_name = ['RH', 'BP', 'DBT', 'GHI', 'TCC', 'WS']
-    target_feat_name = ['ESIF_Energy_Net','ESIF_Real_Power_Total']
+    target_feat_name = ['Garage_Real_Power_Total']
 
     train_response_dict, test_response_dict = fetch_data(root_url, reference_id, train_date_range, test_date_range, feat_name, run_train)
     prtime("data fetched from the API successfully, now parsing...")

@@ -151,7 +151,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     # hyper-parameters
     num_epochs = num_epochs
     learning_rate = 0.0005
-    input_dim = 14  # Fixed
+    input_dim = 15  # Fixed
     hidden_dim = int(configs['hidden_nodes'])
     output_dim = 1  # one prediction - energy consumption
     layer_dim = 1
