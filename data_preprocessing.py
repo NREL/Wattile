@@ -43,16 +43,6 @@ def fetch_data(root_url, reference_id, train_date_range, test_date_range, feat_n
     if run_train:
         for i in range(len(reference_id)):
 
-            """
-            while True:
-                train_response_dict['resp_'+feat_name[i]] = requests.get(root_url+reference_id[i]+train_date_range)
-                if train_response_dict['resp_'+feat_name[i]].status_code == 200:
-                    break
-                else:
-                    print("response from {} is not getting fetched from API for training data, status code: {}, retrying".format(
-                        feat_name[i], train_response_dict['resp_' + feat_name[i]].status_code))
-            """
-
             t0 = time.time()
             try:
                 train_response_dict['resp_' + feat_name[i]] = requests_retry_session().get(
@@ -69,16 +59,6 @@ def fetch_data(root_url, reference_id, train_date_range, test_date_range, feat_n
 
     for i in range(len(reference_id)):
 
-        """
-        while True:
-            test_response_dict['resp_' + feat_name[i]] = requests.get(root_url + reference_id[i] + test_date_range)
-            if test_response_dict['resp_' + feat_name[i]].status_code == 200:
-                break
-            else:
-                print("response from {} is not getting fetched from API for test data, status code: {}, retrying".format(
-                        feat_name[i], test_response_dict['resp_' + feat_name[i]].status_code))
-        """
-
         t0 = time.time()
         try:
             test_response_dict['resp_' + feat_name[i]] = requests_retry_session().get(
@@ -91,7 +71,7 @@ def fetch_data(root_url, reference_id, train_date_range, test_date_range, feat_n
         finally:
             t1 = time.time()
             time_took = t1 - t0
-            print('Train data fetch took {} seconds for {}'.format(time_took, feat_name[i]))
+            print('Test data fetch took {} seconds for {}'.format(time_took, feat_name[i]))
 
     return train_response_dict, test_response_dict
 
@@ -552,22 +532,24 @@ def main(configs):
     # sys.stdout = open(log_file, 'w')  # Redirect print statement's outputs to file
     # print("Stdout:")
 
-    # exlcuding Xcel Energy Meter's EnergyConsumption data (since it is not available for the given date range)
+    # excluding Xcel Energy Meter's EnergyConsumption data (since it is not available for the given date range)
     # reference_id for EC = '@p:stm_campus:r:225918db-bfbda16a'
-
-    # 'Garage_Energy_Net'
-    # #Garage_Real_Power_Total data fetching is returning 404 status code for year 2017, this dropping it
     # 'Garage_Energy_Net : '@p:stm_campus:r:23752630-b115b3c7'
+    # 'Garage_Real_Power_Total'= '@p:stm_campus:r:23295bf9-933c18ac'
+    # RSF1 Main= 'Real_Power_Total': '@p:stm_campus:r:1f587070-8c045a5e'
+    # RSF2 Main= 'Real_Power_Total': '@p:stm_campus:r:1f587071-6a7f739d'
+
+
 
     root_url = 'https://internal-apis.nrel.gov/intelligentcampus/hisRead?id='
     reference_id = ['@p:stm_campus:r:20ed5e0a-275dbdc2', '@p:stm_campus:r:20ed5e0a-53e174aa',
                     '@p:stm_campus:r:20ed5e0a-fe755c80', '@p:stm_campus:r:20ed5df2-2c0e126b', '@p:stm_campus:r:20ed5e0a-acc8beff',
-                    '@p:stm_campus:r:20ed5df2-fd2eecc5', '@p:stm_campus:r:23295bf9-933c18ac']
+                    '@p:stm_campus:r:20ed5df2-fd2eecc5', '@p:stm_campus:r:1f587070-8c045a5e', '@p:stm_campus:r:1f587071-6a7f739d']
     train_date_range = '&range=\"' + train_start_date + '%2c' + train_end_date + '\"'
     test_date_range = '&range=\"' + test_start_date + '%2c' + test_end_date + '\"'
-    feat_name = ['RH', 'BP', 'DBT', 'GHI', 'TCC', 'WS','Garage_Real_Power_Total']
+    feat_name = ['RH', 'BP', 'DBT', 'GHI', 'TCC', 'WS','RSF1_Real_Power_Total', 'RSF2_Real_Power_Total']
     input_feat_name = ['RH', 'BP', 'DBT', 'GHI', 'TCC', 'WS']
-    target_feat_name = ['Garage_Real_Power_Total']
+    target_feat_name = ['RSF1_Real_Power_Total', 'RSF2_Real_Power_Total']
 
     train_response_dict, test_response_dict = fetch_data(root_url, reference_id, train_date_range, test_date_range, feat_name, run_train)
     prtime("data fetched from the API successfully, now parsing...")
