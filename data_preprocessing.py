@@ -164,7 +164,7 @@ def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_tra
             df_temp = df_temp.set_index('datetime_str').resample("1min").first()
             df_temp.interpolate(inplace=True)
             df_temp = df_temp.reset_index().reindex(columns=cols)
-            
+            df_temp.name = "df_" + input_feat_name[i]
             prtime("final-processed train input df = {}, shape = {}".format(df_temp.name, df_temp.shape))
 
             train_df_dict["df_" + input_feat_name[i]] = df_temp
@@ -210,7 +210,7 @@ def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_tra
         df_temp = df_temp.set_index('datetime_str').resample("1min").first()
         df_temp.interpolate(inplace=True)
         df_temp = df_temp.reset_index().reindex(columns=cols)
-
+        df_temp.name = "df_" + input_feat_name[i]
         prtime("final-processed train input df = {}, shape = {}".format(df_temp.name, df_temp.shape))
 
         test_df_dict["df_" + input_feat_name[i]] = df_temp
@@ -266,6 +266,7 @@ def target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, 
             df_temp = df_temp.reset_index().reindex(columns=cols)
 
             train_df_target["df_" + target_feat_name[i]] = df_temp
+            df_temp.name = "df_" + target_feat_name[i]
             prtime("final-processed train target df = {}, shape = {}".format(df_temp.name, df_temp.shape))
             del df_temp
 
@@ -314,6 +315,7 @@ def target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, 
         df_temp = df_temp.reset_index().reindex(columns=cols)
 
         test_df_target["df_" + target_feat_name[i]] = df_temp
+        df_temp.name = "df_" + target_feat_name[i]
         prtime("final-processed test target df = {}, shape = {}".format(df_temp.name, df_temp.shape))
         del df_temp
 
