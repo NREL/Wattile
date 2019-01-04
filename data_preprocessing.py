@@ -142,6 +142,7 @@ def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_tra
             mask = np.where(~(z_temp > threshold))
             # print(len(mask))
             df_temp = df_temp.iloc[mask]
+            df_temp.name = "df_" + input_feat_name[i]
             prtime("outlier-removed train input df = {}, shape = {}".format(df_temp.name, df_temp.shape))
 
 
@@ -163,7 +164,7 @@ def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_tra
             df_temp = df_temp.set_index('datetime_str').resample("1min").first()
             df_temp.interpolate(inplace=True)
             df_temp = df_temp.reset_index().reindex(columns=cols)
-
+            
             prtime("final-processed train input df = {}, shape = {}".format(df_temp.name, df_temp.shape))
 
             train_df_dict["df_" + input_feat_name[i]] = df_temp
@@ -188,6 +189,7 @@ def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_tra
         mask = np.where(~(z_temp > threshold))
         # print(len(mask))
         df_temp = df_temp.iloc[mask]
+        df_temp.name = "df_" + input_feat_name[i]
         prtime("outlier-removed test input df = {}, shape = {}".format(df_temp.name, df_temp.shape))
 
         df_temp['datetime_str'] = pd.to_datetime(df_temp['datetime_str'])
@@ -243,6 +245,7 @@ def target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, 
             mask = np.where(~(z_temp > threshold))
             # print(len(mask))
             df_temp = df_temp.iloc[mask]
+            df_temp.name = "df_" + target_feat_name[i]
             prtime("outlier-removed train target df = {}, shape = {}".format(df_temp.name, df_temp.shape))
 
             df_temp['datetime_str'] = pd.to_datetime(df_temp['datetime_str'])
@@ -290,6 +293,7 @@ def target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, 
         mask = np.where(~(z_temp > threshold))
         # print(len(mask))
         df_temp = df_temp.iloc[mask]
+        df_temp.name = "df_" + target_feat_name[i]
         prtime("outlier-removed test target df = {}, shape = {}".format(df_temp.name, df_temp.shape))
 
         df_temp['datetime_str'] = pd.to_datetime(df_temp['datetime_str'])
