@@ -70,15 +70,15 @@ def data_transform(train_data, test_data, transformation_method, run_train):
 
     return train_data, test_data
 
-def data_iterable(train_data, test_data, run_train, tr_desired_batch_size, te_desired_batch_size):
+def data_iterable(train_data, test_data, run_train, tr_desired_batch_size, te_desired_batch_size, target_feat_name):
 
     train_batch_size, test_batch_size = size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_batch_size)
     #test_batch_size = 200
 
     if run_train:
-        X_train = train_data.drop('EC', axis=1).values.astype(dtype='float32')
+        X_train = train_data.drop(target_feat_name[0], axis=1).values.astype(dtype='float32')
 
-        y_train = train_data['EC'].shift(1).fillna(method='bfill')
+        y_train = train_data[target_feat_name[0]].shift(1).fillna(method='bfill')
         y_train = y_train.values.astype(dtype='float32')
 
         train_feat_tensor = torch.from_numpy(X_train).type(torch.FloatTensor)
@@ -91,9 +91,9 @@ def data_iterable(train_data, test_data, run_train, tr_desired_batch_size, te_de
     else:
         train_loader = []
 
-    X_test = test_data.drop('EC', axis=1).values.astype(dtype='float32')
+    X_test = test_data.drop(target_feat_name[0], axis=1).values.astype(dtype='float32')
 
-    y_test = test_data['EC'].shift(1).fillna(method='bfill')
+    y_test = test_data[target_feat_name[0]].shift(1).fillna(method='bfill')
     y_test = y_test.values.astype(dtype='float32')
 
     test_feat_tensor = torch.from_numpy(X_test).type(torch.FloatTensor)
@@ -109,7 +109,7 @@ def save_model(model, epoch, n_iter):
     torch.save(model_dict, file_prefix + '/torch_model')
     prtime("FFNN Model checkpoint saved")
 
-def test_processing(test_df, test_loader, model, input_dim, transformation_method):
+def test_processing(test_df, test_loader, model, input_dim, transformation_method, target_feat_name):
     model.eval()
     preds = []
     targets = []
@@ -135,13 +135,13 @@ def test_processing(test_df, test_loader, model, input_dim, transformation_metho
     train_std = pd.DataFrame(train_stats['train_std'], index=[1]).iloc[0]
 
     if transformation_method == "minmaxscale":
-        final_preds = ((train_max['EC'] - train_min['EC']) * semifinal_preds) + train_min['EC']
+        final_preds = ((train_max[target_feat_name[0]] - train_min[target_feat_name[0]]) * semifinal_preds) + train_min[target_feat_name[0]]
 
     else:
-        final_preds = ((semifinal_preds * train_std['EC']) + train_mean['EC'])
+        final_preds = ((semifinal_preds * train_std[target_feat_name[0]]) + train_mean[target_feat_name[0]])
 
     predictions = pd.DataFrame(final_preds)
-    denormalized_rmse = np.array(np.sqrt(np.mean((predictions.values.squeeze() - test_df.EC.values) ** 2)), ndmin=1)
+    denormalized_rmse = np.array(np.sqrt(np.mean((predictions.values.squeeze() - test_df[target_feat_name[0]].values) ** 2)), ndmin=1)
 
     return predictions, denormalized_rmse, mse
 
@@ -151,7 +151,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     # hyper-parameters
     num_epochs = num_epochs
     learning_rate = 0.0005
-    input_dim = 14  # Fixed
+    input_dim = 15  # Fixed
     hidden_dim = int(configs['hidden_nodes'])
     output_dim = 1  # one prediction - energy consumption
     layer_dim = 1
@@ -164,6 +164,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     configs['layer_dim']= layer_dim
     configs['weight_decay'] = weight_decay
 
+    target_feat_name = configs['target_feat_name']
     path = file_prefix + '/configs.json'
     with open(path, 'w') as fp:
         json.dump(configs, fp)
@@ -248,7 +249,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                     save_model(model, epoch, n_iter)
 
                 if n_iter % 100 == 0:
-                    predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, input_dim, transformation_method)
+                    predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, input_dim, transformation_method, target_feat_name)
                     test_iter.append(n_iter)
                     test_loss.append(mse)
                     test_rmse.append(denorm_rmse)
@@ -261,7 +262,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
         save_model(model, epoch, n_iter)
 
-        predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, input_dim, transformation_method)
+        predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, input_dim, transformation_method, target_feat_name)
 
         predictions.to_csv(file_prefix + '/predictions.csv', index=False)
         np.savetxt(file_prefix + '/final_rmse.csv', denorm_rmse, delimiter=",")
@@ -273,7 +274,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         prtime("Loaded model from file, given run_train=False\n")
 
 
-        predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, input_dim, transformation_method)
+        predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, input_dim, transformation_method, target_feat_name)
         test_loss.append(mse)
         test_rmse.append(denorm_rmse)
         writer.add_scalar("/test_loss", mse)
@@ -296,6 +297,7 @@ def main(train_df, test_df, configs):
     train_exp_num = configs['train_exp_num']
     test_exp_num = configs['test_exp_num']
     arch_type = configs['arch_type']
+    target_feat_name = configs['target_feat_name']
 
     results_dir = "EnergyForecasting_Results"
     if not os.path.exists(results_dir):
@@ -322,7 +324,7 @@ def main(train_df, test_df, configs):
     train_data, test_data = data_transform(train_data, test_data, transformation_method, run_train)
     prtime("data transformed using {} as transformation method".format(transformation_method))
 
-    train_loader, test_loader, train_batch_size, test_batch_size = data_iterable(train_data, test_data, run_train, tr_desired_batch_size, te_desired_batch_size)
+    train_loader, test_loader, train_batch_size, test_batch_size = data_iterable(train_data, test_data, run_train, tr_desired_batch_size, te_desired_batch_size, target_feat_name)
     prtime("data converted to iterable dataset")
 
     process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method, configs)

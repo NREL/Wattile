@@ -11,11 +11,15 @@ configs = argparser.get_arguments()
 
 
 if configs['preprocess']:
-    train_df, test_df= data_preprocessing.main(configs)
+    train_df, test_df, configs= data_preprocessing.main(configs)
 
-    # save the data fetched from API and piped through data_preprocessing (i.e. train_df and test_df)
+    # save the data fetch_n_parseed from API and piped through data_preprocessing (i.e. train_df and test_df)
     train_df.to_csv('train_data.csv')
     test_df.to_csv('test_data.csv')
+
+else:
+    # preprocessing module defines target_feat_name list and sends it back.
+    configs['target_feat_name'] =  ['RSF_Real_Power_Total']
 
 # read the pre-processed data from  csvs
 train_df = pd.read_csv('train_data.csv')
@@ -36,4 +40,4 @@ elif configs['arch_type'] == 'RNN':
 train_exp_num = configs['train_exp_num']
 test_exp_num = configs['test_exp_num']
 arch_type = configs['arch_type']
-print('Run with arch: {}, train_num= {} and test_num= {} is done!'.format(arch_type, train_exp_num, test_exp_num))
+print('Run with arch: {}, train_num= {}, test_num= {} and target= {} is done!'.format(arch_type, train_exp_num, test_exp_num,configs['target_feat_name'] ))
