@@ -38,7 +38,7 @@ def requests_retry_session(retries=5,
 
     return session
 
-def fetch_n_parse_data(root_url, reference_id, train_date_range, test_date_range, feat_name, run_train):
+def fetch_data(root_url, reference_id, train_date_range, test_date_range, feat_name, run_train):
     train_response_dict = {}
     test_response_dict = {}
     if run_train:
@@ -135,14 +135,15 @@ def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_tra
 
             df_temp = train_df_dict["df_" + input_feat_name[i]]
             df_temp.name = "df_" + input_feat_name[i]
-            prtime("raw_train dataframe = {}, shape = {}".format(df_temp.name, df_temp.shape))
+            prtime("raw_train input df = {}, shape = {}".format(df_temp.name, df_temp.shape))
 
             z_temp = np.abs(stats.zscore(df_temp[input_feat_name[i]]))
             threshold = 3
             mask = np.where(~(z_temp > threshold))
             # print(len(mask))
             df_temp = df_temp.iloc[mask]
-            prtime("shape of outlier-removed dataframe: {}".format(df_temp.shape))
+            prtime("outlier-removed train input df = {}, shape = {}".format(df_temp.name, df_temp.shape))
+
 
             df_temp['datetime_str'] = pd.to_datetime(df_temp['datetime_str'])
             if not (df_temp.loc[0, 'datetime_str'] == pd.to_datetime(train_start_date + ' ' + start_time)):
@@ -163,7 +164,7 @@ def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_tra
             df_temp.interpolate(inplace=True)
             df_temp = df_temp.reset_index().reindex(columns=cols)
 
-            prtime("shape of processed train df: {}".format(df_temp.shape))
+            prtime("final-processed train input df = {}, shape = {}".format(df_temp.name, df_temp.shape))
 
             train_df_dict["df_" + input_feat_name[i]] = df_temp
             del df_temp
@@ -180,14 +181,14 @@ def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_tra
 
         df_temp = test_df_dict["df_" + input_feat_name[i]]
         df_temp.name = "df_" + input_feat_name[i]
-        prtime("raw_test dataframe = {}, shape = {}".format(df_temp.name, df_temp.shape))
+        prtime("raw_test input df = {}, shape = {}".format(df_temp.name, df_temp.shape))
 
         z_temp = np.abs(stats.zscore(df_temp[input_feat_name[i]]))
         threshold = 3
         mask = np.where(~(z_temp > threshold))
         # print(len(mask))
         df_temp = df_temp.iloc[mask]
-        prtime("shape of outlier-removed dataframe: {}".format(df_temp.shape))
+        prtime("outlier-removed test input df = {}, shape = {}".format(df_temp.name, df_temp.shape))
 
         df_temp['datetime_str'] = pd.to_datetime(df_temp['datetime_str'])
         if not (df_temp.loc[0, 'datetime_str'] == pd.to_datetime(test_start_date + ' ' + start_time)):
@@ -208,7 +209,7 @@ def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_tra
         df_temp.interpolate(inplace=True)
         df_temp = df_temp.reset_index().reindex(columns=cols)
 
-        prtime("shape of processed test dataframe: {}".format(df_temp.shape))
+        prtime("final-processed train input df = {}, shape = {}".format(df_temp.name, df_temp.shape))
 
         test_df_dict["df_" + input_feat_name[i]] = df_temp
         del df_temp
@@ -235,14 +236,14 @@ def target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, 
 
             df_temp = train_df_target["df_" + target_feat_name[i]]
             df_temp.name = "df_" + target_feat_name[i]
-            prtime("raw_train target dataframe = {}, shape = {}".format(df_temp.name, df_temp.shape))
+            prtime("raw_train target df = {}, shape = {}".format(df_temp.name, df_temp.shape))
 
             z_temp = np.abs(stats.zscore(df_temp[target_feat_name[i]]))
             threshold = 3.2
             mask = np.where(~(z_temp > threshold))
             # print(len(mask))
             df_temp = df_temp.iloc[mask]
-            prtime("shape of outlier-removed dataframe: {}".format(df_temp.shape))
+            prtime("outlier-removed train target df = {}, shape = {}".format(df_temp.name, df_temp.shape))
 
             df_temp['datetime_str'] = pd.to_datetime(df_temp['datetime_str'])
             if not (df_temp.loc[0, 'datetime_str'] == pd.to_datetime(train_start_date + ' ' + tar_start_time)):
@@ -260,10 +261,9 @@ def target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, 
             df_temp = df_temp.set_index('datetime_str').resample("1min").first()
             df_temp.interpolate(inplace=True)
             df_temp = df_temp.reset_index().reindex(columns=cols)
-            prtime("shape of processed train {} dataframe: {}".format(target_feat_name[i], df_temp.shape))
 
             train_df_target["df_" + target_feat_name[i]] = df_temp
-            prtime("shape of processed train target {} dataframe: {}".format(target_feat_name[i], df_temp.shape))
+            prtime("final-processed train target df = {}, shape = {}".format(df_temp.name, df_temp.shape))
             del df_temp
 
     else:
@@ -290,7 +290,7 @@ def target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, 
         mask = np.where(~(z_temp > threshold))
         # print(len(mask))
         df_temp = df_temp.iloc[mask]
-        prtime("shape of outlier-removed test target: {} dataframe: {}".format(target_feat_name[i],df_temp.shape))
+        prtime("outlier-removed test target df = {}, shape = {}".format(df_temp.name, df_temp.shape))
 
         df_temp['datetime_str'] = pd.to_datetime(df_temp['datetime_str'])
         if not (df_temp.loc[0, 'datetime_str'] == pd.to_datetime(test_start_date + ' ' + tar_start_time)):
@@ -310,7 +310,7 @@ def target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, 
         df_temp = df_temp.reset_index().reindex(columns=cols)
 
         test_df_target["df_" + target_feat_name[i]] = df_temp
-        prtime("shape of processed test target {} dataframe: {}".format(target_feat_name[i], df_temp.shape))
+        prtime("final-processed test target df = {}, shape = {}".format(df_temp.name, df_temp.shape))
         del df_temp
 
     return train_df_target, test_df_target
@@ -325,7 +325,7 @@ def merge_n_resample(train_df_dict, test_df_dict, train_df_target, test_df_targe
         train_input_df = reduce(lambda left, right: pd.merge(left, right, on=['datetime_str'], how='outer'), train_df_list)
 
         # re-sampling (downsampling 1-min data to 15-min, since target values are for 15-min)
-        train_input_df =train_input_df.set_index('datetime_str').resample("1min").mean().reset_index().reindex(columns=train_input_df.columns)
+        #train_input_df =train_input_df.set_index('datetime_str').resample("1min").mean().reset_index().reindex(#columns=train_input_df.columns)
 
         train_df_target_list = []
         for key, value in train_df_target.items():
@@ -346,8 +346,8 @@ def merge_n_resample(train_df_dict, test_df_dict, train_df_target, test_df_targe
     test_input_df = reduce(lambda left, right: pd.merge(left, right, on=['datetime_str'], how='outer'), test_df_list)
 
     # re-sampling (downsampling 1-min data to 15-min, since target values are for 15-min)
-    test_input_df = test_input_df.set_index('datetime_str').resample("1min").mean().reset_index().reindex(
-        columns=test_input_df.columns)
+    # test_input_df = test_input_df.set_index('datetime_str').resample("1min").mean().reset_index().reindex(
+    #    columns=test_input_df.columns)
 
     test_df_target_list = []
     for key, value in test_df_target.items():
@@ -571,7 +571,7 @@ def main(configs):
 
     if fetch_n_parse:
 
-        train_response_dict, test_response_dict = fetch_n_parse_data(root_url, reference_id, train_date_range, test_date_range, feat_name, run_train)
+        train_response_dict, test_response_dict = fetch_data(root_url, reference_id, train_date_range, test_date_range, feat_name, run_train)
         train_parsed_dict, test_parsed_dict = parse_data(train_response_dict, test_response_dict, feat_name, run_train)
         prtime("data fetched and parsed in a dictionary successfully, dumping it to json")
 
