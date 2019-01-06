@@ -78,7 +78,7 @@ def data_iterable(train_data, test_data, run_train, tr_desired_batch_size, te_de
     if run_train:
         X_train = train_data.drop(target_feat_name[0], axis=1).values.astype(dtype='float32')
 
-        y_train = train_data[target_feat_name[0]].shift(1).fillna(method='bfill')
+        y_train = train_data[target_feat_name[0]].shift(18).fillna(method='bfill')
         y_train = y_train.values.astype(dtype='float32')
 
         train_feat_tensor = torch.from_numpy(X_train).type(torch.FloatTensor)
@@ -93,7 +93,7 @@ def data_iterable(train_data, test_data, run_train, tr_desired_batch_size, te_de
 
     X_test = test_data.drop(target_feat_name[0], axis=1).values.astype(dtype='float32')
 
-    y_test = test_data[target_feat_name[0]].shift(1).fillna(method='bfill')
+    y_test = test_data[target_feat_name[0]].shift(18).fillna(method='bfill')
     y_test = y_test.values.astype(dtype='float32')
 
     test_feat_tensor = torch.from_numpy(X_test).type(torch.FloatTensor)
@@ -151,7 +151,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     # hyper-parameters
     num_epochs = num_epochs
     learning_rate = 0.0005
-    input_dim = 15  # Fixed
+    input_dim = 11  # Fixed
     hidden_dim = int(configs['hidden_nodes'])
     output_dim = 1  # one prediction - energy consumption
     layer_dim = 1

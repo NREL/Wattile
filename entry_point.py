@@ -19,7 +19,7 @@ if configs['preprocess']:
 
 else:
     # preprocessing module defines target_feat_name list and sends it back.
-    configs['target_feat_name'] =  ['RSF_Real_Power_Total']
+    configs['target_feat_name'] =  ['Garage_Real_Power_Total']
 
 # read the pre-processed data from  csvs
 train_df = pd.read_csv('train_data.csv')

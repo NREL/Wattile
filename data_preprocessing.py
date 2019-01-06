@@ -12,6 +12,7 @@ from functools import reduce
 from util import prtime
 import time
 import json
+import glob
 
 
 start_time = '00:01:00'
@@ -89,6 +90,14 @@ def date_parser(row):
     time = parsed.time()
     return (datetime_var ,date, time)
 
+def total_parser_garage(row):
+    row = row.strip(" Denver")
+    parsed = parse(row)
+    datetime_var = parsed.strftime(format='%m-%d-%y %H:%M:%S')
+    date = parsed.date()
+    time = parsed.time()
+    return (datetime_var, date, time)
+
 
 def parse_data(train_response_dict, test_response_dict, feat_name, run_train):
     train_parsed_dict = {}
@@ -153,7 +162,7 @@ def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_tra
                 df_temp.loc[df_temp.index[-1], 'datetime_str'] = pd.to_datetime(train_end_date + ' ' + end_time)
 
 
-            #df_temp = df_temp.set_index('datetime_str').resample("1min").first().reset_index().reindex(columns=df_temp.columns)
+            #df_temp = df_temp.set_index('datetime_str').resample("H").mean().reset_index().reindex(columns=df_temp.columns)
             # df_temp[input_feat_name[i] + '_roll_mean'] = df_temp[input_feat_name[i]].rolling(12, center=True,
             #                                                                                  min_periods=1).mean()
             # df_temp[input_feat_name[i] + '_roll_mean'].update(df_temp[input_feat_name[i]])
@@ -161,7 +170,7 @@ def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_tra
             # df_temp = df_temp.rename(columns={input_feat_name[i] + '_roll_mean': input_feat_name[i]})
 
             cols = df_temp.columns
-            df_temp = df_temp.set_index('datetime_str').resample("1min").first()
+            df_temp = df_temp.set_index('datetime_str').resample("H").mean()
             df_temp.interpolate(inplace=True)
             df_temp = df_temp.reset_index().reindex(columns=cols)
             df_temp.name = "df_" + input_feat_name[i]
@@ -198,7 +207,7 @@ def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_tra
         if not (df_temp.loc[df_temp.index[-1], 'datetime_str'] == pd.to_datetime(test_end_date + ' ' + end_time)):
             df_temp.loc[df_temp.index[-1], 'datetime_str'] = pd.to_datetime(test_end_date + ' ' + end_time)
 
-        # df_temp = df_temp.set_index('datetime_str').resample("1min").first().reset_index().reindex(
+        # df_temp = df_temp.set_index('datetime_str').resample("H").mean().reset_index().reindex(
         #     columns=df_temp.columns)
         # df_temp[input_feat_name[i] + '_roll_mean'] = df_temp[input_feat_name[i]].rolling(12, center=True,
         #                                                                                  min_periods=1).mean()
@@ -207,11 +216,11 @@ def input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_tra
         # df_temp = df_temp.rename(columns={input_feat_name[i] + '_roll_mean': input_feat_name[i]})
 
         cols = df_temp.columns
-        df_temp = df_temp.set_index('datetime_str').resample("1min").first()
+        df_temp = df_temp.set_index('datetime_str').resample("H").mean()
         df_temp.interpolate(inplace=True)
         df_temp = df_temp.reset_index().reindex(columns=cols)
         df_temp.name = "df_" + input_feat_name[i]
-        prtime("final-processed train input df = {}, shape = {}".format(df_temp.name, df_temp.shape))
+        prtime("final-processed test input df = {}, shape = {}".format(df_temp.name, df_temp.shape))
 
         test_df_dict["df_" + input_feat_name[i]] = df_temp
         del df_temp
@@ -254,14 +263,14 @@ def target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, 
             if not (df_temp.loc[df_temp.index[-1], 'datetime_str'] == pd.to_datetime(train_end_date + ' ' + tar_end_time)):
                 df_temp.loc[df_temp.index[-1], 'datetime_str'] = pd.to_datetime(train_end_date + ' ' + tar_end_time)
 
-            # train_df_target = train_df_target.set_index('datetime_str').resample("15min").first().reset_index().reindex(columns=train_df_target.columns)
+            # train_df_target = train_df_target.set_index('datetime_str').resample("15min").mean().reset_index().reindex(columns=train_df_target.columns)
             # train_df_target['EC_roll_mean'] = train_df_target['EC'].rolling(12, center=True, min_periods=1).mean()
             # train_df_target['EC_roll_mean'].update(train_df_target['EC'])
             # train_df_target.drop(['EC'], inplace=True, axis=1)
             # train_df_target = train_df_target.rename(columns={'EC_roll_mean': 'EC'})
 
             cols = df_temp.columns
-            df_temp = df_temp.set_index('datetime_str').resample("1min").first()
+            df_temp = df_temp.set_index('datetime_str').resample("H").mean()
             df_temp.interpolate(inplace=True)
             df_temp = df_temp.reset_index().reindex(columns=cols)
 
@@ -303,14 +312,14 @@ def target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, 
         if not (df_temp.loc[df_temp.index[-1], 'datetime_str'] == pd.to_datetime(test_end_date + ' ' + tar_end_time)):
             df_temp.loc[df_temp.index[-1], 'datetime_str'] = pd.to_datetime(test_end_date + ' ' + tar_end_time)
 
-        # test_df_target = test_df_target.set_index('datetime_str').resample("15min").first().reset_index().reindex(
+        # test_df_target = test_df_target.set_index('datetime_str').resample("15min").mean().reset_index().reindex(
         #     columns=test_df_target.columns)
         # test_df_target['EC_roll_mean'] = test_df_target['EC'].rolling(12, center=True, min_periods=1).mean()
         # test_df_target['EC_roll_mean'].update(test_df_target['EC'])
         # test_df_target.drop(['EC'], inplace=True, axis=1)
         # test_df_target = test_df_target.rename(columns={'EC_roll_mean': 'EC'})
         cols = df_temp.columns
-        df_temp = df_temp.set_index('datetime_str').resample("1min").first()
+        df_temp = df_temp.set_index('datetime_str').resample("H").mean()
         df_temp.interpolate(inplace=True)
         df_temp = df_temp.reset_index().reindex(columns=cols)
 
@@ -318,6 +327,84 @@ def target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, 
         df_temp.name = "df_" + target_feat_name[i]
         prtime("final-processed test target df = {}, shape = {}".format(df_temp.name, df_temp.shape))
         del df_temp
+
+    return train_df_target, test_df_target
+
+def target_df_garage(train_target_df, test_target_df, run_train, train_start_date, train_end_date, test_start_date,
+              test_end_date, target_feat_name):
+
+    train_df_target = {}
+    test_df_target = {}
+
+    if run_train:
+
+        # parsing the datetimeinfo obtained in above list into datetime string, date and time
+        train_target_df.datetime_str = \
+        list(zip(*train_target_df.datetime_str.apply(lambda row: total_parser_garage(row))))[0]
+
+        df_temp = train_target_df
+        df_temp.name = "df_" + target_feat_name[0]
+        prtime("raw_train target df = {}, shape = {}".format(df_temp.name, df_temp.shape))
+
+        z_temp = np.abs(stats.zscore(df_temp[target_feat_name[0]]))
+        threshold = 3.2
+        mask = np.where(~(z_temp > threshold))
+        # print(len(mask))
+        df_temp = df_temp.iloc[mask]
+        df_temp.name = "df_" + target_feat_name[0]
+        prtime("outlier-removed train target df = {}, shape = {}".format(df_temp.name, df_temp.shape))
+
+        df_temp['datetime_str'] = pd.to_datetime(df_temp['datetime_str'])
+        if not (df_temp.loc[0, 'datetime_str'] == pd.to_datetime(train_start_date + ' ' + tar_start_time)):
+            df_temp.loc[0, 'datetime_str'] = pd.to_datetime(train_start_date + ' ' + tar_start_time)
+        if not (df_temp.loc[df_temp.index[-1], 'datetime_str'] == pd.to_datetime(train_end_date + ' ' + tar_end_time)):
+            df_temp.loc[df_temp.index[-1], 'datetime_str'] = pd.to_datetime(train_end_date + ' ' + tar_end_time)
+
+        cols = df_temp.columns
+        df_temp = df_temp.set_index('datetime_str').resample("H").mean()
+        df_temp.interpolate(inplace=True)
+        df_temp = df_temp.reset_index().reindex(columns=cols)
+
+        train_df_target["df_" + target_feat_name[0]] = df_temp
+        df_temp.name = "df_" + target_feat_name[0]
+        prtime("final-processed train target df = {}, shape = {}".format(df_temp.name, df_temp.shape))
+        del df_temp
+
+    else:
+        # if run_train = False, then return empty train dataframe
+        train_df_target = pd.DataFrame()
+
+    # parsing the datetimeinfo obtained in above list into datetime string, date and time
+    test_target_df.datetime_str = \
+        list(zip(*test_target_df.datetime_str.apply(lambda row: total_parser_garage(row))))[0]
+
+    df_temp = test_target_df
+    df_temp.name = "df_" + target_feat_name[0]
+    prtime("raw_train target df = {}, shape = {}".format(df_temp.name, df_temp.shape))
+
+    z_temp = np.abs(stats.zscore(df_temp[target_feat_name[0]]))
+    threshold = 3.2
+    mask = np.where(~(z_temp > threshold))
+    # print(len(mask))
+    df_temp = df_temp.iloc[mask]
+    df_temp.name = "df_" + target_feat_name[0]
+    prtime("outlier-removed test target df = {}, shape = {}".format(df_temp.name, df_temp.shape))
+
+    df_temp['datetime_str'] = pd.to_datetime(df_temp['datetime_str'])
+    if not (df_temp.loc[0, 'datetime_str'] == pd.to_datetime(test_start_date + ' ' + tar_start_time)):
+        df_temp.loc[0, 'datetime_str'] = pd.to_datetime(test_start_date + ' ' + tar_start_time)
+    if not (df_temp.loc[df_temp.index[-1], 'datetime_str'] == pd.to_datetime(test_end_date + ' ' + tar_end_time)):
+        df_temp.loc[df_temp.index[-1], 'datetime_str'] = pd.to_datetime(test_end_date + ' ' + tar_end_time)
+
+    cols = df_temp.columns
+    df_temp = df_temp.set_index('datetime_str').resample("H").mean()
+    df_temp.interpolate(inplace=True)
+    df_temp = df_temp.reset_index().reindex(columns=cols)
+
+    test_df_target["df_" + target_feat_name[0]] = df_temp
+    df_temp.name = "df_" + target_feat_name[0]
+    prtime("final-processed test target df = {}, shape = {}".format(df_temp.name, df_temp.shape))
+    del df_temp
 
     return train_df_target, test_df_target
 
@@ -331,7 +418,7 @@ def merge_n_resample(train_df_dict, test_df_dict, train_df_target, test_df_targe
         train_input_df = reduce(lambda left, right: pd.merge(left, right, on=['datetime_str'], how='outer'), train_df_list)
 
         # re-sampling (downsampling 1-min data to 15-min, since target values are for 15-min)
-        #train_input_df =train_input_df.set_index('datetime_str').resample("1min").mean().reset_index().reindex(#columns=train_input_df.columns)
+        #train_input_df =train_input_df.set_index('datetime_str').resample("H").mean().reset_index().reindex(#columns=train_input_df.columns)
 
         train_df_target_list = []
         for key, value in train_df_target.items():
@@ -352,7 +439,7 @@ def merge_n_resample(train_df_dict, test_df_dict, train_df_target, test_df_targe
     test_input_df = reduce(lambda left, right: pd.merge(left, right, on=['datetime_str'], how='outer'), test_df_list)
 
     # re-sampling (downsampling 1-min data to 15-min, since target values are for 15-min)
-    # test_input_df = test_input_df.set_index('datetime_str').resample("1min").mean().reset_index().reindex(
+    # test_input_df = test_input_df.set_index('datetime_str').resample("H").mean().reset_index().reindex(
     #    columns=test_input_df.columns)
 
     test_df_target_list = []
@@ -396,21 +483,21 @@ def get_static_features(train_df, test_df, run_train, target_feat_name):
         train_df.insert(loc=idx, column='cos_time', value=new_col)
 
         # adding the lagged EC features
-        idx = idx + 1
-        new_col = train_df[target_feat_name[0]].shift(4)
-        train_df.insert(loc=idx, column='t-4', value=new_col)
-
-        idx = idx + 1
-        new_col = train_df[target_feat_name[0]].shift(3)
-        train_df.insert(loc=idx, column='t-3', value=new_col)
-
-        idx = idx + 1
-        new_col = train_df[target_feat_name[0]].shift(2)
-        train_df.insert(loc=idx, column='t-2', value=new_col)
-
-        idx = idx + 1
-        new_col = train_df[target_feat_name[0]].shift(1)
-        train_df.insert(loc=idx, column='t-1', value=new_col)
+        # idx = idx + 1
+        # new_col = train_df[target_feat_name[0]].shift(4)
+        # train_df.insert(loc=idx, column='t-4', value=new_col)
+        #
+        # idx = idx + 1
+        # new_col = train_df[target_feat_name[0]].shift(3)
+        # train_df.insert(loc=idx, column='t-3', value=new_col)
+        #
+        # idx = idx + 1
+        # new_col = train_df[target_feat_name[0]].shift(2)
+        # train_df.insert(loc=idx, column='t-2', value=new_col)
+        #
+        # idx = idx + 1
+        # new_col = train_df[target_feat_name[0]].shift(1)
+        # train_df.insert(loc=idx, column='t-1', value=new_col)
 
     idx = 7
     new_col = test_df.datetime_str.dt.dayofyear.astype(np.float32)
@@ -436,21 +523,21 @@ def get_static_features(train_df, test_df, run_train, target_feat_name):
     test_df.insert(loc=idx, column='cos_time', value=new_col)
 
     # adding the lagged EC features
-    idx = idx + 1
-    new_col = test_df[target_feat_name[0]].shift(4)
-    test_df.insert(loc=idx, column='t-4', value=new_col)
-
-    idx = idx + 1
-    new_col = test_df[target_feat_name[0]].shift(3)
-    test_df.insert(loc=idx, column='t-3', value=new_col)
-
-    idx = idx + 1
-    new_col = test_df[target_feat_name[0]].shift(2)
-    test_df.insert(loc=idx, column='t-2', value=new_col)
-
-    idx = idx + 1
-    new_col = test_df[target_feat_name[0]].shift(1)
-    test_df.insert(loc=idx, column='t-1', value=new_col)
+    # idx = idx + 1
+    # new_col = test_df[target_feat_name[0]].shift(4)
+    # test_df.insert(loc=idx, column='t-4', value=new_col)
+    #
+    # idx = idx + 1
+    # new_col = test_df[target_feat_name[0]].shift(3)
+    # test_df.insert(loc=idx, column='t-3', value=new_col)
+    #
+    # idx = idx + 1
+    # new_col = test_df[target_feat_name[0]].shift(2)
+    # test_df.insert(loc=idx, column='t-2', value=new_col)
+    #
+    # idx = idx + 1
+    # new_col = test_df[target_feat_name[0]].shift(1)
+    # test_df.insert(loc=idx, column='t-1', value=new_col)
 
     return train_df, test_df
 
@@ -568,12 +655,12 @@ def main(configs):
     root_url = 'https://internal-apis.nrel.gov/intelligentcampus/hisRead?id='
     reference_id = ['@p:stm_campus:r:20ed5e0a-275dbdc2', '@p:stm_campus:r:20ed5e0a-53e174aa',
                     '@p:stm_campus:r:20ed5e0a-fe755c80', '@p:stm_campus:r:20ed5df2-2c0e126b', '@p:stm_campus:r:20ed5e0a-acc8beff',
-                    '@p:stm_campus:r:20ed5df2-fd2eecc5', '@p:stm_campus:r:1f587070-8c045a5e', '@p:stm_campus:r:1f587071-6a7f739d']
+                    '@p:stm_campus:r:20ed5df2-fd2eecc5']
     train_date_range = '&range=\"' + train_start_date + '%2c' + train_end_date + '\"'
     test_date_range = '&range=\"' + test_start_date + '%2c' + test_end_date + '\"'
-    feat_name = ['RH', 'BP', 'DBT', 'GHI', 'TCC', 'WS','RSF1_Real_Power_Total', 'RSF2_Real_Power_Total']
+    feat_name = ['RH', 'BP', 'DBT', 'GHI', 'TCC', 'WS']
     input_feat_name = ['RH', 'BP', 'DBT', 'GHI', 'TCC', 'WS']
-    target_feat_name = ['RSF1_Real_Power_Total', 'RSF2_Real_Power_Total']
+    target_feat_name = ['Garage_Real_Power_Total']
 
     if fetch_n_parse:
 
@@ -593,25 +680,46 @@ def main(configs):
         with open('test_parsed.json', 'r') as fr:
             test_parsed_dict = json.load(fr)
 
+    train_df_dict, test_df_dict = input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_train,
+                                                 train_start_date, train_end_date, test_start_date, test_end_date)
+
+    # reading the target variable from the csv
+    cols = ['datetime_str', 'Garage_Real_Power_Total']
+    train_path = './garage_data/train'
+    test_path = './garage_data/test'
+
+    train_files = glob.glob(train_path + "/*.csv")
+    train_files.sort()
+
+    test_files = glob.glob(test_path + "/*.csv")
+    test_files.sort()
+
+    train_target_df = pd.concat([pd.read_csv(f, skipinitialspace=True, skiprows=(1), float_precision='round_trip',
+                                    delimiter=',', index_col=False, header=None, names=cols) for f in train_files],
+                       ignore_index=True)
+    test_target_df = pd.concat([pd.read_csv(f, skipinitialspace=True, skiprows=(1), float_precision='round_trip',
+                                    delimiter=',', index_col=False, header=None, names=cols) for f in test_files],
+                       ignore_index=True)
 
 
-    train_df_dict, test_df_dict = input_feat_dfs(train_parsed_dict, test_parsed_dict, input_feat_name, run_train, train_start_date, train_end_date, test_start_date, test_end_date)
+    train_df_target, test_df_target = target_df_garage(train_target_df, test_target_df, run_train, train_start_date,
+                                                train_end_date, test_start_date, test_end_date, target_feat_name)
 
-    train_df_target, test_df_target = target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, train_end_date, test_start_date, test_end_date, target_feat_name)
+
     prtime("feature and target data structured successfully into dataframe, further processing...")
 
     train_df, test_df = merge_n_resample(train_df_dict, test_df_dict, train_df_target, test_df_target, run_train)
 
-    # this adjustment is for RSF Real_Power_Total case alone.
-    train_df['RSF_Real_Power_Total'] = train_df['RSF1_Real_Power_Total'] + train_df['RSF2_Real_Power_Total']
-    train_df.drop(['RSF1_Real_Power_Total', 'RSF2_Real_Power_Total'], axis=1, inplace=True)
-    test_df['RSF_Real_Power_Total'] = test_df['RSF1_Real_Power_Total'] + test_df['RSF2_Real_Power_Total']
-    test_df.drop(['RSF1_Real_Power_Total', 'RSF2_Real_Power_Total'], axis=1, inplace=True)
+    ### this adjustment is for RSF Real_Power_Total case alone.
+    # train_df['RSF_Real_Power_Total'] = train_df['RSF1_Real_Power_Total'] + train_df['RSF2_Real_Power_Total']
+    # train_df.drop(['RSF1_Real_Power_Total', 'RSF2_Real_Power_Total'], axis=1, inplace=True)
+    # test_df['RSF_Real_Power_Total'] = test_df['RSF1_Real_Power_Total'] + test_df['RSF2_Real_Power_Total']
+    # test_df.drop(['RSF1_Real_Power_Total', 'RSF2_Real_Power_Total'], axis=1, inplace=True)
 
     # the target_feat_name list is being updated specifically for RSF case
-    target_feat_name = ['RSF_Real_Power_Total']                  # rep stands for repitative feature
+    #target_feat_name = ['RSF_Real_Power_Total']                  # rep stands for repitative feature
     train_df, test_df = get_static_features(train_df, test_df, run_train, target_feat_name)
-    train_df, test_df = fill_nan(train_df, test_df, run_train)
+    #train_df, test_df = fill_nan(train_df, test_df, run_train)
     prtime("train and test dataframes merged and resampled. Exiting data_preprocessing module")
 
     configs['target_feat_name'] = target_feat_name
