@@ -90,13 +90,17 @@ def date_parser(row):
     time = parsed.time()
     return (datetime_var ,date, time)
 
-def total_parser_garage(row):
+def date_parser_garage(row):
     row = row.strip(" Denver")
     parsed = parse(row)
     datetime_var = parsed.strftime(format='%m-%d-%y %H:%M:%S')
     date = parsed.date()
     time = parsed.time()
     return (datetime_var, date, time)
+
+def val_parser_garage(row):
+    energy_val = re.sub('[kwh%RHmbar°FW/m²_irrp]', '', row)
+    return float(energy_val)
 
 
 def parse_data(train_response_dict, test_response_dict, feat_name, run_train):
@@ -340,7 +344,9 @@ def target_df_garage(train_target_df, test_target_df, run_train, train_start_dat
 
         # parsing the datetimeinfo obtained in above list into datetime string, date and time
         train_target_df.datetime_str = \
-        list(zip(*train_target_df.datetime_str.apply(lambda row: total_parser_garage(row))))[0]
+        list(zip(*train_target_df.datetime_str.apply(lambda row: date_parser_garage(row))))[0]
+        train_target_df[target_feat_name[0]] = \
+             train_target_df[target_feat_name[0]].apply(lambda row: val_parser_garage(row))
 
         df_temp = train_target_df
         df_temp.name = "df_" + target_feat_name[0]
@@ -376,7 +382,10 @@ def target_df_garage(train_target_df, test_target_df, run_train, train_start_dat
 
     # parsing the datetimeinfo obtained in above list into datetime string, date and time
     test_target_df.datetime_str = \
-        list(zip(*test_target_df.datetime_str.apply(lambda row: total_parser_garage(row))))[0]
+        list(zip(*test_target_df.datetime_str.apply(lambda row: date_parser_garage(row))))[0]
+
+    test_target_df[target_feat_name[0]] = \
+        test_target_df[target_feat_name[0]].apply(lambda row: val_parser_garage(row))
 
     df_temp = test_target_df
     df_temp.name = "df_" + target_feat_name[0]
