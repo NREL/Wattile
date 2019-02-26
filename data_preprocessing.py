@@ -658,6 +658,7 @@ def main(configs):
     # 'Garage_Real_Power_Total'= '@p:stm_campus:r:23295bf9-933c18ac'
     # RSF1 Main= 'Real_Power_Total': '@p:stm_campus:r:1f587070-8c045a5e'
     # RSF2 Main= 'Real_Power_Total': '@p:stm_campus:r:1f587071-6a7f739d'
+    # Cafe Main= 'Energy Net' : '@p:stm_campus:r:23752630-93eb705e'
 
 
 
