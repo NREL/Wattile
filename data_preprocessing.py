@@ -389,7 +389,7 @@ def target_df_garage(train_target_df, test_target_df, run_train, train_start_dat
 
     df_temp = test_target_df
     df_temp.name = "df_" + target_feat_name[0]
-    prtime("raw_train target df = {}, shape = {}".format(df_temp.name, df_temp.shape))
+    prtime("raw_test target df = {}, shape = {}".format(df_temp.name, df_temp.shape))
 
     z_temp = np.abs(stats.zscore(df_temp[target_feat_name[0]]))
     threshold = 3.2
