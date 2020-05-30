@@ -46,7 +46,7 @@ def data_transform(train_data, test_data, transformation_method, run_train):
 
     if run_train:
 
-        # for the result de-normalization purpose, saving the max and min values of the EC columns
+        # for the result de-normalization purpose, saving the max and min values of the STM_Xcel_Meter columns
         train_stats = {}
         train_stats['train_max'] = train_data.max().to_dict()
         train_stats['train_min'] = train_data.min().to_dict()
@@ -90,10 +90,10 @@ def data_iterable(train_data, test_data, run_train, window, tr_desired_batch_siz
     train_batch_size, test_batch_size = size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_batch_size)
 
     if run_train:
-        X_train = train_data.drop('EC', axis=1).values.astype(dtype='float32')
+        X_train = train_data.drop('STM_Xcel_Meter', axis=1).values.astype(dtype='float32')
         X_train = seq_pad(X_train, window)
 
-        y_train = train_data['EC'].shift(window).fillna(method='bfill')
+        y_train = train_data['STM_Xcel_Meter'].shift(window).fillna(method='bfill')
         y_train = y_train.values.astype(dtype='float32')
 
         train_feat_tensor = torch.from_numpy(X_train).type(torch.FloatTensor)
@@ -106,10 +106,10 @@ def data_iterable(train_data, test_data, run_train, window, tr_desired_batch_siz
     else:
         train_loader = []
 
-    X_test = test_data.drop('EC', axis=1).values.astype(dtype='float32')
+    X_test = test_data.drop('STM_Xcel_Meter', axis=1).values.astype(dtype='float32')
     X_test = seq_pad(X_test, window)
 
-    y_test = test_data['EC'].shift(window).fillna(method='bfill')
+    y_test = test_data['STM_Xcel_Meter'].shift(window).fillna(method='bfill')
     y_test = y_test.values.astype(dtype='float32')
 
     test_feat_tensor = torch.from_numpy(X_test).type(torch.FloatTensor)
@@ -155,13 +155,13 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     train_std = pd.DataFrame(train_stats['train_std'], index=[1]).iloc[0]
 
     if transformation_method == "minmaxscale":
-        final_preds = ((train_max['EC'] - train_min['EC']) * semifinal_preds) + train_min['EC']
+        final_preds = ((train_max['STM_Xcel_Meter'] - train_min['STM_Xcel_Meter']) * semifinal_preds) + train_min['STM_Xcel_Meter']
 
     else:
-        final_preds = ((semifinal_preds* train_std['EC'])+ train_mean['EC'])
+        final_preds = ((semifinal_preds* train_std['STM_Xcel_Meter'])+ train_mean['STM_Xcel_Meter'])
 
     predictions = pd.DataFrame(final_preds)
-    denormalized_rmse = np.array(np.sqrt(np.mean((predictions.values.squeeze() - test_df.EC.values) ** 2)), ndmin=1)
+    denormalized_rmse = np.array(np.sqrt(np.mean((predictions.values.squeeze() - test_df.STM_Xcel_Meter.values) ** 2)), ndmin=1)
 
     return predictions, denormalized_rmse, mse
 
@@ -171,7 +171,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     # hyper-parameters
     num_epochs = num_epochs
     learning_rate = 0.0005
-    input_dim = 16  # Fixed
+    input_dim = 7  # Fixed
     hidden_dim = int(configs['hidden_nodes'])
     output_dim = 1  # one prediction - energy consumption
     layer_dim = 1
@@ -340,13 +340,13 @@ def main(train_df, test_df, configs):
     # dropping the datetime_str column. Causes problem with normalization
     if run_train:
         train_data = train_df.copy(deep=True)
-        train_data = train_data.drop('datetime_str', axis=1)
+        train_data = train_data.drop('Date_time_MT', axis=1)
 
     else:
         train_data = train_df
 
     test_data = test_df.copy(deep=True)
-    test_data = test_data.drop('datetime_str', axis=1)
+    test_data = test_data.drop('Date_time_MT', axis=1)
 
     train_data, test_data = data_transform(train_data, test_data, transformation_method, run_train)
     prtime("data transformed using {} as transformation method".format(transformation_method))
