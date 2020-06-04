@@ -16,4 +16,4 @@ This repository contains the source code for forecasting energy consumption usin
 * Conda environment for running the code:
  A conda environment file is provided for convenience. Assuming you have Anaconda python distribution available on your computer, you can create a new conda environment with the necessary packages using the following command:
 
-`conda env create -f conda_env.yaml -n "python3_pytorch"`
+`conda env create -f ml-env.yml -n "ic-lf-deploy"`
