@@ -5,6 +5,7 @@ import algo_main_lstm
 import algo_main_gru
 import pandas as pd
 import argparser
+import seaborn as sns
 
 
 configs = argparser.get_arguments()
@@ -27,6 +28,9 @@ train_df = pd.read_csv('./data/STM_Train_Data_processed.csv')
 test_df = pd.read_csv('./data/STM_Test_Data_processed.csv')
 #test_df.drop('Unnamed: 0',axis=1, inplace=True)
 print("data read from csv")
+
+#sns.pairplot(train_df)
+
 
 if configs['arch_type'] == 'FFNN':
     algo_main_ffnn.main(train_df, test_df, configs)

@@ -135,7 +135,6 @@ def main():
     # RSF2 Main= 'Real_Power_Total': '@p:stm_campus:r:1f587071-6a7f739d'
     # Cafe Main= 'Energy Net' : '@p:stm_campus:r:23752630-93eb705e'
 
-
     root_url = 'https://internal-apis.nrel.gov/intelligentcampus/hisRead?id='
     reference_id = ['@p:stm_campus:r:20ed5e0a-275dbdc2', '@p:stm_campus:r:20ed5e0a-53e174aa',
                     '@p:stm_campus:r:20ed5e0a-fe755c80', '@p:stm_campus:r:20ed5df2-2c0e126b', '@p:stm_campus:r:20ed5e0a-acc8beff',

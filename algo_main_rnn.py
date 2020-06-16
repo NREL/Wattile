@@ -188,7 +188,6 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     with open(path, 'w') as fp:
         json.dump(configs, fp)
 
-
     # initializing lists to store losses over epochs:
     train_loss = []
     train_iter = []
@@ -196,9 +195,9 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     test_iter = []
     test_rmse = []
 
-
+    # If you want to continue training the model
     if run_train:
-
+        # If you are resuming from a previous training session
         if run_resume:
             try:
                 torch_model = torch.load(file_prefix + '/torch_model')
@@ -211,6 +210,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                 print("model does not exist in the given folder for resuming the training. Exiting...")
                 exit()
             prtime("rune_resume=True, model loaded from: {}".format(file_prefix))
+        # If you want to start training a model from scratch
         else:
             model = rnn.RNNModel(input_dim, hidden_dim, layer_dim, output_dim)
             epoch_range = np.arange(num_epochs)
@@ -277,6 +277,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                 if n_iter %25 == 0:
                     save_model(model, epoch, n_iter)
 
+                # Do a test batch
                 if n_iter % 100 == 0:
                     predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method)
                     test_iter.append(n_iter)
@@ -286,15 +287,14 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                     writer.add_scalar("denorm_test_rmse", denorm_rmse, n_iter)
                     print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}'.format(epoch, n_iter, loss.data.item(), mse))
 
+        # Once model training is done
         save_model(model, epoch, n_iter)
 
         predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method)
         predictions.to_csv(file_prefix + '/predictions.csv', index=False)
         np.savetxt(file_prefix + '/final_rmse.csv', denorm_rmse, delimiter=",")
 
-
-
-
+    # If you just want to immediately test the model on the existing (saved) model
     else:
         torch_model = torch.load(file_prefix + '/torch_model')
         model = torch_model['torch_model']
@@ -334,8 +334,6 @@ def main(train_df, test_df, configs):
     writer_path = file_prefix
     writer = SummaryWriter(writer_path)
     print(writer_path)
-
-
 
     # dropping the datetime_str column. Causes problem with normalization
     if run_train:
