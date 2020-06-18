@@ -12,10 +12,12 @@ class RNNModel(nn.Module):
         # Number of hidden layers
         self.layer_dim = layer_dim
 
-        # Building the RNN
+        # Building the RNN, specifying type of activation function
+        # nonlinearity: relu or tanh
+        # batch_first: True if input and output tensors are provided
         self.rnn = nn.RNN(input_dim, hidden_dim, layer_dim, batch_first=True, nonlinearity='relu')
 
-        # Readout layer
+        # Readout layer (Fully connected layer)
         self.fc = nn.Linear(hidden_dim, output_dim)
 
     def forward(self, x):

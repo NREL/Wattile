@@ -14,18 +14,22 @@ from tensorboardX import SummaryWriter
 
 file_prefix = '/default'
 
+# Create lagged versions of exogenous variables
 def seq_pad(a, window):
     rows = a.shape[0]
     cols = a.shape[1]
-
     b = np.zeros((rows, window * cols))
 
+    # Make new columns for the time-lagged values. Lagged spaces filled with zeros.
     for i in range(window):
+        # The first window isnt lagged and is just a copy of "a"
         if i == 0:
             b[:, 0:cols] = a
+        # For all remaining windows, just paste a slightly cropped version (so it fits) of "a" into "b"
         else:
             b[i:, i * cols:(i + 1) * cols] = a[:-i, :]
 
+    # The zeros are replaced with a copy of the first n rows
     for i in list(np.arange(window - 1)):
         j = (i * cols) + cols
         b[i, j:] = np.tile(b[i, 0:cols], window - i-1)
@@ -42,6 +46,7 @@ def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_ba
 
     return train_bt_size, test_bt_size
 
+# Normalization
 def data_transform(train_data, test_data, transformation_method, run_train):
 
     if run_train:
@@ -64,14 +69,11 @@ def data_transform(train_data, test_data, transformation_method, run_train):
         else:
             train_data = (train_data - train_data.mean(axis=0)) / train_data.std(axis=0)
 
-
-
-
     # reading back the train stats for normalizing test data w.r.t to train data
     file_loc = file_prefix + '/train_stats.json'
     with open(file_loc, 'r') as f:
         train_stats = json.load(f)
-
+    # get statistics for training data
     train_max = pd.DataFrame(train_stats['train_max'], index=[1]).iloc[0]
     train_min = pd.DataFrame(train_stats['train_min'], index=[1]).iloc[0]
     train_mean = pd.DataFrame(train_stats['train_mean'], index=[1]).iloc[0]
@@ -85,31 +87,36 @@ def data_transform(train_data, test_data, transformation_method, run_train):
 
     return train_data, test_data
 
+# Create lagged variables and convert train and test data to torch data types
 def data_iterable(train_data, test_data, run_train, window, tr_desired_batch_size, te_desired_batch_size):
 
     train_batch_size, test_batch_size = size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_batch_size)
 
     if run_train:
+        # Create lagged INPUT variables, i.e. columns: w1_(t-1), w1_(t-2)...
+        # Does this for all input variables for times up to "window"
         X_train = train_data.drop('STM_Xcel_Meter', axis=1).values.astype(dtype='float32')
         X_train = seq_pad(X_train, window)
 
-        y_train = train_data['STM_Xcel_Meter'].shift(window).fillna(method='bfill')
+        # Lag output variable, i.e. input for t=5 maps to EC at t=0, t=6 maps to EC t=1, etc.
+        y_train = train_data['STM_Xcel_Meter'].shift(-window).fillna(method='ffill')
         y_train = y_train.values.astype(dtype='float32')
 
+        # Convert to iterable tensors
         train_feat_tensor = torch.from_numpy(X_train).type(torch.FloatTensor)
         train_target_tensor = torch.from_numpy(y_train).type(torch.FloatTensor)
-
         train = data_utils.TensorDataset(train_feat_tensor, train_target_tensor)
-        train_loader = data_utils.DataLoader(train, batch_size=train_batch_size, shuffle=True)
+        train_loader = data_utils.DataLoader(train, batch_size=train_batch_size, shuffle=True) # Contains features and targets
         print("data train made iterable")
 
     else:
         train_loader = []
 
+    # Do the same as above for the test set
     X_test = test_data.drop('STM_Xcel_Meter', axis=1).values.astype(dtype='float32')
     X_test = seq_pad(X_test, window)
 
-    y_test = test_data['STM_Xcel_Meter'].shift(window).fillna(method='bfill')
+    y_test = test_data['STM_Xcel_Meter'].shift(-window).fillna(method='bfill')
     y_test = y_test.values.astype(dtype='float32')
 
     test_feat_tensor = torch.from_numpy(X_test).type(torch.FloatTensor)
@@ -139,7 +146,7 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
         preds.append(outputs.data.numpy().squeeze())
         targets.append(values.data.numpy())
 
-        # concatenating the preds and targets for the whole epoch (iterating over test_loader once)
+    # concatenating the preds and targets for the whole epoch (iterating over test_loader once)
     semifinal_preds = np.concatenate(preds).ravel()
     semifinal_targs = np.concatenate(targets).ravel()
     mse = np.mean((semifinal_targs - semifinal_preds) ** 2)
@@ -154,6 +161,7 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     train_mean = pd.DataFrame(train_stats['train_mean'], index=[1]).iloc[0]
     train_std = pd.DataFrame(train_stats['train_std'], index=[1]).iloc[0]
 
+    # Do do-normalization process on predictions from test set
     if transformation_method == "minmaxscale":
         final_preds = ((train_max['STM_Xcel_Meter'] - train_min['STM_Xcel_Meter']) * semifinal_preds) + train_min['STM_Xcel_Meter']
 
@@ -170,7 +178,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
     # hyper-parameters
     num_epochs = num_epochs
-    learning_rate = 0.0005
+    learning_rate = 0.001
     input_dim = 7  # Fixed
     hidden_dim = int(configs['hidden_nodes'])
     output_dim = 1  # one prediction - energy consumption
@@ -212,6 +220,10 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
             prtime("rune_resume=True, model loaded from: {}".format(file_prefix))
         # If you want to start training a model from scratch
         else:
+            # RNN layer
+            # input_dim: The number of expected features in the input x
+            # hidden_dim: the number of features in the hidden state h
+            # layer_dim: Number of recurrent layers. i.e. if 2, it is stacking two RNNs together to form a stacked RNN
             model = rnn.RNNModel(input_dim, hidden_dim, layer_dim, output_dim)
             epoch_range = np.arange(num_epochs)
             prtime("A new {} model instantiated, with run_train=True".format("rnn"))
@@ -239,18 +251,20 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
             n_iter = 0
 
         #y_at_t = torch.FloatTensor()
-        train_y_at_t = torch.zeros(train_batch_size, seq_dim, 1)
+        train_y_at_t = torch.zeros(train_batch_size, seq_dim, 1) # 960 x 5 x 1
+        # Loop through epochs
         for epoch in epoch_range:
             model.train()
+            # This loop returns elements from the dataset batch by batch. Contains features AND targets
             for i, (feats, values) in enumerate(train_loader):
 
-                features = Variable(feats.view(-1, seq_dim, input_dim-1))
-                target = Variable(values)
+                features = Variable(feats.view(-1, seq_dim, input_dim-1)) # batch size x 5 x 6
+                target = Variable(values) # batch size x 1
 
-                # Clear gradients w.r.t. parameters
+                # Clear gradients w.r.t. parameters (from previous epoch)
                 optimizer.zero_grad()
 
-                # Forward pass to get output/logits
+                # Forward pass to get output/logits. Returns vector with same size as # of samples in a training batch
                 outputs = model(torch.cat((features, train_y_at_t), dim=2))
 
                 # tiling the 2nd axis of y_at_t from 1 to 5
@@ -262,22 +276,24 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                 train_loss.append(loss.data.item())
                 train_iter.append(n_iter)
 
+                # Print to terminal and save training loss
                 prtime('Epoch: {} Iteration: {} TrainLoss: {}'.format(epoch, n_iter, train_loss[-1]))
                 writer.add_scalar("/train_loss", loss.data.item(), n_iter)
 
-                # Getting gradients w.r.t. parameters
+                # Does backpropogation and gets gradients w.r.t. parameters
                 loss.backward(retain_graph=True)
 
-                # Updating parameters
+                # Updating the weights/parameters
                 optimizer.step()
 
+                # Each iteration is one batch
                 n_iter += 1
 
-                # save the model every few iterations
+                # save the model every 25 iterations
                 if n_iter %25 == 0:
                     save_model(model, epoch, n_iter)
 
-                # Do a test batch
+                # Do a test batch every 100 iterations
                 if n_iter % 100 == 0:
                     predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method)
                     test_iter.append(n_iter)
@@ -287,7 +303,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                     writer.add_scalar("denorm_test_rmse", denorm_rmse, n_iter)
                     print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}'.format(epoch, n_iter, loss.data.item(), mse))
 
-        # Once model training is done
+        # Once model training is done, save it
         save_model(model, epoch, n_iter)
 
         predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method)
@@ -346,10 +362,12 @@ def main(train_df, test_df, configs):
     test_data = test_df.copy(deep=True)
     test_data = test_data.drop('Date_time_MT', axis=1)
 
+    # Normalization transformation
     train_data, test_data = data_transform(train_data, test_data, transformation_method, run_train)
     prtime("data transformed using {} as transformation method".format(transformation_method))
 
-    window = 5    # window is synonomus to the "sequence length" dimension
+    # Convert to iterable dataset (DataLoaders)
+    window = 5    # window is synonymous to the "sequence length" dimension
     train_loader, test_loader, train_batch_size, test_batch_size = data_iterable(train_data, test_data, run_train, window, tr_desired_batch_size, te_desired_batch_size)
     prtime("data converted to iterable dataset")
 

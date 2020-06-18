@@ -465,28 +465,23 @@ def merge_n_resample(train_df_dict, test_df_dict, train_df_target, test_df_targe
 
 
 def get_static_features(train_df, test_df, run_train, target_feat_name):
-
     if run_train:
-        # inserting new columns at index 7 and onward
+        #Iinserting new columns: Day of year, day of week, and time in seconds. At index 7 and onward.
         idx = 7
         new_col = train_df.datetime_str.dt.dayofyear.astype(np.float32)
         train_df.insert(loc=idx, column='doy', value=new_col)
-
         idx = idx + 1
         new_col = train_df.datetime_str.dt.dayofweek.astype(np.float32)
         train_df.insert(loc=idx, column='dow', value=new_col)
-
         idx = idx + 1
         new_col = pd.to_timedelta(train_df.datetime_str.dt.strftime('%H:%M:%S')).dt.total_seconds().astype(int)
         train_df.insert(loc=idx, column='timeinSec', value=new_col)
 
-        # conversion to cyclic coordinates
+        # Add cyclic time variables to training set
         seconds_in_day = 24 * 60 * 60
-
         idx = idx + 1
         new_col = np.sin(2 * np.pi * train_df.timeinSec / seconds_in_day)
         train_df.insert(loc=idx, column='sin_time', value=new_col)
-
         idx = idx + 1
         new_col = np.cos(2 * np.pi * train_df.timeinSec / seconds_in_day)
         train_df.insert(loc=idx, column='cos_time', value=new_col)
@@ -520,13 +515,11 @@ def get_static_features(train_df, test_df, run_train, target_feat_name):
     new_col = pd.to_timedelta(test_df.datetime_str.dt.strftime('%H:%M:%S')).dt.total_seconds().astype(int)
     test_df.insert(loc=idx, column='timeinSec', value=new_col)
 
-    # conversion to cyclic coordinates
+    # Add cyclic time variables to test set
     seconds_in_day = 24 * 60 * 60
-
     idx = idx + 1
     new_col = np.sin(2 * np.pi * test_df.timeinSec / seconds_in_day)
     test_df.insert(loc=idx, column='sin_time', value=new_col)
-
     idx = idx + 1
     new_col = np.cos(2 * np.pi * test_df.timeinSec / seconds_in_day)
     test_df.insert(loc=idx, column='cos_time', value=new_col)
@@ -550,7 +543,7 @@ def get_static_features(train_df, test_df, run_train, target_feat_name):
 
     return train_df, test_df
 
-
+# Not currently used
 def fill_nan(train_df, test_df, run_train):
 
     # carefully filling in the nan values created during the shift operation

@@ -7,9 +7,8 @@ import pandas as pd
 import argparser
 import seaborn as sns
 
-
+# Get inputs from command-line
 configs = argparser.get_arguments()
-
 
 if configs['preprocess']:
     train_df, test_df, configs= data_preprocessing.main(configs)
@@ -22,16 +21,14 @@ else:
     # preprocessing module defines target_feat_name list and sends it back.
     configs['target_feat_name'] =  ['STM_Xcel_Meter']
 
-# read the pre-processed data from  csvs
+# Read the pre-processed data from  csvs
 train_df = pd.read_csv('./data/STM_Train_Data_processed.csv')
 #train_df.drop('Unnamed: 0',axis=1, inplace=True)
 test_df = pd.read_csv('./data/STM_Test_Data_processed.csv')
 #test_df.drop('Unnamed: 0',axis=1, inplace=True)
 print("data read from csv")
 
-#sns.pairplot(train_df)
-
-
+# Choose what ML architecture to use and execute the corresponding script
 if configs['arch_type'] == 'FFNN':
     algo_main_ffnn.main(train_df, test_df, configs)
 elif configs['arch_type'] == 'RNN':
