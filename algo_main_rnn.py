@@ -93,7 +93,7 @@ def data_iterable(train_data, test_data, run_train, window, tr_desired_batch_siz
         X_train = train_data.drop('STM_Xcel_Meter', axis=1).values.astype(dtype='float32')
         X_train = seq_pad(X_train, window)
 
-        y_train = train_data['STM_Xcel_Meter'].shift(window).fillna(method='bfill')
+        y_train = train_data['STM_Xcel_Meter'].shift(-window).fillna(method='bfill')
         y_train = y_train.values.astype(dtype='float32')
 
         train_feat_tensor = torch.from_numpy(X_train).type(torch.FloatTensor)
@@ -109,7 +109,7 @@ def data_iterable(train_data, test_data, run_train, window, tr_desired_batch_siz
     X_test = test_data.drop('STM_Xcel_Meter', axis=1).values.astype(dtype='float32')
     X_test = seq_pad(X_test, window)
 
-    y_test = test_data['STM_Xcel_Meter'].shift(window).fillna(method='bfill')
+    y_test = test_data['STM_Xcel_Meter'].shift(-window).fillna(method='bfill')
     y_test = y_test.values.astype(dtype='float32')
 
     test_feat_tensor = torch.from_numpy(X_test).type(torch.FloatTensor)
