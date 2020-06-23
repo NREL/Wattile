@@ -11,8 +11,10 @@ import torch.utils.data as data_utils
 import torch.nn as nn
 from torch.autograd import Variable
 from tensorboardX import SummaryWriter
+import timeit
 
 file_prefix = '/default'
+
 
 # Create lagged versions of exogenous variables
 def seq_pad(a, window):
@@ -32,23 +34,23 @@ def seq_pad(a, window):
     # The zeros are replaced with a copy of the first n rows
     for i in list(np.arange(window - 1)):
         j = (i * cols) + cols
-        b[i, j:] = np.tile(b[i, 0:cols], window - i-1)
+        b[i, j:] = np.tile(b[i, 0:cols], window - i - 1)
 
     return b
 
-def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_batch_size):
 
+def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_batch_size):
     train_bth = factors(train_data.shape[0])
-    train_bt_size = min(train_bth, key=lambda x:abs(x-tr_desired_batch_size))
+    train_bt_size = min(train_bth, key=lambda x: abs(x - tr_desired_batch_size))
 
     test_bth = factors(test_data.shape[0])
-    test_bt_size = min(test_bth, key=lambda x:abs(x-te_desired_batch_size))
+    test_bt_size = min(test_bth, key=lambda x: abs(x - te_desired_batch_size))
 
     return train_bt_size, test_bt_size
 
+
 # Normalization
 def data_transform(train_data, test_data, transformation_method, run_train):
-
     if run_train:
 
         # for the result de-normalization purpose, saving the max and min values of the STM_Xcel_Meter columns
@@ -60,7 +62,6 @@ def data_transform(train_data, test_data, transformation_method, run_train):
         path = file_prefix + '/train_stats.json'
         with open(path, 'w') as fp:
             json.dump(train_stats, fp)
-
 
         if transformation_method == "minmaxscale":
             train_data = (train_data - train_data.min()) / (train_data.max() - train_data.min())
@@ -87,10 +88,11 @@ def data_transform(train_data, test_data, transformation_method, run_train):
 
     return train_data, test_data
 
+
 # Create lagged variables and convert train and test data to torch data types
 def data_iterable(train_data, test_data, run_train, window, tr_desired_batch_size, te_desired_batch_size):
-
-    train_batch_size, test_batch_size = size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_batch_size)
+    train_batch_size, test_batch_size = size_the_batches(train_data, test_data, tr_desired_batch_size,
+                                                         te_desired_batch_size)
 
     if run_train:
         # Create lagged INPUT variables, i.e. columns: w1_(t-1), w1_(t-2)...
@@ -98,7 +100,7 @@ def data_iterable(train_data, test_data, run_train, window, tr_desired_batch_siz
         X_train = train_data.drop('STM_Xcel_Meter', axis=1).values.astype(dtype='float32')
         X_train = seq_pad(X_train, window)
 
-        # Lag output variable, i.e. input for t=5 maps to EC at t=0, t=6 maps to EC t=1, etc.
+        # Lag output variable, i.e. input for t=5 maps to EC at t=10, t=6 maps to EC t=11, etc.
         y_train = train_data['STM_Xcel_Meter'].shift(-window).fillna(method='ffill')
         y_train = y_train.values.astype(dtype='float32')
 
@@ -106,7 +108,8 @@ def data_iterable(train_data, test_data, run_train, window, tr_desired_batch_siz
         train_feat_tensor = torch.from_numpy(X_train).type(torch.FloatTensor)
         train_target_tensor = torch.from_numpy(y_train).type(torch.FloatTensor)
         train = data_utils.TensorDataset(train_feat_tensor, train_target_tensor)
-        train_loader = data_utils.DataLoader(train, batch_size=train_batch_size, shuffle=True) # Contains features and targets
+        train_loader = data_utils.DataLoader(train, batch_size=train_batch_size,
+                                             shuffle=True)  # Contains features and targets
         print("data train made iterable")
 
     else:
@@ -116,7 +119,7 @@ def data_iterable(train_data, test_data, run_train, window, tr_desired_batch_siz
     X_test = test_data.drop('STM_Xcel_Meter', axis=1).values.astype(dtype='float32')
     X_test = seq_pad(X_test, window)
 
-    y_test = test_data['STM_Xcel_Meter'].shift(-window).fillna(method='bfill')
+    y_test = test_data['STM_Xcel_Meter'].shift(-window).fillna(method='ffill')
     y_test = y_test.values.astype(dtype='float32')
 
     test_feat_tensor = torch.from_numpy(X_test).type(torch.FloatTensor)
@@ -127,14 +130,16 @@ def data_iterable(train_data, test_data, run_train, window, tr_desired_batch_siz
 
     return train_loader, test_loader, train_batch_size, test_batch_size
 
+
 def save_model(model, epoch, n_iter):
-    model_dict = {'epoch_num': epoch, 'n_iter':n_iter,'torch_model':model}
+    model_dict = {'epoch_num': epoch, 'n_iter': n_iter, 'torch_model': model}
     torch.save(model_dict, file_prefix + '/torch_model')
 
     prtime("RNN model checkpoint saved")
 
+
 def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method):
-    #test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method
+    # test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method
     model.eval()
     test_y_at_t = torch.zeros(test_batch_size, seq_dim, 1)
     preds = []
@@ -148,7 +153,7 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
 
     # concatenating the preds and targets for the whole epoch (iterating over test_loader once)
     semifinal_preds = np.concatenate(preds).ravel()
-    semifinal_targs = np.concatenate(targets).ravel()
+    semifinal_targs = np.concatenate(targets).ravel()  # Last 5 entries are nan
     mse = np.mean((semifinal_targs - semifinal_preds) ** 2)
 
     # loading the training data stats for de-normalization purpose
@@ -163,22 +168,24 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
 
     # Do do-normalization process on predictions from test set
     if transformation_method == "minmaxscale":
-        final_preds = ((train_max['STM_Xcel_Meter'] - train_min['STM_Xcel_Meter']) * semifinal_preds) + train_min['STM_Xcel_Meter']
+        final_preds = ((train_max['STM_Xcel_Meter'] - train_min['STM_Xcel_Meter']) * semifinal_preds) + train_min[
+            'STM_Xcel_Meter']
 
     else:
-        final_preds = ((semifinal_preds* train_std['STM_Xcel_Meter'])+ train_mean['STM_Xcel_Meter'])
+        final_preds = ((semifinal_preds * train_std['STM_Xcel_Meter']) + train_mean['STM_Xcel_Meter'])
 
     predictions = pd.DataFrame(final_preds)
-    denormalized_rmse = np.array(np.sqrt(np.mean((predictions.values.squeeze() - test_df.STM_Xcel_Meter.values) ** 2)), ndmin=1)
+    denormalized_rmse = np.array(np.sqrt(np.mean((predictions.values.squeeze() - test_df.STM_Xcel_Meter.values) ** 2)),
+                                 ndmin=1)
 
     return predictions, denormalized_rmse, mse
 
 
-def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method, configs, train_batch_size, test_batch_size, seq_dim):
-
+def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method,
+            configs, train_batch_size, test_batch_size, seq_dim):
     # hyper-parameters
     num_epochs = num_epochs
-    learning_rate = 0.001
+    learning_rate = 0.01
     input_dim = 7  # Fixed
     hidden_dim = int(configs['hidden_nodes'])
     output_dim = 1  # one prediction - energy consumption
@@ -241,31 +248,36 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         prtime("starting to train the model for {} epochs!".format(num_epochs))
 
         if (len(epoch_range) == 0):
-                epoch = resume_num_epoch + 1
-                prtime("the previously saved model was at epoch= {}, which is same as num_epochs. So, not training"
-                        .format(resume_num_epoch))
+            epoch = resume_num_epoch + 1
+            prtime("the previously saved model was at epoch= {}, which is same as num_epochs. So, not training"
+                   .format(resume_num_epoch))
 
         if run_resume:
             n_iter = resume_n_iter
         else:
             n_iter = 0
 
-        #y_at_t = torch.FloatTensor()
-        train_y_at_t = torch.zeros(train_batch_size, seq_dim, 1) # 960 x 5 x 1
+        # y_at_t = torch.FloatTensor()
+        train_y_at_t = torch.zeros(train_batch_size, seq_dim, 1)  # 960 x 5 x 1
         # Loop through epochs
         for epoch in epoch_range:
             model.train()
             # This loop returns elements from the dataset batch by batch. Contains features AND targets
             for i, (feats, values) in enumerate(train_loader):
+                time1 = timeit.default_timer()
 
-                features = Variable(feats.view(-1, seq_dim, input_dim-1)) # batch size x 5 x 6
-                target = Variable(values) # batch size x 1
+                features = Variable(feats.view(-1, seq_dim, input_dim - 1))  # batch size x 5 x 6
+                target = Variable(values)  # batch size x 1
+
+                time2 = timeit.default_timer()
 
                 # Clear gradients w.r.t. parameters (from previous epoch)
                 optimizer.zero_grad()
 
                 # Forward pass to get output/logits. Returns vector with same size as # of samples in a training batch
                 outputs = model(torch.cat((features, train_y_at_t), dim=2))
+
+                time3 = timeit.default_timer()
 
                 # tiling the 2nd axis of y_at_t from 1 to 5
                 train_y_at_t = tile(outputs.unsqueeze(2), 1, 5)
@@ -278,10 +290,17 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
                 # Print to terminal and save training loss
                 prtime('Epoch: {} Iteration: {} TrainLoss: {}'.format(epoch, n_iter, train_loss[-1]))
-                writer.add_scalar("/train_loss", loss.data.item(), n_iter)
+                # writer.add_scalar("/train_loss", loss.data.item(), n_iter)
+                writer.add_scalars("Loss", {'Train': loss.data.item()}, n_iter)
 
-                # Does backpropogation and gets gradients w.r.t. parameters
+                time4 = timeit.default_timer()
+
+                # TODO Memory leak in this line
+                # Does backpropogation and gets gradients, (the weights and bias)
                 loss.backward(retain_graph=True)
+                #backward(retain_graph=False)
+
+                time5 = timeit.default_timer()
 
                 # Updating the weights/parameters
                 optimizer.step()
@@ -289,24 +308,36 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                 # Each iteration is one batch
                 n_iter += 1
 
+                # Compute time per iteration
+                time6 = timeit.default_timer()
+                writer.add_scalars("Iteration time", {"dt1": time2-time1,
+                                                      "dt2": time3-time2,
+                                                      "dt3": time4-time3,
+                                                      "dt4": time5-time4,
+                                                      "dt5": time6-time5}, n_iter)
+
                 # save the model every 25 iterations
-                if n_iter %25 == 0:
+                if n_iter % 25 == 0:
                     save_model(model, epoch, n_iter)
 
                 # Do a test batch every 100 iterations
                 if n_iter % 100 == 0:
-                    predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method)
+                    predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, seq_dim, input_dim,
+                                                                    test_batch_size, transformation_method)
                     test_iter.append(n_iter)
                     test_loss.append(mse)
                     test_rmse.append(denorm_rmse)
-                    writer.add_scalar("test_loss", mse, n_iter)
-                    writer.add_scalar("denorm_test_rmse", denorm_rmse, n_iter)
-                    print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}'.format(epoch, n_iter, loss.data.item(), mse))
+                    # writer.add_scalar("test_loss", mse, n_iter)
+                    # writer.add_scalar("denorm_test_rmse", denorm_rmse, n_iter)
+                    writer.add_scalars("Loss", {"Test": mse}, n_iter)
+                    print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}'.format(epoch, n_iter, loss.data.item(),
+                                                                                        mse))
 
         # Once model training is done, save it
         save_model(model, epoch, n_iter)
 
-        predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method)
+        predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, seq_dim, input_dim,
+                                                        test_batch_size, transformation_method)
         predictions.to_csv(file_prefix + '/predictions.csv', index=False)
         np.savetxt(file_prefix + '/final_rmse.csv', denorm_rmse, delimiter=",")
 
@@ -316,16 +347,17 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         model = torch_model['torch_model']
         prtime("Loaded model from file, given run_train=False\n")
 
-        predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method)
+        predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, seq_dim, input_dim,
+                                                        test_batch_size, transformation_method)
         test_loss.append(mse)
         test_rmse.append(denorm_rmse)
-        writer.add_scalar("/test_loss", mse)
-        writer.add_scalar("/denorm_test_rmse", denorm_rmse)
+        # writer.add_scalar("/test_loss", mse)
+        # writer.add_scalar("/denorm_test_rmse", denorm_rmse)
+        writer.add_scalars("Loss", {"Test": mse})
 
         prtime('Test_MSE: {}'.format(mse))
         predictions.to_csv(file_prefix + '/predictions.csv', index=False)
         np.savetxt(file_prefix + '/final_rmse.csv', denorm_rmse, delimiter=",")
-
 
 
 def main(train_df, test_df, configs):
@@ -351,6 +383,10 @@ def main(train_df, test_df, configs):
     writer = SummaryWriter(writer_path)
     print(writer_path)
 
+    # writer_path = file_prefix
+    # train_writer = SummaryWriter(writer_path)
+    # test_writer = SummaryWriter(writer_path)
+
     # dropping the datetime_str column. Causes problem with normalization
     if run_train:
         train_data = train_df.copy(deep=True)
@@ -367,8 +403,11 @@ def main(train_df, test_df, configs):
     prtime("data transformed using {} as transformation method".format(transformation_method))
 
     # Convert to iterable dataset (DataLoaders)
-    window = 5    # window is synonymous to the "sequence length" dimension
-    train_loader, test_loader, train_batch_size, test_batch_size = data_iterable(train_data, test_data, run_train, window, tr_desired_batch_size, te_desired_batch_size)
+    window = 5  # window is synonymous to the "sequence length" dimension
+    train_loader, test_loader, train_batch_size, test_batch_size = data_iterable(train_data, test_data, run_train,
+                                                                                 window, tr_desired_batch_size,
+                                                                                 te_desired_batch_size)
     prtime("data converted to iterable dataset")
 
-    process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume,writer, transformation_method, configs, train_batch_size, test_batch_size, seq_dim=window)
+    process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method,
+            configs, train_batch_size, test_batch_size, seq_dim=window)
