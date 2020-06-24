@@ -12,9 +12,9 @@ import torch.nn as nn
 from torch.autograd import Variable
 from tensorboardX import SummaryWriter
 import timeit
+import matplotlib.pyplot as plt
 
 file_prefix = '/default'
-
 
 # Create lagged versions of exogenous variables
 def seq_pad(a, window):
@@ -185,7 +185,8 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
             configs, train_batch_size, test_batch_size, seq_dim):
     # hyper-parameters
     num_epochs = num_epochs
-    learning_rate = 0.01
+    #learning_rate = 0.0005
+    learning_rate = 0.00005
     input_dim = 7  # Fixed
     hidden_dim = int(configs['hidden_nodes'])
     output_dim = 1  # one prediction - energy consumption
@@ -231,6 +232,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
             # input_dim: The number of expected features in the input x
             # hidden_dim: the number of features in the hidden state h
             # layer_dim: Number of recurrent layers. i.e. if 2, it is stacking two RNNs together to form a stacked RNN
+            # Initialize the model
             model = rnn.RNNModel(input_dim, hidden_dim, layer_dim, output_dim)
             epoch_range = np.arange(num_epochs)
             prtime("A new {} model instantiated, with run_train=True".format("rnn"))
@@ -257,30 +259,38 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         else:
             n_iter = 0
 
-        # y_at_t = torch.FloatTensor()
+        # Initialize re-trainable matrix
         train_y_at_t = torch.zeros(train_batch_size, seq_dim, 1)  # 960 x 5 x 1
         # Loop through epochs
         for epoch in epoch_range:
-            model.train()
             # This loop returns elements from the dataset batch by batch. Contains features AND targets
             for i, (feats, values) in enumerate(train_loader):
+                model.train()
+                # feats: 960x30 (tensor)
+                # values: 960x1 (tensor)
                 time1 = timeit.default_timer()
 
-                features = Variable(feats.view(-1, seq_dim, input_dim - 1))  # batch size x 5 x 6
-                target = Variable(values)  # batch size x 1
+                # batch size x 5 x 6. -1 means "I don't know". Middle dimension is time.
+                # (batches, timesteps, features)
+                features = Variable(feats.view(-1, seq_dim, input_dim - 1)) # size: (960x5x6)
+                target = Variable(values)  # size: batch size
 
                 time2 = timeit.default_timer()
 
-                # Clear gradients w.r.t. parameters (from previous epoch)
+                # Clear gradients w.r.t. parameters (from previous epoch). Same as model.zero_grad()
                 optimizer.zero_grad()
 
-                # Forward pass to get output/logits. Returns vector with same size as # of samples in a training batch
-                outputs = model(torch.cat((features, train_y_at_t), dim=2))
+                # FORWARD PASS to get output/logits.
+                # train_y_at_t is 960 x 5 x 1
+                # features is     960 x 5 x 6
+                # This command: (960x5x7) --> 960x1
+                outputs = model(torch.cat((features, train_y_at_t.detach_()), dim=2))
 
                 time3 = timeit.default_timer()
 
                 # tiling the 2nd axis of y_at_t from 1 to 5
                 train_y_at_t = tile(outputs.unsqueeze(2), 1, 5)
+                #train_y_at_t_nump = train_y_at_t.detach().numpy()
 
                 # Calculate Loss: softmax --> cross entropy loss
                 loss = criterion(outputs.squeeze(), target)
@@ -290,19 +300,16 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
                 # Print to terminal and save training loss
                 prtime('Epoch: {} Iteration: {} TrainLoss: {}'.format(epoch, n_iter, train_loss[-1]))
-                # writer.add_scalar("/train_loss", loss.data.item(), n_iter)
                 writer.add_scalars("Loss", {'Train': loss.data.item()}, n_iter)
 
                 time4 = timeit.default_timer()
 
-                # TODO Memory leak in this line
-                # Does backpropogation and gets gradients, (the weights and bias)
-                loss.backward(retain_graph=True)
-                #backward(retain_graph=False)
+                # Does backpropogation and gets gradients, (the weights and bias). Create graph
+                loss.backward()
 
                 time5 = timeit.default_timer()
 
-                # Updating the weights/parameters
+                # Updating the weights/parameters. Clear computational graph.
                 optimizer.step()
 
                 # Each iteration is one batch
@@ -327,9 +334,13 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                     test_iter.append(n_iter)
                     test_loss.append(mse)
                     test_rmse.append(denorm_rmse)
-                    # writer.add_scalar("test_loss", mse, n_iter)
-                    # writer.add_scalar("denorm_test_rmse", denorm_rmse, n_iter)
                     writer.add_scalars("Loss", {"Test": mse}, n_iter)
+                    # Add matplotlib plot to compare actual test set vs predicted
+                    fig, ax = plt.subplots()
+                    ax.plot(predictions, label='Prediction')
+                    ax.plot(test_df['STM_Xcel_Meter'], label='Actual')
+                    ax.legend()
+                    writer.add_figure('Predictions',fig)
                     print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}'.format(epoch, n_iter, loss.data.item(),
                                                                                         mse))
 
@@ -351,8 +362,6 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                                                         test_batch_size, transformation_method)
         test_loss.append(mse)
         test_rmse.append(denorm_rmse)
-        # writer.add_scalar("/test_loss", mse)
-        # writer.add_scalar("/denorm_test_rmse", denorm_rmse)
         writer.add_scalars("Loss", {"Test": mse})
 
         prtime('Test_MSE: {}'.format(mse))
@@ -382,10 +391,6 @@ def main(train_df, test_df, configs):
     writer_path = file_prefix
     writer = SummaryWriter(writer_path)
     print(writer_path)
-
-    # writer_path = file_prefix
-    # train_writer = SummaryWriter(writer_path)
-    # test_writer = SummaryWriter(writer_path)
 
     # dropping the datetime_str column. Causes problem with normalization
     if run_train:
