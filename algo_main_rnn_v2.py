@@ -13,6 +13,7 @@ from torch.autograd import Variable
 from tensorboardX import SummaryWriter
 import timeit
 import matplotlib.pyplot as plt
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 file_prefix = '/default'
 
@@ -40,11 +41,17 @@ def seq_pad(a, window):
 
 
 def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_batch_size):
+    # Find factors of the length of train and test df's and pick the closest one to the requested batch sizes
     train_bth = factors(train_data.shape[0])
     train_bt_size = min(train_bth, key=lambda x: abs(x - tr_desired_batch_size))
 
     test_bth = factors(test_data.shape[0])
     test_bt_size = min(test_bth, key=lambda x: abs(x - te_desired_batch_size))
+
+    print("Available train batch sizes: {}".format(sorted(train_bth)))
+    print("Requested size of batches - Train: {}, Test: {}".format(tr_desired_batch_size, te_desired_batch_size))
+    print("Actual size of batches - Train: {}, Test: {}".format(train_bt_size, test_bt_size))
+    print("Number of batches in data set - Train: {}, Test: {}".format(train_data.shape[0]/train_bt_size, test_data.shape[0]/test_bt_size))
 
     return train_bt_size, test_bt_size
 
@@ -80,6 +87,7 @@ def data_transform(train_data, test_data, transformation_method, run_train):
     train_mean = pd.DataFrame(train_stats['train_mean'], index=[1]).iloc[0]
     train_std = pd.DataFrame(train_stats['train_std'], index=[1]).iloc[0]
 
+    # Normalize data
     if transformation_method == "minmaxscale":
         test_data = (test_data - train_min) / (train_max - train_min)
 
@@ -90,18 +98,19 @@ def data_transform(train_data, test_data, transformation_method, run_train):
 
 
 # Create lagged variables and convert train and test data to torch data types
-def data_iterable(train_data, test_data, run_train, window, tr_desired_batch_size, te_desired_batch_size):
+def data_iterable(train_data, test_data, run_train, window, tr_desired_batch_size, te_desired_batch_size, configs):
+
     train_batch_size, test_batch_size = size_the_batches(train_data, test_data, tr_desired_batch_size,
                                                          te_desired_batch_size)
 
     if run_train:
         # Create lagged INPUT variables, i.e. columns: w1_(t-1), w1_(t-2)...
         # Does this for all input variables for times up to "window"
-        X_train = train_data.drop('STM_Xcel_Meter', axis=1).values.astype(dtype='float32')
+        X_train = train_data.drop(configs['target_var'], axis=1).values.astype(dtype='float32')
         X_train = seq_pad(X_train, window)
 
         # Lag output variable, i.e. input for t=5 maps to EC at t=10, t=6 maps to EC t=11, etc.
-        y_train = train_data['STM_Xcel_Meter'].shift(-window).fillna(method='ffill')
+        y_train = train_data[configs['target_var']].shift(-window).fillna(method='ffill')
         y_train = y_train.values.astype(dtype='float32')
 
         # Convert to iterable tensors
@@ -116,10 +125,10 @@ def data_iterable(train_data, test_data, run_train, window, tr_desired_batch_siz
         train_loader = []
 
     # Do the same as above for the test set
-    X_test = test_data.drop('STM_Xcel_Meter', axis=1).values.astype(dtype='float32')
+    X_test = test_data.drop(configs['target_var'], axis=1).values.astype(dtype='float32')
     X_test = seq_pad(X_test, window)
 
-    y_test = test_data['STM_Xcel_Meter'].shift(-window).fillna(method='ffill')
+    y_test = test_data[configs['target_var']].shift(-window).fillna(method='ffill')
     y_test = y_test.values.astype(dtype='float32')
 
     test_feat_tensor = torch.from_numpy(X_test).type(torch.FloatTensor)
@@ -135,19 +144,21 @@ def save_model(model, epoch, n_iter):
     model_dict = {'epoch_num': epoch, 'n_iter': n_iter, 'torch_model': model}
     torch.save(model_dict, file_prefix + '/torch_model')
 
-    prtime("RNN model checkpoint saved")
+    #prtime("RNN model checkpoint saved")
 
 
-def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method):
+def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method, configs):
     # test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method
     model.eval()
-    test_y_at_t = torch.zeros(test_batch_size, seq_dim, 1)
+    #test_y_at_t = torch.zeros(test_batch_size, seq_dim, 1)
     preds = []
     targets = []
     for i, (feats, values) in enumerate(test_loader):
-        features = Variable(feats.view(-1, seq_dim, input_dim - 1))
-        outputs = model(torch.cat((features, test_y_at_t), dim=2))
-        test_y_at_t = tile(outputs.unsqueeze(2), 1, 5)
+        #features = Variable(feats.view(-1, seq_dim, input_dim - 1))
+        features = Variable(feats.view(-1, seq_dim, input_dim))
+        #outputs = model(torch.cat((features, test_y_at_t), dim=2))
+        outputs = model(features)
+        #test_y_at_t = tile(outputs.unsqueeze(2), 1, 5)
         preds.append(outputs.data.numpy().squeeze())
         targets.append(values.data.numpy())
 
@@ -168,14 +179,16 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
 
     # Do do-normalization process on predictions from test set
     if transformation_method == "minmaxscale":
-        final_preds = ((train_max['STM_Xcel_Meter'] - train_min['STM_Xcel_Meter']) * semifinal_preds) + train_min[
-            'STM_Xcel_Meter']
+        final_preds = ((train_max[configs['target_var']] - train_min[configs['target_var']]) * semifinal_preds) + train_min[
+            configs['target_var']]
 
     else:
-        final_preds = ((semifinal_preds * train_std['STM_Xcel_Meter']) + train_mean['STM_Xcel_Meter'])
+        final_preds = ((semifinal_preds * train_std[configs['target_var']]) + train_mean[configs['target_var']])
 
     predictions = pd.DataFrame(final_preds)
-    denormalized_rmse = np.array(np.sqrt(np.mean((predictions.values.squeeze() - test_df.STM_Xcel_Meter.values) ** 2)),
+    # denormalized_rmse = np.array(np.sqrt(np.mean((predictions.values.squeeze() - test_df.STM_Xcel_Meter.values) ** 2)),
+    #                              ndmin=1)
+    denormalized_rmse = np.array(np.sqrt(np.mean((predictions.values.squeeze() - test_df[configs['target_var']].values) ** 2)),
                                  ndmin=1)
 
     return predictions, denormalized_rmse, mse
@@ -185,16 +198,17 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
             configs, train_batch_size, test_batch_size, seq_dim):
     # hyper-parameters
     num_epochs = num_epochs
-    #learning_rate = 0.0005
-    learning_rate = 0.00005
-    input_dim = 7  # Fixed
+    learning_rate_base = 1e-02
+    lr_schedule = False
+    #input_dim = 4  # Fixed
     hidden_dim = int(configs['hidden_nodes'])
     output_dim = 1  # one prediction - energy consumption
     layer_dim = 1
     weight_decay = float(configs['weight_decay'])
 
-    configs['learning_rate'] = learning_rate
-    configs['input_dim'] = input_dim
+    configs['learning_rate_base'] = learning_rate_base
+    #configs['input_dim'] = input_dim
+    input_dim = configs['input_dim']
     configs['hidden_dim'] = hidden_dim
     configs['output_dim'] = output_dim
     configs['layer_dim'] = layer_dim
@@ -244,7 +258,11 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         criterion = nn.MSELoss()
 
         # Instantiate Optimizer Class
-        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate_base, weight_decay=weight_decay)
+
+        if lr_schedule:
+            # Set up learning rate scheduler. patience (for our case) is # of iterations, not epochs
+            scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, min_lr=1e-04, patience=2000, verbose=True)
 
         prtime("Preparing model to train")
         prtime("starting to train the model for {} epochs!".format(num_epochs))
@@ -260,7 +278,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
             n_iter = 0
 
         # Initialize re-trainable matrix
-        train_y_at_t = torch.zeros(train_batch_size, seq_dim, 1)  # 960 x 5 x 1
+        #train_y_at_t = torch.zeros(train_batch_size, seq_dim, 1)  # 960 x 5 x 1
         # Loop through epochs
         for epoch in epoch_range:
             # This loop returns elements from the dataset batch by batch. Contains features AND targets
@@ -272,7 +290,8 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
                 # batch size x 5 x 6. -1 means "I don't know". Middle dimension is time.
                 # (batches, timesteps, features)
-                features = Variable(feats.view(-1, seq_dim, input_dim - 1)) # size: (960x5x6)
+                #features = Variable(feats.view(-1, seq_dim, input_dim - 1)) # size: (960x5x6)
+                features = Variable(feats.view(-1, seq_dim, input_dim))
                 target = Variable(values)  # size: batch size
 
                 time2 = timeit.default_timer()
@@ -284,12 +303,13 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                 # train_y_at_t is 960 x 5 x 1
                 # features is     960 x 5 x 6
                 # This command: (960x5x7) --> 960x1
-                outputs = model(torch.cat((features, train_y_at_t.detach_()), dim=2))
+                #outputs = model(torch.cat((features, train_y_at_t.detach_()), dim=2))
+                outputs = model(features)
 
                 time3 = timeit.default_timer()
 
                 # tiling the 2nd axis of y_at_t from 1 to 5
-                train_y_at_t = tile(outputs.unsqueeze(2), 1, 5)
+                #train_y_at_t = tile(outputs.unsqueeze(2), 1, 5)
                 #train_y_at_t_nump = train_y_at_t.detach().numpy()
 
                 # Calculate Loss: softmax --> cross entropy loss
@@ -299,7 +319,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                 train_iter.append(n_iter)
 
                 # Print to terminal and save training loss
-                prtime('Epoch: {} Iteration: {} TrainLoss: {}'.format(epoch, n_iter, train_loss[-1]))
+                #prtime('Epoch: {} Iteration: {} TrainLoss: {}'.format(epoch, n_iter, train_loss[-1]))
                 writer.add_scalars("Loss", {'Train': loss.data.item()}, n_iter)
 
                 time4 = timeit.default_timer()
@@ -308,6 +328,9 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                 loss.backward()
 
                 time5 = timeit.default_timer()
+
+                if lr_schedule:
+                    scheduler.step(loss)
 
                 # Updating the weights/parameters. Clear computational graph.
                 optimizer.step()
@@ -323,32 +346,47 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                                                       "dt4": time5-time4,
                                                       "dt5": time6-time5}, n_iter)
 
-                # save the model every 25 iterations
-                if n_iter % 25 == 0:
+                # save the model every __ iterations
+                if n_iter % 200 == 0:
                     save_model(model, epoch, n_iter)
 
                 # Do a test batch every 100 iterations
-                if n_iter % 100 == 0:
+                if n_iter % 200 == 0:
                     predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, seq_dim, input_dim,
-                                                                    test_batch_size, transformation_method)
+                                                                    test_batch_size, transformation_method, configs)
                     test_iter.append(n_iter)
                     test_loss.append(mse)
                     test_rmse.append(denorm_rmse)
                     writer.add_scalars("Loss", {"Test": mse}, n_iter)
+
                     # Add matplotlib plot to compare actual test set vs predicted
-                    fig, ax = plt.subplots()
-                    ax.plot(predictions, label='Prediction')
-                    ax.plot(test_df['STM_Xcel_Meter'], label='Actual')
-                    ax.legend()
-                    writer.add_figure('Predictions',fig)
-                    print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}'.format(epoch, n_iter, loss.data.item(),
-                                                                                        mse))
+                    fig1, ax1 = plt.subplots()
+                    ax1.plot(predictions, label='Prediction', lw=1)
+                    ax1.plot(test_df[configs['target_var']], label='Actual', lw=1)
+                    ax1.legend()
+                    writer.add_figure('Predictions', fig1, n_iter)
+
+                    # Add parody plot
+                    fig2, ax2 = plt.subplots()
+                    ax2.scatter(predictions, test_df[configs['target_var']], s=5, alpha=0.3)
+                    strait_line = np.linspace(min(min(predictions), min(test_df[configs['target_var']])),
+                                     max(max(predictions), max(test_df[configs['target_var']])), 5)
+                    ax2.plot(strait_line, strait_line, c='k')
+                    ax2.set_xlabel('Predicted')
+                    ax2.set_ylabel('Observed')
+                    ax2.axhline(y=0, color='k')
+                    ax2.axvline(x=0, color='k')
+                    ax2.axis('equal')
+                    writer.add_figure('Parody', fig2, n_iter)
+
+                    print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}, LR: {}'.format(epoch, n_iter, loss.data.item(),
+                                                                                        mse, optimizer.param_groups[0]['lr']))
 
         # Once model training is done, save it
         save_model(model, epoch, n_iter)
 
         predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, seq_dim, input_dim,
-                                                        test_batch_size, transformation_method)
+                                                        test_batch_size, transformation_method, configs)
         predictions.to_csv(file_prefix + '/predictions.csv', index=False)
         np.savetxt(file_prefix + '/final_rmse.csv', denorm_rmse, delimiter=",")
 
@@ -359,7 +397,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         prtime("Loaded model from file, given run_train=False\n")
 
         predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, seq_dim, input_dim,
-                                                        test_batch_size, transformation_method)
+                                                        test_batch_size, transformation_method, configs)
         test_loss.append(mse)
         test_rmse.append(denorm_rmse)
         writer.add_scalars("Loss", {"Test": mse})
@@ -381,6 +419,8 @@ def main(train_df, test_df, configs):
     test_exp_num = configs['test_exp_num']
     arch_type = configs['arch_type']
 
+    configs['input_dim'] = train_df.shape[1] - 1
+
     results_dir = "EnergyForecasting_Results"
     if not os.path.exists(results_dir):
         os.mkdir(results_dir)
@@ -392,16 +432,19 @@ def main(train_df, test_df, configs):
     writer = SummaryWriter(writer_path)
     print(writer_path)
 
-    # dropping the datetime_str column. Causes problem with normalization
+    # Get rid of datetime index
     if run_train:
         train_data = train_df.copy(deep=True)
-        train_data = train_data.drop('Date_time_MT', axis=1)
-
+        # train_data = train_data.drop('Date_time_MT', axis=1)
+        train_data.reset_index(drop=True, inplace=True)
+        train_df.reset_index(drop=True, inplace=True)
     else:
         train_data = train_df
 
     test_data = test_df.copy(deep=True)
-    test_data = test_data.drop('Date_time_MT', axis=1)
+    # test_data = test_data.drop('Date_time_MT', axis=1)
+    test_data.reset_index(drop=True, inplace=True)
+    test_df.reset_index(drop=True, inplace=True)
 
     # Normalization transformation
     train_data, test_data = data_transform(train_data, test_data, transformation_method, run_train)
@@ -411,7 +454,7 @@ def main(train_df, test_df, configs):
     window = 5  # window is synonymous to the "sequence length" dimension
     train_loader, test_loader, train_batch_size, test_batch_size = data_iterable(train_data, test_data, run_train,
                                                                                  window, tr_desired_batch_size,
-                                                                                 te_desired_batch_size)
+                                                                                 te_desired_batch_size, configs)
     prtime("data converted to iterable dataset")
 
     process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method,

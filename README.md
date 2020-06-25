@@ -17,3 +17,23 @@ This repository contains the source code for forecasting energy consumption usin
  A conda environment file is provided for convenience. Assuming you have Anaconda python distribution available on your computer, you can create a new conda environment with the necessary packages using the following command:
 
 `conda env create -f ml-env.yml -n "ic-lf-deploy"`
+
+#### algo_main_rnn_v1.py
+
+* Works with STM whole-campus data. Uses previous timestep for prediction feedback. No major architecture changes besides bug fixes.
+
+#### algo_main_rnn_v2.py
+
+* Currently being iterated upon. Built for training on building-specific data, (currently) taken from LAN directory. 
+
+#### entry_point_campus.py
+
+* Older entry point script for STM modeling
+
+#### entry_point_building.py
+
+* Currently being iterated upon. Built for individual building use.
+
+#### buildings_processing.py
+
+* Contains functions for data manipulation and cleaning. (Same file is used for both Quantile Regression and ML methods)
