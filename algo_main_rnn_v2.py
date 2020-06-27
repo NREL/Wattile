@@ -48,10 +48,13 @@ def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_ba
     test_bth = factors(test_data.shape[0])
     test_bt_size = min(test_bth, key=lambda x: abs(x - te_desired_batch_size))
 
+    train_ratio = int(train_data.shape[0]*100/(train_data.shape[0]+test_data.shape[0]))
+    test_ratio = 100-train_ratio
+    print("Train size: {}, Test size: {}, split {}:{}".format(train_data.shape[0], test_data.shape[0], train_ratio, test_ratio))
     print("Available train batch sizes: {}".format(sorted(train_bth)))
     print("Requested size of batches - Train: {}, Test: {}".format(tr_desired_batch_size, te_desired_batch_size))
     print("Actual size of batches - Train: {}, Test: {}".format(train_bt_size, test_bt_size))
-    print("Number of batches in data set - Train: {}, Test: {}".format(train_data.shape[0]/train_bt_size, test_data.shape[0]/test_bt_size))
+    print("Number of batches in 1 epoch - Train: {}, Test: {}".format(train_data.shape[0]/train_bt_size, test_data.shape[0]/test_bt_size))
 
     return train_bt_size, test_bt_size
 
@@ -98,19 +101,16 @@ def data_transform(train_data, test_data, transformation_method, run_train):
 
 
 # Create lagged variables and convert train and test data to torch data types
-def data_iterable(train_data, test_data, run_train, window, tr_desired_batch_size, te_desired_batch_size, configs):
-
-    train_batch_size, test_batch_size = size_the_batches(train_data, test_data, tr_desired_batch_size,
-                                                         te_desired_batch_size)
+def data_iterable(train_data, test_data, run_train, train_batch_size, test_batch_size, configs):
 
     if run_train:
         # Create lagged INPUT variables, i.e. columns: w1_(t-1), w1_(t-2)...
         # Does this for all input variables for times up to "window"
         X_train = train_data.drop(configs['target_var'], axis=1).values.astype(dtype='float32')
-        X_train = seq_pad(X_train, window)
+        X_train = seq_pad(X_train, configs['window'])
 
         # Lag output variable, i.e. input for t=5 maps to EC at t=10, t=6 maps to EC t=11, etc.
-        y_train = train_data[configs['target_var']].shift(-window).fillna(method='ffill')
+        y_train = train_data[configs['target_var']].shift(-configs['EC_future_gap']).fillna(method='ffill')
         y_train = y_train.values.astype(dtype='float32')
 
         # Convert to iterable tensors
@@ -126,9 +126,9 @@ def data_iterable(train_data, test_data, run_train, window, tr_desired_batch_siz
 
     # Do the same as above for the test set
     X_test = test_data.drop(configs['target_var'], axis=1).values.astype(dtype='float32')
-    X_test = seq_pad(X_test, window)
+    X_test = seq_pad(X_test, configs['window'])
 
-    y_test = test_data[configs['target_var']].shift(-window).fillna(method='ffill')
+    y_test = test_data[configs['target_var']].shift(-configs['EC_future_gap']).fillna(method='ffill')
     y_test = y_test.values.astype(dtype='float32')
 
     test_feat_tensor = torch.from_numpy(X_test).type(torch.FloatTensor)
@@ -139,6 +139,41 @@ def data_iterable(train_data, test_data, run_train, window, tr_desired_batch_siz
 
     return train_loader, test_loader, train_batch_size, test_batch_size
 
+def data_iterable_random(train_data, test_data, run_train, train_batch_size, test_batch_size, configs):
+
+    if run_train:
+        # Create lagged INPUT variables, i.e. columns: w1_(t-1), w1_(t-2)...
+        # Does this for all input variables for times up to "window"
+        X_train = train_data.drop(configs['target_var'], axis=1).values.astype(dtype='float32')
+
+        # Output variable
+        y_train = train_data[configs['target_var']]
+        y_train = y_train.values.astype(dtype='float32')
+
+        # Convert to iterable tensors
+        train_feat_tensor = torch.from_numpy(X_train).type(torch.FloatTensor)
+        train_target_tensor = torch.from_numpy(y_train).type(torch.FloatTensor)
+        train = data_utils.TensorDataset(train_feat_tensor, train_target_tensor)
+        train_loader = data_utils.DataLoader(train, batch_size=train_batch_size,
+                                             shuffle=True)  # Contains features and targets
+        print("data train made iterable")
+
+    else:
+        train_loader = []
+
+    # Do the same as above for the test set
+    X_test = test_data.drop(configs['target_var'], axis=1).values.astype(dtype='float32')
+
+    y_test = test_data[configs['target_var']]
+    y_test = y_test.values.astype(dtype='float32')
+
+    test_feat_tensor = torch.from_numpy(X_test).type(torch.FloatTensor)
+    test_target_tensor = torch.from_numpy(y_test).type(torch.FloatTensor)
+
+    test = data_utils.TensorDataset(test_feat_tensor, test_target_tensor)
+    test_loader = DataLoader(dataset=test, batch_size=test_batch_size, shuffle=False)
+
+    return train_loader, test_loader, train_batch_size, test_batch_size
 
 def save_model(model, epoch, n_iter):
     model_dict = {'epoch_num': epoch, 'n_iter': n_iter, 'torch_model': model}
@@ -196,11 +231,12 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
 
 def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method,
             configs, train_batch_size, test_batch_size, seq_dim):
-    # hyper-parameters
+
+    # ___ Hyper-parameters
+    # Input_dim: Determined automatically
     num_epochs = num_epochs
     learning_rate_base = 1e-02
     lr_schedule = False
-    #input_dim = 4  # Fixed
     hidden_dim = int(configs['hidden_nodes'])
     output_dim = 1  # one prediction - energy consumption
     layer_dim = 1
@@ -360,9 +396,9 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                     writer.add_scalars("Loss", {"Test": mse}, n_iter)
 
                     # Add matplotlib plot to compare actual test set vs predicted
-                    fig1, ax1 = plt.subplots()
-                    ax1.plot(predictions, label='Prediction', lw=1)
-                    ax1.plot(test_df[configs['target_var']], label='Actual', lw=1)
+                    fig1, ax1 = plt.subplots(figsize=(20, 5))
+                    ax1.plot(test_df[configs['target_var']], label='Actual', lw=0.5)
+                    ax1.plot(predictions, label='Prediction', lw=0.5)
                     ax1.legend()
                     writer.add_figure('Predictions', fig1, n_iter)
 
@@ -419,7 +455,7 @@ def main(train_df, test_df, configs):
     test_exp_num = configs['test_exp_num']
     arch_type = configs['arch_type']
 
-    configs['input_dim'] = train_df.shape[1] - 1
+    #configs['input_dim'] = train_df.shape[1] - 1
 
     results_dir = "EnergyForecasting_Results"
     if not os.path.exists(results_dir):
@@ -450,12 +486,23 @@ def main(train_df, test_df, configs):
     train_data, test_data = data_transform(train_data, test_data, transformation_method, run_train)
     prtime("data transformed using {} as transformation method".format(transformation_method))
 
-    # Convert to iterable dataset (DataLoaders)
-    window = 5  # window is synonymous to the "sequence length" dimension
-    train_loader, test_loader, train_batch_size, test_batch_size = data_iterable(train_data, test_data, run_train,
-                                                                                 window, tr_desired_batch_size,
-                                                                                 te_desired_batch_size, configs)
+    # Size the batches
+    train_batch_size, test_batch_size = size_the_batches(train_data, test_data, tr_desired_batch_size,
+                                                         te_desired_batch_size)
+
+    if configs["TrainTestSplit"] == 'Sequential':
+        # Normal: Convert to iterable dataset (DataLoaders)
+        train_loader, test_loader, train_batch_size, test_batch_size = data_iterable(train_data, test_data, run_train,
+                                                                                     train_batch_size,
+                                                                                     test_batch_size, configs)
+
+    elif configs["TrainTestSplit"] == 'Random':
+        # Already did sequential padding: Convert to iterable dataset (DataLoaders)
+        train_loader, test_loader, train_batch_size, test_batch_size = data_iterable_random(train_data, test_data, run_train,
+                                                                                     train_batch_size,
+                                                                                     test_batch_size, configs)
+    # Everything should be the same fron this point on
     prtime("data converted to iterable dataset")
 
     process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method,
-            configs, train_batch_size, test_batch_size, seq_dim=window)
+            configs, train_batch_size, test_batch_size, seq_dim=configs['window'])

@@ -24,7 +24,7 @@ This repository contains the source code for forecasting energy consumption usin
 
 #### algo_main_rnn_v2.py
 
-* Currently being iterated upon. Built for training on building-specific data, (currently) taken from LAN directory. 
+* Currently being iterated upon. Built for training on building-specific data. 
 
 #### entry_point_campus.py
 
@@ -32,7 +32,7 @@ This repository contains the source code for forecasting energy consumption usin
 
 #### entry_point_building.py
 
-* Currently being iterated upon. Built for individual building use.
+* Currently being iterated upon. Built for individual building use. (Current) data source is LAN directory. 
 
 #### buildings_processing.py
 
