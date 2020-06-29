@@ -7,42 +7,46 @@ from pandas.tseries.holiday import USFederalHolidayCalendar, get_calendar
 import json
 
 
-def import_from_lan(configs):
-    # Does one year at a time
-    data = pd.DataFrame()
+def import_from_lan(configs, year):
+    # Imports EC data and weather data one year at a time
+    data_e = pd.DataFrame()
+    data_w = pd.DataFrame()
 
+    # Read in energy consumption data from LAN file (one month at a time)
     for month in range(1, 13):
-        # Read in energy consumption data from LAN file
         energy_data_dir = configs['LAN_path'] + "\\Building Load data\\"
-        energy_file = "{} {}-{} Meter Trends.csv".format(configs['building'], configs['year'], "{:02d}".format(month))
+        energy_file = "{} {}-{} Meter Trends.csv".format(configs['building'], year, "{:02d}".format(month))
         dateparse = lambda date: dt.datetime.strptime(date[:-13], '%Y-%m-%dT%H:%M:%S')
         df_e = pd.read_csv(energy_data_dir + energy_file,
                            parse_dates=['Timestamp'],
                            date_parser=dateparse,
                            index_col='Timestamp')
-        data = pd.concat([data, df_e])
-        print('Read month {} in {}'.format(month, configs['year']))
+        data_e = pd.concat([data_e, df_e])
+        print('Read energy month {}/12 in {} for {}'.format(month, year, configs['building']))
     print('Done reading in energy data')
 
-    # Read in weather data
-    file_extension = "data/Weather_{}.h5".format(configs['year'])
+    # Read in weather data (one month at a time)
+    file_extension = "data/Weather_{}.h5".format(year)
     if pathlib.Path(file_extension).exists():
-        df_w = pd.read_hdf(file_extension, key='df')
+        data_w = pd.read_hdf(file_extension, key='df')
     else:
         site = 'STM'
         weather_data_dir = configs['LAN_path'] + "\Weather\\"
-        weather_file = '{} Site Weather {}.csv'.format(site, configs['year'])
-        df_w = pd.read_csv(weather_data_dir + weather_file,
-                           parse_dates=['Timestamp'],
-                           date_parser=dateparse,
-                           index_col='Timestamp')
-        df_w.to_hdf(file_extension, key='df', mode='w')
+        for month in range(1, 13):
+            weather_file = '{} Site Weather {}-{}.csv'.format(site, year, "{:02d}".format(month))
+            df_w = pd.read_csv(weather_data_dir + weather_file,
+                               parse_dates=['Timestamp'],
+                               date_parser=dateparse,
+                               index_col='Timestamp')
+            data_w = pd.concat([data_w, df_w])
+            print('Read weather month {}/12 in {}'.format(month, year))
+        data_w.to_hdf(file_extension, key='df', mode='w')
     print('Done reading in weather data')
 
-    dataset = pd.concat([data, df_w], axis=1)
+    dataset = pd.concat([data_e, data_w], axis=1)
 
     pathlib.Path('data').mkdir(parents=True, exist_ok=True)
-    output_string = 'data/Data_{}_{}.h5'.format(configs['building'], configs['year'])
+    output_string = 'data/Data_{}_{}.h5'.format(configs['building'], year)
     dataset.to_hdf(output_string, key='df', mode='w')
 
     return output_string
@@ -65,7 +69,7 @@ def get_full_data(configs):
             data_full = pd.read_hdf(file_extension, key='df')
         else:
             # print('Processing data to hdf file')
-            file_path = import_from_lan(configs)
+            file_path = import_from_lan(configs, year)
             data_full = pd.read_hdf(file_path, key='df')
         dataset[year] = data_full
 
@@ -154,13 +158,32 @@ def train_test_split(data, configs):
     if configs['TrainTestSplit'] == 'Random':
         pathlib.Path('data').mkdir(parents=True, exist_ok=True)
         mask_file = "data/mask_{}_{}.json".format(configs['building'], "-".join(configs['year']))
+        # Check if a mask for the building/year combination already exists
         if pathlib.Path(mask_file).exists():
-            print("Reading existing training mask")
+            # Open the mask file
             with open(mask_file, "r") as read_file:
                 msk = json.load(read_file)
-            msk = np.array(msk)
-            train_df = data[msk]
-            test_df = data[~msk]
+            # Check if the saved mask is the same size as the data file
+            if len(msk) == data.shape[0]:
+                msk = np.array(msk)
+                train_df = data[msk]
+                test_df = data[~msk]
+                print("Using an existing training mask: {}".format(mask_file))
+            # If not, a recent architectural change must have changed the length of data. Make a new one.
+            else:
+                print("There was a length mismatch between the existing mask and the data. Making a new mask and writing to file.")
+                data_size = data.shape[0]
+                num_ones = (0.9 * data_size) - ((0.9 * data_size) % 32)
+                msk = np.zeros(data_size)
+                indices = np.random.choice(np.arange(data_size), replace=False, size=int(num_ones))
+                msk[indices] = 1
+                msk = msk.astype(bool)
+                train_df = data[msk]
+                test_df = data[~msk]
+                with open(mask_file, "w") as write_file:
+                    json.dump(msk.tolist(), write_file)
+
+        # If no previously-saved mask exists, make one
         else:
             print("Creating random training mask and writing to file")
             data_size = data.shape[0]
@@ -226,7 +249,8 @@ def prep_for_rnn(configs):
     data = clean_data(data, configs)
 
     # Deal with NANs
-    data = data.dropna(how='any')
+    #data = data.dropna(how='any')
+    data = data.interpolate()
 
     # Add time-based dummy variables
     data = time_dummies(data, configs)

@@ -11,23 +11,25 @@
     "run_resume": false,
     "preprocess": false,
     "arch_type": "RNN",
-    "train_exp_num": "RSF",
+    "train_exp_num": "SSEB",
     "test_exp_num": "dev",
     "hidden_nodes": "10",
-    "weight_decay": "0.0001",
+    "weight_decay": "0.001",
     "fetch_n_parse": false,
     "LAN_path": "Z:\\Data",
-    "building": "RSF",
+    "building": "SSEB",
     "year": [
         "2018",
         "2019"
     ],
-    "target_var": "RSF Main Power (kW)",
+    "target_var": "SSEB Main Power (kW)",
     "weather_include": [
         "SRRL BMS Global Horizontal Irradiance (W/m\u00b2_irr)",
         "SRRL BMS Wind Speed at 19' (mph)",
         "SRRL BMS Dry Bulb Temperature (\u00b0F)",
-        "SRRL BMS Total Cloud Cover (%)"
+        "SRRL BMS Total Cloud Cover (%)",
+        "SRRL BMS Relative Humidity (%RH)",
+        "SRRL BMS Barometric Pressure (mbar)"
     ],
     "TrainTestSplit": "Random",
     "test_start": "10/01/2019 00:00:00",
@@ -40,5 +42,8 @@
     "Holidays": true,
     "HOD_indicator": "sincos",
     "window": 5,
-    "EC_future_gap": 5
+    "EC_future_gap": 5,
+    "learning_rate_base": 1e-02,
+    "lr_schedule": false,
+    "results_dir": "EnergyForecasting_Results"
 }

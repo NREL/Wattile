@@ -235,8 +235,8 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     # ___ Hyper-parameters
     # Input_dim: Determined automatically
     num_epochs = num_epochs
-    learning_rate_base = 1e-02
-    lr_schedule = False
+    learning_rate_base = configs['learning_rate_base']
+    lr_schedule = configs['lr_schedule']
     hidden_dim = int(configs['hidden_nodes'])
     output_dim = 1  # one prediction - energy consumption
     layer_dim = 1
@@ -250,9 +250,10 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     configs['layer_dim'] = layer_dim
     configs['weight_decay'] = weight_decay
 
+    # Write the configurations used for this training process to a json file
     path = file_prefix + '/configs.json'
     with open(path, 'w') as fp:
-        json.dump(configs, fp)
+        json.dump(configs, fp, indent=1)
 
     # initializing lists to store losses over epochs:
     train_loss = []
@@ -285,7 +286,8 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
             # Initialize the model
             model = rnn.RNNModel(input_dim, hidden_dim, layer_dim, output_dim)
             epoch_range = np.arange(num_epochs)
-            prtime("A new {} model instantiated, with run_train=True".format("rnn"))
+            #prtime("A new {} model instantiated, with run_train=True".format("rnn"))
+            print("A new {} model instantiated, with run_train=True".format("rnn"))
 
         # Check if gpu support is available
         cuda_avail = torch.cuda.is_available()
@@ -457,7 +459,8 @@ def main(train_df, test_df, configs):
 
     #configs['input_dim'] = train_df.shape[1] - 1
 
-    results_dir = "EnergyForecasting_Results"
+    #results_dir = "EnergyForecasting_Results"
+    results_dir = configs["results_dir"]
     if not os.path.exists(results_dir):
         os.mkdir(results_dir)
     global file_prefix
@@ -466,7 +469,7 @@ def main(train_df, test_df, configs):
 
     writer_path = file_prefix
     writer = SummaryWriter(writer_path)
-    print(writer_path)
+    print("Writer path: {}".format(writer_path))
 
     # Get rid of datetime index
     if run_train:
@@ -484,7 +487,8 @@ def main(train_df, test_df, configs):
 
     # Normalization transformation
     train_data, test_data = data_transform(train_data, test_data, transformation_method, run_train)
-    prtime("data transformed using {} as transformation method".format(transformation_method))
+    #prtime("data transformed using {} as transformation method".format(transformation_method))
+    print("Data transformed using {} as transformation method".format(transformation_method))
 
     # Size the batches
     train_batch_size, test_batch_size = size_the_batches(train_data, test_data, tr_desired_batch_size,
@@ -503,6 +507,7 @@ def main(train_df, test_df, configs):
                                                                                      test_batch_size, configs)
     # Everything should be the same fron this point on
     prtime("data converted to iterable dataset")
+
 
     process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method,
             configs, train_batch_size, test_batch_size, seq_dim=configs['window'])
