@@ -1,3 +1,4 @@
+import sys
 import data_preprocessing
 import algo_main_rnn_v2
 import algo_main_ffnn
@@ -5,9 +6,13 @@ import algo_main_lstm
 import algo_main_gru
 import pandas as pd
 import argparser
-import seaborn as sns
-import buildings_processing as bp
 import json
+
+# Import shared files from other project
+shared_dir = 'C:\\dev\\intelligentcampus-2020summer\\loads\\Stats_Models_Loads'
+sys.path.append(shared_dir)
+import buildings_processing as bp
+
 
 def main(configs):
     # Preprocess if needed
@@ -40,6 +45,8 @@ def main(configs):
     print('Run with arch: {}, train_num= {}, test_num= {} and target= {} is done!'.format(arch_type, train_exp_num,
                                                                                       test_exp_num,
                                                                                       configs['target_var']))
+
+
 if __name__ == "__main__":
     # Read in configs from json
     with open("configs.json", "r") as read_file:

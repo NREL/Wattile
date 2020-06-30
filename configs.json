@@ -5,29 +5,29 @@
     "test_end_date": "2018-12-31",
     "transformation_method": "minmaxscale",
     "run_train": true,
-    "num_epochs": 1000,
+    "num_epochs": 700,
     "tr_batch_size": 3716,
     "te_batch_size": 100,
     "run_resume": false,
     "preprocess": false,
     "arch_type": "RNN",
-    "train_exp_num": "SSEB",
+    "train_exp_num": "Cafe",
     "test_exp_num": "dev",
     "hidden_nodes": "10",
     "weight_decay": "0.001",
     "fetch_n_parse": false,
     "LAN_path": "Z:\\Data",
-    "building": "SSEB",
+    "building": "Cafe",
     "year": [
         "2018",
         "2019"
     ],
-    "target_var": "SSEB Main Power (kW)",
+    "target_var": "Cafe Main Power (kW)",
     "weather_include": [
         "SRRL BMS Global Horizontal Irradiance (W/m\u00b2_irr)",
         "SRRL BMS Wind Speed at 19' (mph)",
         "SRRL BMS Dry Bulb Temperature (\u00b0F)",
-        "SRRL BMS Total Cloud Cover (%)",
+        "SRRL BMS Opaque Cloud Cover (%)",
         "SRRL BMS Relative Humidity (%RH)",
         "SRRL BMS Barometric Pressure (mbar)"
     ],
@@ -43,7 +43,8 @@
     "HOD_indicator": "sincos",
     "window": 5,
     "EC_future_gap": 5,
-    "learning_rate_base": 1e-02,
+    "learning_rate_base": 1e-03,
     "lr_schedule": false,
-    "results_dir": "EnergyForecasting_Results"
+    "results_dir": "EnergyForecasting_Results",
+    "holidays_file": "C:\\dev\\intelligentcampus-2020summer\\loads\\Stats_Models_Loads\\holidays.json"
 }
