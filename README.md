@@ -25,7 +25,7 @@ This repository contains the source code for forecasting energy consumption usin
 
 * Currently being iterated upon. (Current) data source is LAN directory. 
 * Model configurations defined in external configs.json file.
-* For whole campus modeling, specify `"train_exp_num": "Campus Energy"` in configs.json. As of 7/1/2020 it is recommended to only use 2019 data.
+* For whole campus modeling, specify `"building": "Campus Energy"` and change `target_var` in `configs.json`. As of 7/1/2020 it is recommended to only use 2019 data due to inconsistent data formatting in previous years. 
  
 #### algo_main_rnn_v1.py
 
