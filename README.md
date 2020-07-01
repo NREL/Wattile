@@ -49,6 +49,8 @@ This repository contains the source code for forecasting energy consumption usin
 
 ## Externally referenced files
 
+The code in this repo references some files that are held in external repos. The descriptions below describe how to reference these files. 
+
 #### buildings_processing.py
 
 * Contains functions for data manipulation and cleaning. (Same file is used for both Quantile Regression and ML methods)
@@ -56,5 +58,5 @@ This repository contains the source code for forecasting energy consumption usin
 
 #### holidays.json
 
-*JSON file containing holidays specific to the region being tested. 
+* JSON file containing holidays specific to the region being tested. 
 * File path specified in configs.json
