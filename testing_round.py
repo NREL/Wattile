@@ -3,7 +3,7 @@ Run-alone script for running testing on hyperparmeter values for a ML model.
 """
 
 import json
-import entry_point_building as epb
+import entry_point as epb
 import os
 
 

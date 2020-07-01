@@ -17,8 +17,9 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 file_prefix = '/default'
 
-# Create lagged versions of exogenous variables
+
 def seq_pad(a, window):
+    # Create lagged versions of exogenous variables
     rows = a.shape[0]
     cols = a.shape[1]
     b = np.zeros((rows, window * cols))
