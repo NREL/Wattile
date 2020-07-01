@@ -19,6 +19,12 @@ file_prefix = '/default'
 
 
 def seq_pad(a, window):
+    """
+    Append time-lagged versions of exogenous variables in input array.
+    :param a: np.array
+    :param window: int
+    :return: np.array
+    """
     # Create lagged versions of exogenous variables
     rows = a.shape[0]
     cols = a.shape[1]
@@ -42,6 +48,14 @@ def seq_pad(a, window):
 
 
 def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_batch_size):
+    """
+    Compute the batch sizes for training and test set
+    :param train_data: DataFrame
+    :param test_data: DataFrame
+    :param tr_desired_batch_size: int
+    :param te_desired_batch_size: int
+    :return:
+    """
     # Find factors of the length of train and test df's and pick the closest one to the requested batch sizes
     train_bth = factors(train_data.shape[0])
     train_bt_size = min(train_bth, key=lambda x: abs(x - tr_desired_batch_size))
@@ -60,8 +74,15 @@ def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_ba
     return train_bt_size, test_bt_size
 
 
-# Normalization
 def data_transform(train_data, test_data, transformation_method, run_train):
+    """
+    Normalize the training and test data according to a user-defined criteria
+    :param train_data: DataFrame
+    :param test_data: DataFrame
+    :param transformation_method: str
+    :param run_train: Boolean
+    :return:
+    """
     if run_train:
 
         # for the result de-normalization purpose, saving the max and min values of the STM_Xcel_Meter columns
@@ -101,8 +122,18 @@ def data_transform(train_data, test_data, transformation_method, run_train):
     return train_data, test_data
 
 
-# Create lagged variables and convert train and test data to torch data types
+
 def data_iterable(train_data, test_data, run_train, train_batch_size, test_batch_size, configs):
+    """
+    Create lagged variables and convert train and test data to torch data types
+    :param train_data: DataFrame
+    :param test_data: DataFrame
+    :param run_train: Boolean
+    :param train_batch_size: int
+    :param test_batch_size: int
+    :param configs: dict
+    :return:
+    """
 
     if run_train:
         # Create lagged INPUT variables, i.e. columns: w1_(t-1), w1_(t-2)...
@@ -141,6 +172,16 @@ def data_iterable(train_data, test_data, run_train, train_batch_size, test_batch
     return train_loader, test_loader, train_batch_size, test_batch_size
 
 def data_iterable_random(train_data, test_data, run_train, train_batch_size, test_batch_size, configs):
+    """
+    Converts train and test data to torch data types (used only if splitting training and test set randomly)
+    :param train_data: DataFrame
+    :param test_data: DataFrame
+    :param run_train: Boolean
+    :param train_batch_size: int
+    :param test_batch_size: int
+    :param configs: dict
+    :return:
+    """
 
     if run_train:
         # Create lagged INPUT variables, i.e. columns: w1_(t-1), w1_(t-2)...
@@ -177,6 +218,13 @@ def data_iterable_random(train_data, test_data, run_train, train_batch_size, tes
     return train_loader, test_loader, train_batch_size, test_batch_size
 
 def save_model(model, epoch, n_iter):
+    """
+    Save a PyTorch model to a file
+    :param model: Pytorch model
+    :param epoch: int
+    :param n_iter: int
+    :return:
+    """
     model_dict = {'epoch_num': epoch, 'n_iter': n_iter, 'torch_model': model}
     torch.save(model_dict, file_prefix + '/torch_model')
 
@@ -184,6 +232,18 @@ def save_model(model, epoch, n_iter):
 
 
 def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method, configs):
+    """
+    Process the test set and report error statistics
+    :param test_df: DataFrame
+    :param test_loader: Data Loader
+    :param model:
+    :param seq_dim:
+    :param input_dim:
+    :param test_batch_size:
+    :param transformation_method:
+    :param configs:
+    :return:
+    """
     # test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method
     model.eval()
     #test_y_at_t = torch.zeros(test_batch_size, seq_dim, 1)
@@ -232,7 +292,22 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
 
 def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method,
             configs, train_batch_size, test_batch_size, seq_dim):
-
+    """
+    Main training process for RNN models
+    :param train_loader:
+    :param test_loader:
+    :param test_df:
+    :param num_epochs:
+    :param run_train:
+    :param run_resume:
+    :param writer:
+    :param transformation_method:
+    :param configs:
+    :param train_batch_size:
+    :param test_batch_size:
+    :param seq_dim:
+    :return:
+    """
     # ___ Hyper-parameters
     # Input_dim: Determined automatically
     num_epochs = num_epochs
@@ -447,6 +522,13 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
 
 def main(train_df, test_df, configs):
+    """
+    Main executable for prepping data for input to RNN model.
+    :param train_df:
+    :param test_df:
+    :param configs:
+    :return:
+    """
     transformation_method = configs['transformation_method']
     run_train = configs['run_train']
     num_epochs = configs['num_epochs']

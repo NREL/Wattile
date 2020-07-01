@@ -11,17 +11,18 @@
     "run_resume": false,
     "preprocess": false,
     "arch_type": "RNN",
-    "train_exp_num": "Campus Energy",
+    "train_exp_num": "Cafe",
     "test_exp_num": "dev",
     "hidden_nodes": "10",
     "weight_decay": "0.001",
     "fetch_n_parse": false,
     "LAN_path": "Z:\\Data",
-    "building": "Campus Energy",
+    "building": "Cafe",
     "year": [
-         "2019"
+        "2018",
+        "2019"
     ],
-    "target_var": "South Table Mountain Xcel Meter Power (kW)",
+    "target_var": "Cafe Main Power (kW)",
     "weather_include": [
         "SRRL BMS Global Horizontal Irradiance (W/m\u00b2_irr)",
         "SRRL BMS Wind Speed at 19' (mph)",
