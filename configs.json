@@ -5,24 +5,24 @@
     "test_end_date": "2018-12-31",
     "transformation_method": "minmaxscale",
     "run_train": true,
-    "num_epochs": 300,
+    "num_epochs": 400,
     "tr_batch_size": 3716,
     "te_batch_size": 100,
     "run_resume": false,
     "preprocess": false,
     "arch_type": "RNN",
-    "train_exp_num": "Cafe",
+    "train_exp_num": "RSF",
     "test_exp_num": "dev",
     "hidden_nodes": "10",
     "weight_decay": "0.001",
     "fetch_n_parse": false,
     "LAN_path": "Z:\\Data",
-    "building": "Cafe",
+    "building": "RSF",
     "year": [
         "2018",
         "2019"
     ],
-    "target_var": "Cafe Main Power (kW)",
+    "target_var": "RSF Main Power (kW)",
     "weather_include": [
         "SRRL BMS Global Horizontal Irradiance (W/m\u00b2_irr)",
         "SRRL BMS Wind Speed at 19' (mph)",
@@ -46,5 +46,11 @@
     "learning_rate_base": 1e-03,
     "lr_schedule": false,
     "results_dir": "EnergyForecasting_Results",
+    "lr_config": {
+        "base": 0.001,
+        "factor": 0.1,
+        "min": 1e-04,
+        "patience": 50
+    },
     "holidays_file": "C:\\dev\\intelligentcampus-2020summer\\loads\\Stats_Models_Loads\\holidays.json"
 }

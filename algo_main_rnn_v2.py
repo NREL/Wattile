@@ -65,13 +65,14 @@ def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_ba
 
     train_ratio = int(train_data.shape[0]*100/(train_data.shape[0]+test_data.shape[0]))
     test_ratio = 100-train_ratio
+    num_train_data = train_data.shape[0]
     print("Train size: {}, Test size: {}, split {}:{}".format(train_data.shape[0], test_data.shape[0], train_ratio, test_ratio))
     print("Available train batch sizes: {}".format(sorted(train_bth)))
     print("Requested size of batches - Train: {}, Test: {}".format(tr_desired_batch_size, te_desired_batch_size))
     print("Actual size of batches - Train: {}, Test: {}".format(train_bt_size, test_bt_size))
     print("Number of batches in 1 epoch - Train: {}, Test: {}".format(train_data.shape[0]/train_bt_size, test_data.shape[0]/test_bt_size))
 
-    return train_bt_size, test_bt_size
+    return train_bt_size, test_bt_size, num_train_data
 
 
 def data_transform(train_data, test_data, transformation_method, run_train):
@@ -292,7 +293,7 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
 
 
 def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method,
-            configs, train_batch_size, test_batch_size, seq_dim):
+            configs, train_batch_size, test_batch_size, seq_dim, num_train_data):
     """
     Main training process for RNN models
     :param train_loader:
@@ -312,14 +313,14 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     # ___ Hyper-parameters
     # Input_dim: Determined automatically
     num_epochs = num_epochs
-    learning_rate_base = configs['learning_rate_base']
+    #learning_rate_base = configs['learning_rate_base']
     lr_schedule = configs['lr_schedule']
     hidden_dim = int(configs['hidden_nodes'])
     output_dim = 1  # one prediction - energy consumption
     layer_dim = 1
     weight_decay = float(configs['weight_decay'])
 
-    configs['learning_rate_base'] = learning_rate_base
+    #configs['learning_rate_base'] = learning_rate_base
     #configs['input_dim'] = input_dim
     input_dim = configs['input_dim']
     configs['hidden_dim'] = hidden_dim
@@ -373,11 +374,17 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         criterion = nn.MSELoss()
 
         # Instantiate Optimizer Class
-        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate_base, weight_decay=weight_decay)
+        optimizer = torch.optim.Adam(model.parameters(), lr=configs['lr_config']['base'], weight_decay=weight_decay)
 
         if lr_schedule:
-            # Set up learning rate scheduler. patience (for our case) is # of iterations, not epochs
-            scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, min_lr=1e-04, patience=2000, verbose=True)
+            # Set up learning rate scheduler.
+            # Patience (for our case) is # of iterations, not epochs, but configs specification is num epochs
+            scheduler = ReduceLROnPlateau(optimizer,
+                                          mode='min',
+                                          factor=configs['lr_config']['factor'],
+                                          min_lr=configs['lr_config']['min'],
+                                          patience=int(configs['lr_config']['patience']*num_train_data),
+                                          verbose=True)
 
         prtime("Preparing model to train")
         prtime("starting to train the model for {} epochs!".format(num_epochs))
@@ -498,10 +505,8 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                                                                                         mse, optimizer.param_groups[0]['lr']))
 
 
-
         # Once model training is done, save it
         save_model(model, epoch, n_iter)
-
 
         predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, seq_dim, input_dim,
                                                         test_batch_size, transformation_method, configs)
@@ -651,7 +656,7 @@ def main(train_df, test_df, data_time_index, configs):
     print("Data transformed using {} as transformation method".format(transformation_method))
 
     # Size the batches
-    train_batch_size, test_batch_size = size_the_batches(train_data, test_data, tr_desired_batch_size,
+    train_batch_size, test_batch_size, num_train_data = size_the_batches(train_data, test_data, tr_desired_batch_size,
                                                          te_desired_batch_size)
 
     if configs["TrainTestSplit"] == 'Sequential':
@@ -669,8 +674,10 @@ def main(train_df, test_df, data_time_index, configs):
 
     # Start the training process
     process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method,
-            configs, train_batch_size, test_batch_size, seq_dim=configs['window'])
+            configs, train_batch_size, test_batch_size, seq_dim=configs['window'], num_train_data)
 
     # Evaluate the trained model with the training set to diagnose training ability and plot residuals
-    eval_trained_model(file_prefix, train_data, train_batch_size, data_time_index, configs)
-    plot_processed_model(file_prefix)
+    # TODO: Currently only supported for random test/train split
+    if configs["TrainTestSplit"] == 'Random':
+        eval_trained_model(file_prefix, train_data, train_batch_size, data_time_index, configs)
+        #plot_processed_model(file_prefix)
