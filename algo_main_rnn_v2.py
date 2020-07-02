@@ -14,6 +14,8 @@ from tensorboardX import SummaryWriter
 import timeit
 import matplotlib.pyplot as plt
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+import csv
+import pathlib
 
 file_prefix = '/default'
 
@@ -63,14 +65,16 @@ def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_ba
     test_bth = factors(test_data.shape[0])
     test_bt_size = min(test_bth, key=lambda x: abs(x - te_desired_batch_size))
 
-    train_ratio = int(train_data.shape[0]*100/(train_data.shape[0]+test_data.shape[0]))
-    test_ratio = 100-train_ratio
+    train_ratio = int(train_data.shape[0] * 100 / (train_data.shape[0] + test_data.shape[0]))
+    test_ratio = 100 - train_ratio
     num_train_data = train_data.shape[0]
-    print("Train size: {}, Test size: {}, split {}:{}".format(train_data.shape[0], test_data.shape[0], train_ratio, test_ratio))
+    print("Train size: {}, Test size: {}, split {}:{}".format(train_data.shape[0], test_data.shape[0], train_ratio,
+                                                              test_ratio))
     print("Available train batch sizes: {}".format(sorted(train_bth)))
     print("Requested size of batches - Train: {}, Test: {}".format(tr_desired_batch_size, te_desired_batch_size))
     print("Actual size of batches - Train: {}, Test: {}".format(train_bt_size, test_bt_size))
-    print("Number of batches in 1 epoch - Train: {}, Test: {}".format(train_data.shape[0]/train_bt_size, test_data.shape[0]/test_bt_size))
+    print("Number of batches in 1 epoch - Train: {}, Test: {}".format(train_data.shape[0] / train_bt_size,
+                                                                      test_data.shape[0] / test_bt_size))
 
     return train_bt_size, test_bt_size, num_train_data
 
@@ -230,7 +234,7 @@ def save_model(model, epoch, n_iter):
     model_dict = {'epoch_num': epoch, 'n_iter': n_iter, 'torch_model': model}
     torch.save(model_dict, file_prefix + '/torch_model')
 
-    #prtime("RNN model checkpoint saved")
+    # prtime("RNN model checkpoint saved")
 
 
 def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method, configs):
@@ -248,11 +252,11 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     """
     # test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method
     model.eval()
-    #test_y_at_t = torch.zeros(test_batch_size, seq_dim, 1)
+    # test_y_at_t = torch.zeros(test_batch_size, seq_dim, 1)
     preds = []
     targets = []
     for i, (feats, values) in enumerate(test_loader):
-        #features = Variable(feats.view(-1, seq_dim, input_dim - 1))
+        # features = Variable(feats.view(-1, seq_dim, input_dim - 1))
         # outputs = model(torch.cat((features, test_y_at_t), dim=2))
         # test_y_at_t = tile(outputs.unsqueeze(2), 1, 5)
         features = Variable(feats.view(-1, seq_dim, input_dim))
@@ -263,8 +267,7 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     # concatenating the preds and targets for the whole epoch (iterating over test_loader once)
     semifinal_preds = np.concatenate(preds).ravel()
     semifinal_targs = np.concatenate(targets).ravel()
-    nmse = np.mean((semifinal_targs - semifinal_preds) ** 2)
-    nrmse = np.sqrt(np.mean((semifinal_targs - semifinal_preds) ** 2))
+    mse_loss = np.mean((semifinal_targs - semifinal_preds) ** 2)
 
     # loading the training data stats for de-normalization purpose
     file_loc = file_prefix + '/train_stats.json'
@@ -278,20 +281,27 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
 
     # Do do-normalization process on predictions from test set
     if transformation_method == "minmaxscale":
-        final_preds = ((train_max[configs['target_var']] - train_min[configs['target_var']]) * semifinal_preds) + train_min[
-            configs['target_var']]
+        final_preds = ((train_max[configs['target_var']] - train_min[configs['target_var']]) * semifinal_preds) + \
+                      train_min[
+                          configs['target_var']]
 
     else:
         final_preds = ((semifinal_preds * train_std[configs['target_var']]) + train_mean[configs['target_var']])
 
     predictions = pd.DataFrame(final_preds)
-    rmse = np.array(np.sqrt(np.mean((predictions.values.squeeze() - test_df[configs['target_var']].values) ** 2)),
-                                 ndmin=1)
-    mse = np.array(np.mean((predictions.values.squeeze() - test_df[configs['target_var']].values) ** 2),
-                                 ndmin=1)
+    predicted = predictions.values.squeeze()
+    measured = test_df[configs['target_var']].values
+    p_nmbe = 0  # Number of "adjustable model parameters"
+    p_cvrmse = 1
+
+    # Calculate different error metrics
+    rmse = np.sqrt(np.mean((predicted - measured) ** 2))
+    nmbe = (1 / (np.mean(measured))) * (np.sum(measured - predicted)) / (len(measured) - p_nmbe)
+    cvrmse = (1 / (np.mean(measured))) * np.sqrt(np.sum((measured-predicted)**2) / (len(measured) - p_cvrmse))
+    gof = (np.sqrt(2) / 2)  * np.sqrt(cvrmse**2 + nmbe**2)
 
     # Add different error statistics to a dictionary
-    errors = {"nmse": nmse, "nrmse": nrmse, "mse": nmse, "rmse": nrmse}
+    errors = {"mse_loss": mse_loss, "rmse": rmse, "nmbe": nmbe, "cvrmse": cvrmse, "gof": gof}
 
     return predictions, errors
 
@@ -338,9 +348,9 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     # initializing lists to store losses over epochs:
     train_loss = []
     train_iter = []
-    test_loss = []
+    #test_loss = []
     test_iter = []
-    test_rmse = []
+    #test_rmse = []
 
     # If you want to continue training the model
     if run_train:
@@ -366,7 +376,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
             # Initialize the model
             model = rnn.RNNModel(input_dim, hidden_dim, layer_dim, output_dim)
             epoch_range = np.arange(num_epochs)
-            #prtime("A new {} model instantiated, with run_train=True".format("rnn"))
+            # prtime("A new {} model instantiated, with run_train=True".format("rnn"))
             print("A new {} model instantiated, with run_train=True".format("rnn"))
 
         # Check if gpu support is available
@@ -385,7 +395,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                                           mode='min',
                                           factor=configs['lr_config']['factor'],
                                           min_lr=configs['lr_config']['min'],
-                                          patience=int(configs['lr_config']['patience']*num_train_data),
+                                          patience=int(configs['lr_config']['patience'] * num_train_data),
                                           verbose=True)
 
         prtime("Preparing model to train")
@@ -402,7 +412,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
             n_iter = 0
 
         # Initialize re-trainable matrix
-        #train_y_at_t = torch.zeros(train_batch_size, seq_dim, 1)  # 960 x 5 x 1
+        # train_y_at_t = torch.zeros(train_batch_size, seq_dim, 1)  # 960 x 5 x 1
         # Loop through epochs
         for epoch in epoch_range:
             # This loop returns elements from the dataset batch by batch. Contains features AND targets
@@ -414,7 +424,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
                 # batch size x 5 x 6. -1 means "I don't know". Middle dimension is time.
                 # (batches, timesteps, features)
-                #features = Variable(feats.view(-1, seq_dim, input_dim - 1)) # size: (960x5x6)
+                # features = Variable(feats.view(-1, seq_dim, input_dim - 1)) # size: (960x5x6)
                 features = Variable(feats.view(-1, seq_dim, input_dim))
                 target = Variable(values)  # size: batch size
 
@@ -427,14 +437,14 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                 # train_y_at_t is 960 x 5 x 1
                 # features is     960 x 5 x 6
                 # This command: (960x5x7) --> 960x1
-                #outputs = model(torch.cat((features, train_y_at_t.detach_()), dim=2))
+                # outputs = model(torch.cat((features, train_y_at_t.detach_()), dim=2))
                 outputs = model(features)
 
                 time3 = timeit.default_timer()
 
                 # tiling the 2nd axis of y_at_t from 1 to 5
-                #train_y_at_t = tile(outputs.unsqueeze(2), 1, 5)
-                #train_y_at_t_nump = train_y_at_t.detach().numpy()
+                # train_y_at_t = tile(outputs.unsqueeze(2), 1, 5)
+                # train_y_at_t_nump = train_y_at_t.detach().numpy()
 
                 # Calculate Loss: softmax --> cross entropy loss
                 loss = criterion(outputs.squeeze(), target)
@@ -443,7 +453,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                 train_iter.append(n_iter)
 
                 # Print to terminal and save training loss
-                #prtime('Epoch: {} Iteration: {} TrainLoss: {}'.format(epoch, n_iter, train_loss[-1]))
+                # prtime('Epoch: {} Iteration: {} TrainLoss: {}'.format(epoch, n_iter, train_loss[-1]))
                 writer.add_scalars("Loss", {'Train': loss.data.item()}, n_iter)
 
                 time4 = timeit.default_timer()
@@ -464,11 +474,11 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
                 # Compute time per iteration
                 time6 = timeit.default_timer()
-                writer.add_scalars("Iteration time", {"dt1": time2-time1,
-                                                      "dt2": time3-time2,
-                                                      "dt3": time4-time3,
-                                                      "dt4": time5-time4,
-                                                      "dt5": time6-time5}, n_iter)
+                writer.add_scalars("Iteration time", {"dt1": time2 - time1,
+                                                      "dt2": time3 - time2,
+                                                      "dt3": time4 - time3,
+                                                      "dt4": time5 - time4,
+                                                      "dt5": time6 - time5}, n_iter)
 
                 # save the model every ___ iterations
                 if n_iter % 200 == 0:
@@ -478,11 +488,11 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                 if n_iter % 200 == 0:
                     # Evaluate test set
                     predictions, errors = test_processing(test_df, test_loader, model, seq_dim, input_dim,
-                                                                    test_batch_size, transformation_method, configs)
+                                                          test_batch_size, transformation_method, configs)
                     test_iter.append(n_iter)
-                    test_loss.append(errors['nmse'])
-                    test_rmse.append(errors['rmse'])
-                    writer.add_scalars("Loss", {"Test": errors['nmse']}, n_iter)
+                    #test_loss.append(errors['mse_loss'])
+                    #test_rmse.append(errors['rmse'])
+                    writer.add_scalars("Loss", {"Test": errors['mse_loss']}, n_iter)
 
                     # Add matplotlib plot to TensorBoard to compare actual test set vs predicted
                     fig1, ax1 = plt.subplots(figsize=(20, 5))
@@ -495,7 +505,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                     fig2, ax2 = plt.subplots()
                     ax2.scatter(predictions, test_df[configs['target_var']], s=5, alpha=0.3)
                     strait_line = np.linspace(min(min(predictions), min(test_df[configs['target_var']])),
-                                     max(max(predictions), max(test_df[configs['target_var']])), 5)
+                                              max(max(predictions), max(test_df[configs['target_var']])), 5)
                     ax2.plot(strait_line, strait_line, c='k')
                     ax2.set_xlabel('Predicted')
                     ax2.set_ylabel('Observed')
@@ -506,21 +516,20 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
                     print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}, LR: {}'.format(epoch, n_iter,
                                                                                                 loss.data.item(),
-                                                                                                errors['nmse'],
-                                                                                                optimizer.param_groups[0]['lr']))
-
+                                                                                                errors['mse_loss'],
+                                                                                                optimizer.param_groups[
+                                                                                                    0]['lr']))
 
         # Once model training is done, save the current model state
         save_model(model, epoch, n_iter)
 
         # Once model is done training, process a final test set
         predictions, errors = test_processing(test_df, test_loader, model, seq_dim, input_dim,
-                                                        test_batch_size, transformation_method, configs)
-
+                                              test_batch_size, transformation_method, configs)
 
         # Save the final predictions and error statistics to a file
         predictions.to_csv(file_prefix + '/predictions.csv', index=False)
-        np.savetxt(file_prefix + '/final_rmse.csv', errors['rmse'], delimiter=",")
+        #np.savetxt(file_prefix + '/final_rmse.csv', errors['rmse'], delimiter=",")
 
     # If you just want to immediately test the model on the existing (saved) model
     else:
@@ -529,15 +538,28 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         prtime("Loaded model from file, given run_train=False\n")
 
         predictions, errors = test_processing(test_df, test_loader, model, seq_dim, input_dim,
-                                                        test_batch_size, transformation_method, configs)
-        test_loss.append(errors['nmse'])
-        test_rmse.append(errors['rmse'])
-        writer.add_scalars("Loss", {"Test": errors['nmse']})
-        prtime('Test_MSE: {}'.format(errors['nmse']))
+                                              test_batch_size, transformation_method, configs)
+        #test_loss.append(errors['mse_loss'])
+        #test_rmse.append(errors['rmse'])
+        writer.add_scalars("Loss", {"Test": errors['mse_loss']})
+        prtime('Test_MSE: {}'.format(errors['mse_loss']))
 
         # Save the final predictions and error statistics to a file
         predictions.to_csv(file_prefix + '/predictions.csv', index=False)
-        np.savetxt(file_prefix + '/final_rmse.csv', errors['rmse'], delimiter=",")
+        #np.savetxt(file_prefix + '/final_rmse.csv', errors['rmse'], delimiter=",")
+
+    # If a training history csv file does not exist, make one
+    if not pathlib.Path("Training_history.csv").exists():
+        with open(r'Training_history.csv', 'a') as f:
+            writer = csv.writer(f)
+            writer.writerow(["File Path", "RMSE", "CV(RMSE)", "NMBE", "GOF"])
+
+    # Save the errors statistics to a file once everything is done
+    with open(r'Training_history.csv', 'a') as f:
+        writer = csv.writer(f)
+        writer.writerow([file_prefix, errors["rmse"], errors["cvrmse"], errors["nmbe"], errors["gof"]])
+
+
 
 def eval_trained_model(file_prefix, train_data, train_batch_size, data_time_index, configs):
     """
@@ -566,11 +588,11 @@ def eval_trained_model(file_prefix, train_data, train_batch_size, data_time_inde
     preds = []
     targets = []
     for i, (feats, values) in enumerate(train_loader):
-        #features = Variable(feats.view(-1, seq_dim, input_dim - 1))
+        # features = Variable(feats.view(-1, seq_dim, input_dim - 1))
         features = Variable(feats.view(-1, configs['window'], configs['input_dim']))
-        #outputs = model(torch.cat((features, test_y_at_t), dim=2))
+        # outputs = model(torch.cat((features, test_y_at_t), dim=2))
         outputs = model(features)
-        #test_y_at_t = tile(outputs.unsqueeze(2), 1, 5)
+        # test_y_at_t = tile(outputs.unsqueeze(2), 1, 5)
         preds.append(outputs.data.numpy().squeeze())
         targets.append(values.data.numpy())
 
@@ -583,7 +605,8 @@ def eval_trained_model(file_prefix, train_data, train_batch_size, data_time_inde
         msk = json.load(read_file)
 
     # Adjust the datetime index so it is in line with the EC data
-    target_index = data_time_index[msk] + pd.DateOffset(minutes=(configs["EC_future_gap"] * configs["resample_bin_min"]))
+    target_index = data_time_index[msk] + pd.DateOffset(
+        minutes=(configs["EC_future_gap"] * configs["resample_bin_min"]))
     processed_data = pd.DataFrame(index=target_index)
     processed_data['Training fit'] = semifinal_preds
     processed_data['Target'] = semifinal_targs
@@ -615,6 +638,7 @@ def plot_processed_model(file_prefix):
     axarr[1].set_ylabel("Residual")
     axarr[1].axhline(y=0, color='k')
     plt.show()
+
 
 def main(train_df, test_df, data_time_index, configs):
     """
@@ -662,12 +686,12 @@ def main(train_df, test_df, data_time_index, configs):
 
     # Normalization transformation
     train_data, test_data = data_transform(train_data, test_data, transformation_method, run_train)
-    #prtime("data transformed using {} as transformation method".format(transformation_method))
+    # prtime("data transformed using {} as transformation method".format(transformation_method))
     print("Data transformed using {} as transformation method".format(transformation_method))
 
     # Size the batches
     train_batch_size, test_batch_size, num_train_data = size_the_batches(train_data, test_data, tr_desired_batch_size,
-                                                         te_desired_batch_size)
+                                                                         te_desired_batch_size)
 
     if configs["TrainTestSplit"] == 'Sequential':
         # Normal: Convert to iterable dataset (DataLoaders)
@@ -677,9 +701,10 @@ def main(train_df, test_df, data_time_index, configs):
 
     elif configs["TrainTestSplit"] == 'Random':
         # Already did sequential padding: Convert to iterable dataset (DataLoaders)
-        train_loader, test_loader, train_batch_size, test_batch_size = data_iterable_random(train_data, test_data, run_train,
-                                                                                     train_batch_size,
-                                                                                     test_batch_size, configs)
+        train_loader, test_loader, train_batch_size, test_batch_size = data_iterable_random(train_data, test_data,
+                                                                                            run_train,
+                                                                                            train_batch_size,
+                                                                                            test_batch_size, configs)
     prtime("data converted to iterable dataset")
 
     # Start the training process
@@ -690,4 +715,5 @@ def main(train_df, test_df, data_time_index, configs):
     # TODO: Currently only supported for random test/train split
     if configs["TrainTestSplit"] == 'Random':
         eval_trained_model(file_prefix, train_data, train_batch_size, data_time_index, configs)
-        #plot_processed_model(file_prefix)
+        # plot_processed_model(file_prefix)
+
