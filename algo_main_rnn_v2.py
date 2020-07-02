@@ -295,7 +295,7 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
 def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method,
             configs, train_batch_size, test_batch_size, seq_dim, num_train_data):
     """
-    Main training process for RNN models
+
     :param train_loader:
     :param test_loader:
     :param test_df:
@@ -308,6 +308,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     :param train_batch_size:
     :param test_batch_size:
     :param seq_dim:
+    :param num_train_data:
     :return:
     """
     # ___ Hyper-parameters
@@ -674,7 +675,7 @@ def main(train_df, test_df, data_time_index, configs):
 
     # Start the training process
     process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method,
-            configs, train_batch_size, test_batch_size, seq_dim=configs['window'], num_train_data)
+            configs, train_batch_size, test_batch_size, configs['window'], num_train_data)
 
     # Evaluate the trained model with the training set to diagnose training ability and plot residuals
     # TODO: Currently only supported for random test/train split
