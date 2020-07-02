@@ -253,17 +253,18 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     targets = []
     for i, (feats, values) in enumerate(test_loader):
         #features = Variable(feats.view(-1, seq_dim, input_dim - 1))
+        # outputs = model(torch.cat((features, test_y_at_t), dim=2))
+        # test_y_at_t = tile(outputs.unsqueeze(2), 1, 5)
         features = Variable(feats.view(-1, seq_dim, input_dim))
-        #outputs = model(torch.cat((features, test_y_at_t), dim=2))
         outputs = model(features)
-        #test_y_at_t = tile(outputs.unsqueeze(2), 1, 5)
         preds.append(outputs.data.numpy().squeeze())
         targets.append(values.data.numpy())
 
     # concatenating the preds and targets for the whole epoch (iterating over test_loader once)
     semifinal_preds = np.concatenate(preds).ravel()
-    semifinal_targs = np.concatenate(targets).ravel()  # Last 5 entries are nan
-    mse = np.mean((semifinal_targs - semifinal_preds) ** 2)
+    semifinal_targs = np.concatenate(targets).ravel()
+    nmse = np.mean((semifinal_targs - semifinal_preds) ** 2)
+    nrmse = np.sqrt(np.mean((semifinal_targs - semifinal_preds) ** 2))
 
     # loading the training data stats for de-normalization purpose
     file_loc = file_prefix + '/train_stats.json'
@@ -284,12 +285,15 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
         final_preds = ((semifinal_preds * train_std[configs['target_var']]) + train_mean[configs['target_var']])
 
     predictions = pd.DataFrame(final_preds)
-    # denormalized_rmse = np.array(np.sqrt(np.mean((predictions.values.squeeze() - test_df.STM_Xcel_Meter.values) ** 2)),
-    #                              ndmin=1)
-    denormalized_rmse = np.array(np.sqrt(np.mean((predictions.values.squeeze() - test_df[configs['target_var']].values) ** 2)),
+    rmse = np.array(np.sqrt(np.mean((predictions.values.squeeze() - test_df[configs['target_var']].values) ** 2)),
+                                 ndmin=1)
+    mse = np.array(np.mean((predictions.values.squeeze() - test_df[configs['target_var']].values) ** 2),
                                  ndmin=1)
 
-    return predictions, denormalized_rmse, mse
+    # Add different error statistics to a dictionary
+    errors = {"nmse": nmse, "nrmse": nrmse, "mse": nmse, "rmse": nrmse}
+
+    return predictions, errors
 
 
 def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method,
@@ -314,15 +318,12 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     # ___ Hyper-parameters
     # Input_dim: Determined automatically
     num_epochs = num_epochs
-    #learning_rate_base = configs['learning_rate_base']
     lr_schedule = configs['lr_schedule']
     hidden_dim = int(configs['hidden_nodes'])
     output_dim = 1  # one prediction - energy consumption
     layer_dim = 1
     weight_decay = float(configs['weight_decay'])
 
-    #configs['learning_rate_base'] = learning_rate_base
-    #configs['input_dim'] = input_dim
     input_dim = configs['input_dim']
     configs['hidden_dim'] = hidden_dim
     configs['output_dim'] = output_dim
@@ -469,27 +470,28 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                                                       "dt4": time5-time4,
                                                       "dt5": time6-time5}, n_iter)
 
-                # save the model every __ iterations
+                # save the model every ___ iterations
                 if n_iter % 200 == 0:
                     save_model(model, epoch, n_iter)
 
-                # Do a test batch every 100 iterations
+                # Do a test batch every ___ iterations
                 if n_iter % 200 == 0:
-                    predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, seq_dim, input_dim,
+                    # Evaluate test set
+                    predictions, errors = test_processing(test_df, test_loader, model, seq_dim, input_dim,
                                                                     test_batch_size, transformation_method, configs)
                     test_iter.append(n_iter)
-                    test_loss.append(mse)
-                    test_rmse.append(denorm_rmse)
-                    writer.add_scalars("Loss", {"Test": mse}, n_iter)
+                    test_loss.append(errors['nmse'])
+                    test_rmse.append(errors['rmse'])
+                    writer.add_scalars("Loss", {"Test": errors['nmse']}, n_iter)
 
-                    # Add matplotlib plot to compare actual test set vs predicted
+                    # Add matplotlib plot to TensorBoard to compare actual test set vs predicted
                     fig1, ax1 = plt.subplots(figsize=(20, 5))
                     ax1.plot(test_df[configs['target_var']], label='Actual', lw=0.5)
                     ax1.plot(predictions, label='Prediction', lw=0.5)
                     ax1.legend()
                     writer.add_figure('Predictions', fig1, n_iter)
 
-                    # Add parody plot
+                    # Add parody plot to TensorBoard
                     fig2, ax2 = plt.subplots()
                     ax2.scatter(predictions, test_df[configs['target_var']], s=5, alpha=0.3)
                     strait_line = np.linspace(min(min(predictions), min(test_df[configs['target_var']])),
@@ -502,17 +504,23 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                     ax2.axis('equal')
                     writer.add_figure('Parody', fig2, n_iter)
 
-                    print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}, LR: {}'.format(epoch, n_iter, loss.data.item(),
-                                                                                        mse, optimizer.param_groups[0]['lr']))
+                    print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}, LR: {}'.format(epoch, n_iter,
+                                                                                                loss.data.item(),
+                                                                                                errors['nmse'],
+                                                                                                optimizer.param_groups[0]['lr']))
 
 
-        # Once model training is done, save it
+        # Once model training is done, save the current model state
         save_model(model, epoch, n_iter)
 
-        predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, seq_dim, input_dim,
+        # Once model is done training, process a final test set
+        predictions, errors = test_processing(test_df, test_loader, model, seq_dim, input_dim,
                                                         test_batch_size, transformation_method, configs)
+
+
+        # Save the final predictions and error statistics to a file
         predictions.to_csv(file_prefix + '/predictions.csv', index=False)
-        np.savetxt(file_prefix + '/final_rmse.csv', denorm_rmse, delimiter=",")
+        np.savetxt(file_prefix + '/final_rmse.csv', errors['rmse'], delimiter=",")
 
     # If you just want to immediately test the model on the existing (saved) model
     else:
@@ -520,15 +528,16 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         model = torch_model['torch_model']
         prtime("Loaded model from file, given run_train=False\n")
 
-        predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, seq_dim, input_dim,
+        predictions, errors = test_processing(test_df, test_loader, model, seq_dim, input_dim,
                                                         test_batch_size, transformation_method, configs)
-        test_loss.append(mse)
-        test_rmse.append(denorm_rmse)
-        writer.add_scalars("Loss", {"Test": mse})
+        test_loss.append(errors['nmse'])
+        test_rmse.append(errors['rmse'])
+        writer.add_scalars("Loss", {"Test": errors['nmse']})
+        prtime('Test_MSE: {}'.format(errors['nmse']))
 
-        prtime('Test_MSE: {}'.format(mse))
+        # Save the final predictions and error statistics to a file
         predictions.to_csv(file_prefix + '/predictions.csv', index=False)
-        np.savetxt(file_prefix + '/final_rmse.csv', denorm_rmse, delimiter=",")
+        np.savetxt(file_prefix + '/final_rmse.csv', errors['rmse'], delimiter=",")
 
 def eval_trained_model(file_prefix, train_data, train_batch_size, data_time_index, configs):
     """
