@@ -5,7 +5,7 @@
     "test_end_date": "2018-12-31",
     "transformation_method": "minmaxscale",
     "run_train": true,
-    "num_epochs": 700,
+    "num_epochs": 300,
     "tr_batch_size": 3716,
     "te_batch_size": 100,
     "run_resume": false,
@@ -32,7 +32,7 @@
         "SRRL BMS Barometric Pressure (mbar)"
     ],
     "TrainTestSplit": "Random",
-    "test_start": "10/01/2019 00:00:00",
+    "test_start": "12/28/2019 23:45:00",
     "test_end": "12/31/2019 23:45:00",
     "resample": true,
     "resample_bin_min": 15,

@@ -27,13 +27,13 @@ def main(configs):
         configs['target_feat_name'] = [configs['target_var']]
 
     # For individual building use:
-    train_df, test_df = bp.prep_for_rnn(configs)
+    train_df, test_df, data_time_index = bp.prep_for_rnn(configs)
 
     # Choose what ML architecture to use and execute the corresponding script
     if configs['arch_type'] == 'FFNN':
         algo_main_ffnn.main(train_df, test_df, configs)
     elif configs['arch_type'] == 'RNN':
-        algo_main_rnn_v2.main(train_df, test_df, configs)
+        algo_main_rnn_v2.main(train_df, test_df, data_time_index, configs)
     elif configs['arch_type'] == 'LSTM':
         algo_main_lstm.main(train_df, test_df, configs)
     elif configs['arch_type'] == 'RNN':

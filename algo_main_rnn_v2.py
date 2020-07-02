@@ -122,7 +122,6 @@ def data_transform(train_data, test_data, transformation_method, run_train):
     return train_data, test_data
 
 
-
 def data_iterable(train_data, test_data, run_train, train_batch_size, test_batch_size, configs):
     """
     Create lagged variables and convert train and test data to torch data types
@@ -171,6 +170,7 @@ def data_iterable(train_data, test_data, run_train, train_batch_size, test_batch
 
     return train_loader, test_loader, train_batch_size, test_batch_size
 
+
 def data_iterable_random(train_data, test_data, run_train, train_batch_size, test_batch_size, configs):
     """
     Converts train and test data to torch data types (used only if splitting training and test set randomly)
@@ -216,6 +216,7 @@ def data_iterable_random(train_data, test_data, run_train, train_batch_size, tes
     test_loader = DataLoader(dataset=test, batch_size=test_batch_size, shuffle=False)
 
     return train_loader, test_loader, train_batch_size, test_batch_size
+
 
 def save_model(model, epoch, n_iter):
     """
@@ -496,8 +497,11 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                     print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}, LR: {}'.format(epoch, n_iter, loss.data.item(),
                                                                                         mse, optimizer.param_groups[0]['lr']))
 
+
+
         # Once model training is done, save it
         save_model(model, epoch, n_iter)
+
 
         predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, seq_dim, input_dim,
                                                         test_batch_size, transformation_method, configs)
@@ -520,8 +524,84 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         predictions.to_csv(file_prefix + '/predictions.csv', index=False)
         np.savetxt(file_prefix + '/final_rmse.csv', denorm_rmse, delimiter=",")
 
+def eval_trained_model(file_prefix, train_data, train_batch_size, data_time_index, configs):
+    """
+    Pass the entire training set through the trained model and get the predictions. Compute the residual and save to a DataFrame.
+    :param file_prefix:
+    :param train_data:
+    :param train_batch_size:
+    :param data_time_index:
+    :param configs:
+    :return:
+    """
+    # Evaluate the training model
+    torch_model = torch.load(file_prefix + '/torch_model')
+    model = torch_model['torch_model']
 
-def main(train_df, test_df, configs):
+    X_train = train_data.drop(configs['target_var'], axis=1).values.astype(dtype='float32')
+    y_train = train_data[configs['target_var']]
+    y_train = y_train.values.astype(dtype='float32')
+    train_feat_tensor = torch.from_numpy(X_train).type(torch.FloatTensor)
+    train_target_tensor = torch.from_numpy(y_train).type(torch.FloatTensor)
+    train = data_utils.TensorDataset(train_feat_tensor, train_target_tensor)
+    train_loader = DataLoader(dataset=train, batch_size=train_batch_size, shuffle=False)
+
+    model.eval()
+
+    preds = []
+    targets = []
+    for i, (feats, values) in enumerate(train_loader):
+        #features = Variable(feats.view(-1, seq_dim, input_dim - 1))
+        features = Variable(feats.view(-1, configs['window'], configs['input_dim']))
+        #outputs = model(torch.cat((features, test_y_at_t), dim=2))
+        outputs = model(features)
+        #test_y_at_t = tile(outputs.unsqueeze(2), 1, 5)
+        preds.append(outputs.data.numpy().squeeze())
+        targets.append(values.data.numpy())
+
+    # concatenating the preds and targets for the whole epoch (iterating over test_loader once)
+    semifinal_preds = np.concatenate(preds).ravel()
+    semifinal_targs = np.concatenate(targets).ravel()  # Last 5 entries are nan
+
+    mask_file = os.path.join("data", "mask_{}_{}.json".format(configs['building'], "-".join(configs['year'])))
+    with open(mask_file, "r") as read_file:
+        msk = json.load(read_file)
+
+    # Adjust the datetime index so it is in line with the EC data
+    target_index = data_time_index[msk] + pd.DateOffset(minutes=(configs["EC_future_gap"] * configs["resample_bin_min"]))
+    processed_data = pd.DataFrame(index=target_index)
+    processed_data['Training fit'] = semifinal_preds
+    processed_data['Target'] = semifinal_targs
+    processed_data['Residual'] = semifinal_targs - semifinal_preds
+    processed_data.to_hdf(os.path.join(file_prefix, "evaluated_training_model.h5"), key='df', mode='w')
+
+
+def plot_processed_model(file_prefix):
+    """
+    Plot the trained model, along with the residuals for the trained model.
+    The plot will show what time periods are not being captured by the model.
+    :param file_prefix:
+    :return:
+    """
+    processed_data = pd.read_hdf(os.path.join(file_prefix, "evaluated_training_model.h5"), key='df')
+    # plt.figure(figsize=(9, 3))
+    # plt.plot(processed_data["Target"], label='Targets')
+    # plt.plot(processed_data["Training fit"], label='Training fit')
+    # plt.ylabel("target variable")
+    # plt.legend()
+    # plt.show()
+
+    f, axarr = plt.subplots(2, sharex=True)
+    axarr[0].plot(processed_data["Target"], label='Targets')
+    axarr[0].plot(processed_data["Training fit"], label='Training fit')
+    axarr[0].set_ylabel("target variable")
+    axarr[0].legend()
+    axarr[1].plot(processed_data['Residual'], label='Targets')
+    axarr[1].set_ylabel("Residual")
+    axarr[1].axhline(y=0, color='k')
+    plt.show()
+
+def main(train_df, test_df, data_time_index, configs):
     """
     Main executable for prepping data for input to RNN model.
     :param train_df:
@@ -540,9 +620,6 @@ def main(train_df, test_df, configs):
     test_exp_num = configs['test_exp_num']
     arch_type = configs['arch_type']
 
-    #configs['input_dim'] = train_df.shape[1] - 1
-
-    #results_dir = "EnergyForecasting_Results"
     results_dir = configs["results_dir"]
     if not os.path.exists(results_dir):
         os.mkdir(results_dir)
@@ -588,9 +665,12 @@ def main(train_df, test_df, configs):
         train_loader, test_loader, train_batch_size, test_batch_size = data_iterable_random(train_data, test_data, run_train,
                                                                                      train_batch_size,
                                                                                      test_batch_size, configs)
-    # Everything should be the same fron this point on
     prtime("data converted to iterable dataset")
 
-
+    # Start the training process
     process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method,
             configs, train_batch_size, test_batch_size, seq_dim=configs['window'])
+
+    # Evaluate the trained model with the training set to diagnose training ability and plot residuals
+    eval_trained_model(file_prefix, train_data, train_batch_size, data_time_index, configs)
+    plot_processed_model(file_prefix)
