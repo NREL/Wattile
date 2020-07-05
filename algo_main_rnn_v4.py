@@ -23,9 +23,10 @@ file_prefix = '/default'
 def seq_pad(a, window):
     """
     Append time-lagged versions of exogenous variables in input array.
-    :param a: np.array
-    :param window: int
-    :return: np.array
+
+    :param a: (np.array)
+    :param window: (int)
+    :return: (np.array)
     """
     # Create lagged versions of exogenous variables
     rows = a.shape[0]
@@ -52,10 +53,11 @@ def seq_pad(a, window):
 def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_batch_size):
     """
     Compute the batch sizes for training and test set
-    :param train_data: DataFrame
-    :param test_data: DataFrame
-    :param tr_desired_batch_size: int
-    :param te_desired_batch_size: int
+
+    :param train_data: (DataFrame)
+    :param test_data: (DataFrame)
+    :param tr_desired_batch_size: (int)
+    :param te_desired_batch_size: (int)
     :return:
     """
     # Find factors of the length of train and test df's and pick the closest one to the requested batch sizes
@@ -82,6 +84,7 @@ def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_ba
 def data_transform(train_data, test_data, transformation_method, run_train):
     """
     Normalize the training and test data according to a user-defined criteria
+
     :param train_data: DataFrame
     :param test_data: DataFrame
     :param transformation_method: str
@@ -89,8 +92,7 @@ def data_transform(train_data, test_data, transformation_method, run_train):
     :return:
     """
     if run_train:
-
-        # for the result de-normalization purpose, saving the max and min values of the STM_Xcel_Meter columns
+        # For the result de-normalization purpose, saving the max and min values of the STM_Xcel_Meter columns
         train_stats = {}
         train_stats['train_max'] = train_data.max().to_dict()
         train_stats['train_min'] = train_data.min().to_dict()
@@ -103,14 +105,14 @@ def data_transform(train_data, test_data, transformation_method, run_train):
         if transformation_method == "minmaxscale":
             train_data = (train_data - train_data.min()) / (train_data.max() - train_data.min())
 
-
         else:
             train_data = (train_data - train_data.mean(axis=0)) / train_data.std(axis=0)
 
-    # reading back the train stats for normalizing test data w.r.t to train data
+    # Reading back the train stats for normalizing test data w.r.t to train data
     file_loc = file_prefix + '/train_stats.json'
     with open(file_loc, 'r') as f:
         train_stats = json.load(f)
+
     # get statistics for training data
     train_max = pd.DataFrame(train_stats['train_max'], index=[1]).iloc[0]
     train_min = pd.DataFrame(train_stats['train_min'], index=[1]).iloc[0]
@@ -130,6 +132,7 @@ def data_transform(train_data, test_data, transformation_method, run_train):
 def data_iterable(train_data, test_data, run_train, train_batch_size, test_batch_size, configs):
     """
     Create lagged variables and convert train and test data to torch data types
+
     :param train_data: DataFrame
     :param test_data: DataFrame
     :param run_train: Boolean
@@ -138,7 +141,6 @@ def data_iterable(train_data, test_data, run_train, train_batch_size, test_batch
     :param configs: dict
     :return:
     """
-
     if run_train:
         # Create lagged INPUT variables, i.e. columns: w1_(t-1), w1_(t-2)...
         # Does this for all input variables for times up to "window"
@@ -173,18 +175,19 @@ def data_iterable(train_data, test_data, run_train, train_batch_size, test_batch
     test = data_utils.TensorDataset(test_feat_tensor, test_target_tensor)
     test_loader = DataLoader(dataset=test, batch_size=test_batch_size, shuffle=False)
 
-    return train_loader, test_loader, train_batch_size, test_batch_size
+    return train_loader, test_loader
 
 
 def data_iterable_random(train_data, test_data, run_train, train_batch_size, test_batch_size, configs):
     """
     Converts train and test data to torch data types (used only if splitting training and test set randomly)
-    :param train_data: DataFrame
-    :param test_data: DataFrame
-    :param run_train: Boolean
-    :param train_batch_size: int
-    :param test_batch_size: int
-    :param configs: dict
+
+    :param train_data: (DataFrame)
+    :param test_data: (DataFrame)
+    :param run_train: (Boolean)
+    :param train_batch_size: (int)
+    :param test_batch_size: (int)
+    :param configs: (Dictionary)
     :return:
     """
 
@@ -210,7 +213,7 @@ def data_iterable_random(train_data, test_data, run_train, train_batch_size, tes
     else:
         train_loader = []
 
-    # Do the same as above for the test set
+    # Do the same as above, but for the test set
     X_test = test_data.drop(configs['target_var'], axis=1).values.astype(dtype='float32')
 
     y_test = test_data[configs['target_var']]
@@ -224,170 +227,217 @@ def data_iterable_random(train_data, test_data, run_train, train_batch_size, tes
     test = data_utils.TensorDataset(test_feat_tensor, test_target_tensor)
     test_loader = DataLoader(dataset=test, batch_size=test_batch_size, shuffle=False)
 
-    return train_loader, test_loader, train_batch_size, test_batch_size
+    return train_loader, test_loader
 
 
 def save_model(model, epoch, n_iter):
     """
     Save a PyTorch model to a file
-    :param model: Pytorch model
-    :param epoch: int
-    :param n_iter: int
-    :return:
+
+    :param model: (Pytorch model)
+    :param epoch: (int)
+    :param n_iter: (int)
+    :return: None
     """
     model_dict = {'epoch_num': epoch, 'n_iter': n_iter, 'torch_model': model}
     torch.save(model_dict, file_prefix + '/torch_model')
 
-    # prtime("RNN model checkpoint saved")
+
+def pinball_np(output, target, configs):
+    resid = target - output
+    tau = np.array(configs["qs"])
+    alpha = configs["smoothing_alpha"]
+    log_term = np.zeros_like(resid)
+    log_term[resid < 0] = (np.log(1+np.exp(resid[resid < 0]/alpha)) - (resid[resid < 0]/alpha))
+    log_term[resid >= 0] = np.log(1 + np.exp(-resid[resid >= 0]/alpha))
+    loss = resid * tau + alpha * log_term
+
+    return loss
 
 
-def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method, configs):
+def quantile_loss(output, target, configs):
     """
-    Process the test set and report error statistics
-    :param test_df: DataFrame
-    :param test_loader: Data Loader
-    :param model:
-    :param seq_dim:
+    Computes loss for quantile methods.
+
+    :param output: (Tensor)
+    :param target: (Tensor)
+    :param configs: (Dictionary)
+    :return: (Tensor) Loss for this study (single number)
+    """
+
+    resid = target - output
+    tau = torch.FloatTensor(configs["qs"])
+    alpha = configs["smoothing_alpha"]
+    log_term = torch.zeros_like(resid)
+    log_term[resid < 0] = (torch.log(1+torch.exp(resid[resid < 0]/alpha)) - (resid[resid < 0]/alpha))
+    log_term[resid >= 0] = torch.log(1 + torch.exp(-resid[resid >= 0]/alpha))
+    loss = resid * tau + alpha * log_term
+    loss = torch.mean(torch.mean(loss, 0))
+
+    # Extra statistics to return optionally
+    stats = [resid.data.numpy().min(), resid.data.numpy().max()]
+
+    # See histogram of residuals
+    # graph = pd.DataFrame(resid.data.numpy()).plot(kind="hist", alpha=0.5, bins=50, ec='black', stacked=True)
+
+    return loss
+
+
+def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method, configs, last_run):
+    """
+    Process the test set and report error statistics.
+
+    :param test_df: (DataFrame)
+    :param test_loader: (DataLoader)
+    :param model: (Pytorch model)
+    :param seq_dim: ()
     :param input_dim:
     :param test_batch_size:
     :param transformation_method:
-    :param configs:
+    :param configs: (Dictionary)
     :return:
     """
-    # test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method
+
     model.eval()
-    # test_y_at_t = torch.zeros(test_batch_size, seq_dim, 1)
     preds = []
     targets = []
     for i, (feats, values) in enumerate(test_loader):
-        # features = Variable(feats.view(-1, seq_dim, input_dim - 1))
-        # outputs = model(torch.cat((features, test_y_at_t), dim=2))
-        # test_y_at_t = tile(outputs.unsqueeze(2), 1, 5)
         features = Variable(feats.view(-1, seq_dim, input_dim))
         outputs = model(features)
         preds.append(outputs.data.numpy().squeeze())
         targets.append(values.data.numpy())
 
-    # concatenating the preds and targets for the whole epoch (iterating over test_loader once)
-    # semifinal_preds = np.concatenate(preds).ravel()
-    # semifinal_targs = np.concatenate(targets).ravel()
+    # Concatenating the preds and targets for the whole epoch (iterating over test_loader once)
     semifinal_preds = np.concatenate(preds)
-    #semifinal_preds = semifinal_preds[:, int(semifinal_preds.shape[1] / 2)]
     semifinal_targs = np.concatenate(targets)
-    #semifinal_targs = semifinal_targs[:, int(semifinal_targs.shape[1] / 2)]
-    #mse_loss = np.mean((semifinal_targs - semifinal_preds) ** 2)
     target = semifinal_targs
     output = semifinal_preds
-    resid = target - output
 
-    # alpha = 10
-    # tau = 0.9
-    # huber1 = (resid**2 / (2*alpha)) * np.logical_and(0 <= np.abs(resid), np.abs(resid) <= alpha)
-    # huber2 = (np.abs(resid) - (alpha/2)) * (np.abs(resid) > alpha)
-    # huber = huber1 + huber2
-    # loss1 = (tau * huber) * (resid >= 0)
-    # loss2 = ((tau-1) * huber) * (resid < 0)
-    # loss = loss1 + loss2
-    # mse_loss = np.mean(loss)
+    # Calculate pinball loss
+    loss = pinball_np(output, target, configs)
+    pinball_loss = np.mean(np.mean(loss, 0))
 
-    tau = np.array(configs["qs"])
-    alpha = 0.01
-    log_term = np.log(1 + np.exp(-resid / alpha))
-    loss = resid * tau + alpha * log_term
-    mse_loss = np.mean(np.mean(loss, 0))
-
-    # loading the training data stats for de-normalization purpose
+    # Loading the training data stats for de-normalization purpose
     file_loc = file_prefix + '/train_stats.json'
     with open(file_loc, 'r') as f:
         train_stats = json.load(f)
 
+    # Get normalization statistics
     train_max = pd.DataFrame(train_stats['train_max'], index=[1]).iloc[0]
     train_min = pd.DataFrame(train_stats['train_min'], index=[1]).iloc[0]
     train_mean = pd.DataFrame(train_stats['train_mean'], index=[1]).iloc[0]
     train_std = pd.DataFrame(train_stats['train_std'], index=[1]).iloc[0]
 
+    # Do quantile-related (q != 0.5) error statistics
+    # QS (single point)
+    loss = pinball_np(output, target, configs)
+    QS = loss.sum()
+    # PICP (single point for each bound)
+    target_1D = target[:, 0]
+    bounds = np.zeros((target.shape[0], int(len(configs["qs"])/2)))
+    PINC = []
+    for i, q in enumerate(configs["qs"]):
+        if q == 0.5:
+            break
+        bounds[:, i] = np.logical_and(output[:, i] < target_1D, target_1D < output[:, -(i + 1)])
+        PINC.append(configs["qs"][-(i+1)] - configs["qs"][i])
+    PINC = np.array(PINC)
+    PICP = bounds.mean(axis=0)
+    # ACE (single point)
+    ACE = np.sum(np.abs(PICP - PINC))
+    # IS (single point)
+    lower = output[:, :int(len(configs["qs"])/2)]
+    upper = np.flip(output[:, int(len(configs["qs"])/2)+1:], 1)
+    alph = 1-PINC
+    x = target[:, :int(len(configs["qs"]) / 2)]
+    IS = (upper - lower) + (2 / alph) * (lower - x) * (x < lower) + (2 / alph) * (x - upper) * (x > upper)
+    IS = IS.mean()
+
+    # Compare theoretical and actual Q's
+    act_prob = (output > target).sum(axis=0)/(target.shape[0])
+    Q_vals = pd.DataFrame()
+    Q_vals["q_requested"] = configs["qs"]
+    Q_vals["q_actual"] = act_prob
+
+    # Do quantile-related (q == 0.5) error statistics
+    # Only do reportable error statistics on the q=0.5 predictions. Crop np arrays accordingly
     semifinal_preds = semifinal_preds[:, int(semifinal_preds.shape[1] / 2)]
     semifinal_targs = semifinal_targs[:, int(semifinal_targs.shape[1] / 2)]
 
     # Do do-normalization process on predictions from test set
     if transformation_method == "minmaxscale":
         final_preds = ((train_max[configs['target_var']] - train_min[configs['target_var']]) * semifinal_preds) + \
-                      train_min[
-                          configs['target_var']]
-
+                      train_min[configs['target_var']]
     else:
         final_preds = ((semifinal_preds * train_std[configs['target_var']]) + train_mean[configs['target_var']])
 
     predictions = pd.DataFrame(final_preds)
     predicted = predictions.values.squeeze()
     measured = test_df[configs['target_var']].values
-    p_nmbe = 0  # Number of "adjustable model parameters"
+
+    # Set "Number of adjustable model parameters for each type of error statistic
+    p_nmbe = 0
     p_cvrmse = 1
 
     # Calculate different error metrics
     rmse = np.sqrt(np.mean((predicted - measured) ** 2))
     nmbe = (1 / (np.mean(measured))) * (np.sum(measured - predicted)) / (len(measured) - p_nmbe)
-    cvrmse = (1 / (np.mean(measured))) * np.sqrt(np.sum((measured-predicted)**2) / (len(measured) - p_cvrmse))
-    gof = (np.sqrt(2) / 2)  * np.sqrt(cvrmse**2 + nmbe**2)
+    cvrmse = (1 / (np.mean(measured))) * np.sqrt(np.sum((measured - predicted) ** 2) / (len(measured) - p_cvrmse))
+    gof = (np.sqrt(2) / 2) * np.sqrt(cvrmse ** 2 + nmbe ** 2)
+
+    # If this is the last test run of training, get histogram data of residuals for each quantile
+    if last_run:
+        resid = target - output
+        hist_data = pd.DataFrame()
+        for i, q in enumerate(configs["qs"]):
+            tester = np.histogram(resid[:, i], bins=200)
+            y_vals = tester[0]
+            x_vals = 0.5*(tester[1][1:]+tester[1][:-1])
+            hist_data["{}_x".format(q)] = x_vals
+            hist_data["{}_y".format(q)] = y_vals
+    else:
+        hist_data = []
 
     # Add different error statistics to a dictionary
-    errors = {"mse_loss": mse_loss, "rmse": rmse, "nmbe": nmbe, "cvrmse": cvrmse, "gof": gof}
+    errors = {"pinball_loss": pinball_loss,
+              "rmse": rmse,
+              "nmbe": nmbe,
+              "cvrmse": cvrmse,
+              "gof": gof,
+              "qs": QS,
+              "ace": ACE,
+              "is": IS}
 
-    return predictions, errors
-
-
-def quantile_loss(output, target, configs):
-    #loss = torch.mean((output - target)**2)
-    resid = target - output
-
-    # alpha = 10
-    # tau = 0.9
-    # huber1 = torch.div(torch.pow(resid, 2), 2*alpha) * (0 <= torch.abs(resid)).float() * (torch.abs(resid) <= alpha).float()
-    # huber2 = (torch.abs(resid) - (alpha/2)) * (torch.abs(resid) > alpha).float()
-    # huber = huber1 + huber2
-    # loss1 = (tau * huber) * (resid >= 0).float()
-    # loss2 = ((tau-1) * huber) * (resid < 0).float()
-    # loss = loss1 + loss2
-    # loss = torch.mean(loss)
-
-    tau = torch.FloatTensor(configs["qs"])
-    alpha = 0.01
-    log_term = torch.log(1 + torch.exp(-resid / alpha))
-    loss = resid * tau + alpha * log_term
-    loss = torch.mean(torch.mean(loss, 0))
-
-    return loss
+    return predictions, errors, Q_vals, hist_data
 
 
 def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method,
             configs, train_batch_size, test_batch_size, seq_dim, num_train_data):
     """
+    Contains main training process for RNN
 
-    :param train_loader:
-    :param test_loader:
-    :param test_df:
-    :param num_epochs:
-    :param run_train:
-    :param run_resume:
-    :param writer:
-    :param transformation_method:
-    :param configs:
-    :param train_batch_size:
-    :param test_batch_size:
-    :param seq_dim:
-    :param num_train_data:
-    :return:
+    :param train_loader: (Pytorch DataLoader)
+    :param test_loader: (Pytorch DataLoader)
+    :param test_df: (DataFrame)
+    :param num_epochs: (int)
+    :param run_train: (Boolean)
+    :param run_resume: (Boolean)
+    :param writer: (SummaryWriter object)
+    :param transformation_method: (str)
+    :param configs: (Dictionary)
+    :param train_batch_size: (Float)
+    :param test_batch_size: (Float)
+    :param seq_dim: (Int)
+    :param num_train_data: (Float)
+    :return: None
     """
-    # ___ Hyper-parameters
-    # Input_dim: Determined automatically
+
     num_epochs = num_epochs
     lr_schedule = configs['lr_schedule']
     hidden_dim = int(configs['hidden_nodes'])
     output_dim = configs["output_dim"]
     weight_decay = float(configs['weight_decay'])
-
     input_dim = configs['input_dim']
-    #configs['hidden_dim'] = hidden_dim
     layer_dim = configs['layer_dim']
 
     # Write the configurations used for this training process to a json file
@@ -398,11 +448,11 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     # initializing lists to store losses over epochs:
     train_loss = []
     train_iter = []
-    #test_loss = []
+    # test_loss = []
     test_iter = []
-    #test_rmse = []
+    # test_rmse = []
 
-    # If you want to continue training the model
+    # If you want to continue training the model:
     if run_train:
         # If you are resuming from a previous training session
         if run_resume:
@@ -417,6 +467,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                 print("model does not exist in the given folder for resuming the training. Exiting...")
                 exit()
             prtime("rune_resume=True, model loaded from: {}".format(file_prefix))
+
         # If you want to start training a model from scratch
         else:
             # RNN layer
@@ -426,14 +477,13 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
             # Initialize the model
             model = rnn.RNNModel(input_dim, hidden_dim, layer_dim, output_dim)
             epoch_range = np.arange(num_epochs)
-            # prtime("A new {} model instantiated, with run_train=True".format("rnn"))
             print("A new {} model instantiated, with run_train=True".format("rnn"))
 
         # Check if gpu support is available
         cuda_avail = torch.cuda.is_available()
 
-        # Instantiating Loss Class
-        #criterion = nn.MSELoss()
+        # Instantiating Loss Class (only for MSE)
+        # criterion = nn.MSELoss()
 
         # Instantiate Optimizer Class
         optimizer = torch.optim.Adam(model.parameters(), lr=configs['lr_config']['base'], weight_decay=weight_decay)
@@ -445,7 +495,8 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                                           mode='min',
                                           factor=configs['lr_config']['factor'],
                                           min_lr=configs['lr_config']['min'],
-                                          patience=int(configs['lr_config']['patience'] * (num_train_data / train_batch_size)),
+                                          patience=int(
+                                              configs['lr_config']['patience'] * (num_train_data / train_batch_size)),
                                           verbose=True)
 
         prtime("Preparing model to train")
@@ -461,20 +512,26 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         else:
             n_iter = 0
 
+        # Start training timer
+        train_start_time = timeit.default_timer()
+
+        # Residual diagnostics
+        resid_stats = []
+
         # Initialize re-trainable matrix
         # train_y_at_t = torch.zeros(train_batch_size, seq_dim, 1)  # 960 x 5 x 1
+
         # Loop through epochs
+        epoch_num = 1
         for epoch in epoch_range:
             # This loop returns elements from the dataset batch by batch. Contains features AND targets
             for i, (feats, values) in enumerate(train_loader):
                 model.train()
-                # feats: 960x30 (tensor)
-                # values: 960x1 (tensor)
+                # feats: (# samples in batch) x (unrolled features) (tensor)
+                # values: (# samples in batch) x (Output dimension) (tensor)
                 time1 = timeit.default_timer()
 
-                # batch size x 5 x 6. -1 means "I don't know". Middle dimension is time.
                 # (batches, timesteps, features)
-                # features = Variable(feats.view(-1, seq_dim, input_dim - 1)) # size: (960x5x6)
                 features = Variable(feats.view(-1, seq_dim, input_dim))
                 target = Variable(values)  # size: batch size
 
@@ -484,8 +541,8 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                 optimizer.zero_grad()
 
                 # FORWARD PASS to get output/logits.
-                # train_y_at_t is 960 x 5 x 1
-                # features is     960 x 5 x 6
+                # train_y_at_t is (#batches x timesteps x 1)
+                # features is     (#batches x timesteps x features)
                 # This command: (960x5x7) --> 960x1
                 # outputs = model(torch.cat((features, train_y_at_t.detach_()), dim=2))
                 outputs = model(features)
@@ -497,20 +554,19 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                 # train_y_at_t_nump = train_y_at_t.detach().numpy()
 
                 # Calculate Loss: softmax --> cross entropy loss
-                #loss = criterion(outputs.squeeze(), target)
-                #loss = quantile_loss(outputs.squeeze(), target)
+                # loss = criterion(outputs.squeeze(), target)
                 loss = quantile_loss(outputs, target, configs)
 
+                # resid_stats.append(stats)
                 train_loss.append(loss.data.item())
                 train_iter.append(n_iter)
 
                 # Print to terminal and save training loss
-                # prtime('Epoch: {} Iteration: {} TrainLoss: {}'.format(epoch, n_iter, train_loss[-1]))
                 writer.add_scalars("Loss", {'Train': loss.data.item()}, n_iter)
 
                 time4 = timeit.default_timer()
 
-                # Does backpropogation and gets gradients, (the weights and bias). Create graph
+                # Does backpropogation and gets gradients, (the weights and bias). Create computational graph
                 loss.backward()
 
                 time5 = timeit.default_timer()
@@ -532,19 +588,19 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                                                       "dt4": time5 - time4,
                                                       "dt5": time6 - time5}, n_iter)
 
-                # save the model every ___ iterations
+                # Save the model every ___ iterations
                 if n_iter % 200 == 0:
                     save_model(model, epoch, n_iter)
 
                 # Do a test batch every ___ iterations
                 if n_iter % 200 == 0:
                     # Evaluate test set
-                    predictions, errors = test_processing(test_df, test_loader, model, seq_dim, input_dim,
-                                                          test_batch_size, transformation_method, configs)
+                    predictions, errors, Q_vals, hist_data = test_processing(test_df, test_loader, model, seq_dim, input_dim,
+                                                          test_batch_size, transformation_method, configs, False)
                     test_iter.append(n_iter)
-                    #test_loss.append(errors['mse_loss'])
-                    #test_rmse.append(errors['rmse'])
-                    writer.add_scalars("Loss", {"Test": errors['mse_loss']}, n_iter)
+                    # test_loss.append(errors['mse_loss'])
+                    # test_rmse.append(errors['rmse'])
+                    writer.add_scalars("Loss", {"Test": errors['pinball_loss']}, n_iter)
 
                     # Add matplotlib plot to TensorBoard to compare actual test set vs predicted
                     fig1, ax1 = plt.subplots(figsize=(20, 5))
@@ -568,20 +624,26 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
                     print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}, LR: {}'.format(epoch, n_iter,
                                                                                                 loss.data.item(),
-                                                                                                errors['mse_loss'],
+                                                                                                errors['pinball_loss'],
                                                                                                 optimizer.param_groups[
                                                                                                     0]['lr']))
+                    epoch_num += 1
 
         # Once model training is done, save the current model state
         save_model(model, epoch, n_iter)
 
         # Once model is done training, process a final test set
-        predictions, errors = test_processing(test_df, test_loader, model, seq_dim, input_dim,
-                                              test_batch_size, transformation_method, configs)
+        predictions, errors, Q_vals, hist_data = test_processing(test_df, test_loader, model, seq_dim, input_dim,
+                                              test_batch_size, transformation_method, configs, True)
 
-        # Save the final predictions and error statistics to a file
+        # Save the residual distribution to a file
+        hist_data.to_hdf(os.path.join(file_prefix, "residual_distribution.h5"), key='df', mode='w')
+
+        # Save the final predictions to a file
         predictions.to_csv(file_prefix + '/predictions.csv', index=False)
-        #np.savetxt(file_prefix + '/final_rmse.csv', errors['rmse'], delimiter=",")
+
+        # Save the QQ information to a file
+        Q_vals.to_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df', mode='w')
 
     # If you just want to immediately test the model on the existing (saved) model
     else:
@@ -589,78 +651,93 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         model = torch_model['torch_model']
         prtime("Loaded model from file, given run_train=False\n")
 
-        predictions, errors = test_processing(test_df, test_loader, model, seq_dim, input_dim,
-                                              test_batch_size, transformation_method, configs)
-        #test_loss.append(errors['mse_loss'])
-        #test_rmse.append(errors['rmse'])
-        writer.add_scalars("Loss", {"Test": errors['mse_loss']})
-        prtime('Test_MSE: {}'.format(errors['mse_loss']))
+        predictions, errors, Q_vals, hist_data = test_processing(test_df, test_loader, model, seq_dim, input_dim,
+                                              test_batch_size, transformation_method, configs, True)
+        # test_loss.append(errors['mse_loss'])
+        # test_rmse.append(errors['rmse'])
+        writer.add_scalars("Loss", {"Test": errors['pinball_loss']})
+        prtime('Test_MSE: {}'.format(errors['pinball_loss']))
+
+        # Save the residual distribution to a file
+        path = file_prefix + '/residual_distribution.h5.json'
+        with open(path, 'w') as fp:
+            json.dump(hist_data, fp, indent=1)
 
         # Save the final predictions and error statistics to a file
         predictions.to_csv(file_prefix + '/predictions.csv', index=False)
-        #np.savetxt(file_prefix + '/final_rmse.csv', errors['rmse'], delimiter=",")
+
+        # Save the QQ information to a file
+        Q_vals.to_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df', mode='w')
+
+    # End training timer
+    train_end_time = timeit.default_timer()
+    train_time = train_end_time - train_start_time
+
+    # Plot residual stats
+    # fig3, ax3 = plt.subplots()
+    # ax3.plot(np.array(resid_stats)[:, 0], label="Min")
+    # ax3.plot(np.array(resid_stats)[:, 1], label="Max")
+    # plt.show()
 
     # If a training history csv file does not exist, make one
     if not pathlib.Path("Training_history.csv").exists():
         with open(r'Training_history.csv', 'a') as f:
             writer = csv.writer(f, lineterminator='\n')
-            writer.writerow(["File Path", "RMSE", "CV(RMSE)", "NMBE", "GOF"])
+            writer.writerow(["File Path", "RMSE", "CV(RMSE)", "NMBE", "GOF", "QS", "ACE", "IS", "Train time"])
 
     # Save the errors statistics to a file once everything is done
     with open(r'Training_history.csv', 'a') as f:
         writer = csv.writer(f, lineterminator='\n')
-        writer.writerow([file_prefix, errors["rmse"], errors["cvrmse"], errors["nmbe"], errors["gof"]])
-
+        writer.writerow([file_prefix,
+                         errors["rmse"],
+                         errors["cvrmse"],
+                         errors["nmbe"],
+                         errors["gof"],
+                         errors["qs"],
+                         errors["ace"],
+                         errors["is"],
+                         train_time])
 
 
 def eval_trained_model(file_prefix, train_data, train_batch_size, data_time_index, configs):
     """
-    Pass the entire training set through the trained model and get the predictions. Compute the residual and save to a DataFrame.
-    :param file_prefix:
-    :param train_data:
-    :param train_batch_size:
-    :param data_time_index:
-    :param configs:
-    :return:
+    Pass the entire training set through the trained model and get the predictions.
+    Compute the residual and save to a DataFrame.
+
+    :param file_prefix: (str)
+    :param train_data: (DataFrame)
+    :param train_batch_size: (Float)
+    :param data_time_index: (Datetime index)
+    :param configs: (Dictionary)
+    :return: None
     """
+
     # Evaluate the training model
     torch_model = torch.load(file_prefix + '/torch_model')
     model = torch_model['torch_model']
-
     X_train = train_data.drop(configs['target_var'], axis=1).values.astype(dtype='float32')
     y_train = train_data[configs['target_var']]
     y_train = y_train.values.astype(dtype='float32')
-
     y_train = np.tile(y_train, (len(configs['qs']), 1))
     y_train = np.transpose(y_train)
-
     train_feat_tensor = torch.from_numpy(X_train).type(torch.FloatTensor)
     train_target_tensor = torch.from_numpy(y_train).type(torch.FloatTensor)
     train = data_utils.TensorDataset(train_feat_tensor, train_target_tensor)
     train_loader = DataLoader(dataset=train, batch_size=train_batch_size, shuffle=False)
 
+    # Pass the training data into the trained model
     model.eval()
-
     preds = []
     targets = []
     for i, (feats, values) in enumerate(train_loader):
-        # features = Variable(feats.view(-1, seq_dim, input_dim - 1))
         features = Variable(feats.view(-1, configs['window'], configs['input_dim']))
-        # outputs = model(torch.cat((features, test_y_at_t), dim=2))
         outputs = model(features)
-        # test_y_at_t = tile(outputs.unsqueeze(2), 1, 5)
         preds.append(outputs.data.numpy().squeeze())
         targets.append(values.data.numpy())
-
-    # concatenating the preds and targets for the whole epoch (iterating over test_loader once)
-    # semifinal_preds = np.concatenate(preds).ravel()
-    # semifinal_targs = np.concatenate(targets).ravel()  # Last 5 entries are nan
-
     semifinal_preds = np.concatenate(preds)
-    #semifinal_preds = semifinal_preds[:, int(semifinal_preds.shape[1] / 2)]
     semifinal_targs = np.concatenate(targets)
-    #semifinal_targs = semifinal_targs[:, int(semifinal_targs.shape[1] / 2)]
 
+    # Get the saved binary mask from file
     mask_file = os.path.join("data", "mask_{}_{}.json".format(configs['building'], "-".join(configs['year'])))
     with open(mask_file, "r") as read_file:
         msk = json.load(read_file)
@@ -669,13 +746,16 @@ def eval_trained_model(file_prefix, train_data, train_batch_size, data_time_inde
     target_index = data_time_index[msk] + pd.DateOffset(
         minutes=(configs["EC_future_gap"] * configs["resample_bin_min"]))
     processed_data = pd.DataFrame(index=target_index)
+
+    # Stick data into a DataFrame to be accessed later
     i = 0
     for q in configs["qs"]:
         processed_data["{}_fit".format(q)] = semifinal_preds[:, i]
-        i = i+1
-    #processed_data['Training fit'] = semifinal_preds
+        i = i + 1
     processed_data['Target'] = semifinal_targs[:, 0]
     processed_data['Residual'] = semifinal_targs[:, 0] - semifinal_preds[:, int(semifinal_preds.shape[1] / 2)]
+
+    # Save DataFrame to file
     processed_data.to_hdf(os.path.join(file_prefix, "evaluated_training_model.h5"), key='df', mode='w')
 
 
@@ -683,26 +763,27 @@ def plot_processed_model(file_prefix):
     """
     Plot the trained model, along with the residuals for the trained model.
     The plot will show what time periods are not being captured by the model.
-    :param file_prefix:
-    :return:
-    """
-    processed_data = pd.read_hdf(os.path.join(file_prefix, "evaluated_training_model.h5"), key='df')
-    # = processed_data.drop("Residual", axis=1)
-    # plt.figure(figsize=(9, 3))
-    # plt.plot(processed_data["Target"], label='Targets')
-    # plt.plot(processed_data["Training fit"], label='Training fit')
-    # plt.ylabel("target variable")
-    # plt.legend()
-    # plt.show()
 
+    :param file_prefix: (str) Relative path to the results folder for the model you want to study
+    :return: None
+    """
+
+    # Read in training data and config file from results directory
+    processed_data = pd.read_hdf(os.path.join(file_prefix, "evaluated_training_model.h5"), key='df')
+    with open(os.path.join(file_prefix, "configs.json"), "r") as read_file:
+        configs = json.load(read_file)
+
+    # Plot data
     f, axarr = plt.subplots(2, sharex=True)
+    for i, q in enumerate(configs["qs"]):
+        if q == 0.5:
+            break
+        axarr[0].fill_between(processed_data.index, processed_data["{}_fit".format(q)],
+                              processed_data["{}_fit".format(configs["qs"][-(i + 1)])],
+                              alpha=0.2,
+                              label="{}%".format(round((configs["qs"][-(i + 1)] - q) * 100)))
     axarr[0].plot(processed_data["Target"], label='Target')
-    axarr[0].plot(processed_data["0.5_fit"], label='q=0.5')
-    axarr[0].fill_between(processed_data.index, processed_data["0.1_fit"], processed_data["0.9_fit"],
-                          color='k',
-                          alpha=0.1,
-                          label="Bounds")
-    #model_preformance.plot(ax=axarr[0])
+    axarr[0].plot(processed_data["0.5_fit"], label='q = 0.5')
     axarr[0].set_ylabel("target variable")
     axarr[0].legend()
     axarr[1].plot(processed_data['Residual'], label='Targets')
@@ -711,71 +792,147 @@ def plot_processed_model(file_prefix):
     plt.show()
 
 
+def plot_QQ(file_prefix):
+    """
+    Plots a QQ plot for a specific study specified by an input file directory string.
+
+    :param file_prefix: (str) Relative path to the training results directory in question.
+    :return: None
+    """
+    QQ_data = pd.read_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df')
+    fig2, ax2 = plt.subplots()
+    ax2.scatter(QQ_data["q_requested"], QQ_data["q_actual"], s=20)
+    strait_line = np.linspace(min(min(QQ_data["q_requested"]), min(QQ_data["q_actual"])),
+                              max(max(QQ_data["q_requested"]), max(QQ_data["q_actual"])), 5)
+    ax2.plot([0, 1], [0, 1], c='k', alpha=0.5)
+    ax2.set_xlabel('Requested')
+    ax2.set_ylabel('Actual')
+    #ax2.axhline(y=0, color='k')
+    #ax2.axvline(x=0, color='k')
+    ax2.set_xlim(left=0, right=1)
+    ax2.set_ylim(bottom=0, top=1)
+    #ax2.axis('equal')
+    plt.show()
+
+
+def plot_training_history(x):
+    """
+    Platform for plotting results recorded in the shared csv results file. In development.
+
+    :param x:
+    :return:
+    """
+    data = pd.read_csv("Training_history.csv")
+    data["iterable"] = x
+    data.plot(x="iterable", subplots=True)
+
+
+def plot_resid_dist(study_path, building, alphas, q):
+    """
+    Plot the residual distribution over the smooth approximations for different values of the alpha smoothing parameter.
+
+    :param study_path: (str) Relative path to the study directory in question.
+    :param building: (str) Name of the building in question
+    :param alphas: (list) Numerical values of alphas to consider for plotting
+    :param q: (float) Quantile value to consider for plotting.
+    :return: None
+    """
+    fig, ax1 = plt.subplots()
+    ax2 = ax1.twinx()
+    resid = np.linspace(-1, 1, 1000)
+    max_dist = 0
+
+    for alpha in alphas:
+        c = np.random.rand(3, )
+        # Plot the residual distribution for this alpha value
+        sub_study_path = "RNN_M{}_Tsmoothing_alpha_{}".format(building, alpha)
+        data = pd.read_hdf(os.path.join(study_path, sub_study_path, "residual_distribution.h5"), key='df')
+        # ax2.plot(data["{}_x".format(q)], data["{}_y".format(q)], c=c, alpha=0.5)
+        ax2.fill_between(data["{}_x".format(q)], data["{}_y".format(q)], 0, alpha=0.4, color=c, zorder=1)
+
+        # Store data to later scale axis
+        if data["{}_y".format(q)].max() > max_dist:
+            max_dist = data["{}_y".format(q)].max()
+
+        # Plot the PLF for this alpha value
+        log_term = np.zeros_like(resid)
+        log_term[resid < 0] = (np.log(1 + np.exp(resid[resid < 0] / alpha)) - (resid[resid < 0] / alpha))
+        log_term[resid >= 0] = np.log(1 + np.exp(-resid[resid >= 0] / alpha))
+        loss = resid * q + alpha * log_term
+        ax1.plot(resid, loss, c=c, label="$\\alpha$={}".format(alpha), zorder=10)
+
+    ax1.set_xlabel('Normalized Residual')
+    ax2.set_xlim(left=-0.5, right=0.5)
+    ax1.set_ylim(top=0.6)
+    ax1.set_ylabel('Smoothed PLF')
+    #ax1.set_ylim(bottom=-0.5)
+    ax2.set_ylim(top=4*max_dist)
+    ax2.set_ylabel('Frequency')
+    ax1.legend()
+    plt.show()
+
+
 def main(train_df, test_df, data_time_index, configs):
     """
     Main executable for prepping data for input to RNN model.
-    :param train_df:
-    :param test_df:
-    :param configs:
-    :return:
+
+    :param train_df: (DataFrame)
+    :param test_df: (DataFrame)
+    :param configs: (Dictionary)
+    :return: None
     """
+
     transformation_method = configs['transformation_method']
     run_train = configs['run_train']
     num_epochs = configs['num_epochs']
     run_resume = configs['run_resume']
     tr_desired_batch_size = configs['tr_batch_size']
     te_desired_batch_size = configs['te_batch_size']
-
     train_exp_num = configs['train_exp_num']
     test_exp_num = configs['test_exp_num']
     arch_type = configs['arch_type']
-
     results_dir = configs["results_dir"]
+
+    # Make results directory
     if not os.path.exists(results_dir):
         os.mkdir(results_dir)
     global file_prefix
     file_prefix = os.path.join(results_dir, arch_type + '_M' + str(train_exp_num) + '_T' + str(
         test_exp_num))
 
+    # Create writer object for TensorBoard
     writer_path = file_prefix
     writer = SummaryWriter(writer_path)
     print("Writer path: {}".format(writer_path))
 
-    # Get rid of datetime index
+    # Reset DataFrame index
     if run_train:
         train_data = train_df.copy(deep=True)
-        # train_data = train_data.drop('Date_time_MT', axis=1)
         train_data.reset_index(drop=True, inplace=True)
         train_df.reset_index(drop=True, inplace=True)
     else:
         train_data = train_df
-
     test_data = test_df.copy(deep=True)
-    # test_data = test_data.drop('Date_time_MT', axis=1)
     test_data.reset_index(drop=True, inplace=True)
     test_df.reset_index(drop=True, inplace=True)
 
     # Normalization transformation
     train_data, test_data = data_transform(train_data, test_data, transformation_method, run_train)
-    # prtime("data transformed using {} as transformation method".format(transformation_method))
     print("Data transformed using {} as transformation method".format(transformation_method))
 
     # Size the batches
     train_batch_size, test_batch_size, num_train_data = size_the_batches(train_data, test_data, tr_desired_batch_size,
                                                                          te_desired_batch_size)
 
+    # Normal: Convert to iterable dataset (DataLoaders)
     if configs["TrainTestSplit"] == 'Sequential':
-        # Normal: Convert to iterable dataset (DataLoaders)
-        train_loader, test_loader, train_batch_size, test_batch_size = data_iterable(train_data, test_data, run_train,
-                                                                                     train_batch_size,
-                                                                                     test_batch_size, configs)
+        train_loader, test_loader = data_iterable(train_data, test_data, run_train, train_batch_size,
+                                                  test_batch_size, configs)
 
+    # Already did sequential padding: Convert to iterable dataset (DataLoaders)
     elif configs["TrainTestSplit"] == 'Random':
-        # Already did sequential padding: Convert to iterable dataset (DataLoaders)
-        train_loader, test_loader, train_batch_size, test_batch_size = data_iterable_random(train_data, test_data,
-                                                                                            run_train,
-                                                                                            train_batch_size,
-                                                                                            test_batch_size, configs)
+        train_loader, test_loader = data_iterable_random(train_data, test_data, run_train, train_batch_size,
+                                                         test_batch_size, configs)
     prtime("data converted to iterable dataset")
 
     # Start the training process
@@ -787,4 +944,4 @@ def main(train_df, test_df, data_time_index, configs):
     if configs["TrainTestSplit"] == 'Random':
         eval_trained_model(file_prefix, train_data, train_batch_size, data_time_index, configs)
         # plot_processed_model(file_prefix)
-
+        #plot_QQ(file_prefix)

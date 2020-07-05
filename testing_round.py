@@ -1,16 +1,23 @@
 """
 Run-alone script for running testing on hyperparmeter values for a ML model.
+
+Input format example:
+runs["Test_hn"] = {'iterable': "hidden_nodes", 'iterables': [16, 18], 'iterable_type': str}
+
+"Test_hn" - Example of a name for a particular test (str). Required, but value decided by user.
+iterable (str) - The name of the parameter (as it is named in configs.json) that will be studied
+iterables (list) - The specific values of "iterable" that should be tested
+iterable_type (type) - The type of variable "iterable" as it is defined in configs.json
 """
 
 import json
 import entry_point as epb
 import os
-
+runs = {}
 
 # User inputs: What configurations will be run for this test? Each line is a separate study run in series
-runs = {}
-# runs["Test_wd"] = {'iterable': "weight_decay", 'iterables': [0.1, 0.01, 0.001, 0.0001], 'iterable_type': str}
-runs["Test_hn"] = {'iterable': "hidden_nodes", 'iterables': [1, 2, 3, 4, 5, 6, 8, 10, 12], 'iterable_type': str}
+runs["Test_hn"] = {'iterable': "hidden_nodes", 'iterables': [3, 6, 9, 12, 15, 18, 21, 24, 27], 'iterable_type': int}
+# runs["Test_wd"] = {'iterable': "weight_decay", 'iterables': [0.1, 0.01, 0.001, 0.0001], 'iterable_type': float}
 # runs["Test_lr"] = {'iterable': "learning_rate_base", 'iterables': [1e-1, 1e-2, 1e-3, 1e-4], 'iterable_type': float}
 # runs["Test_ec_gap"] = {'iterable': "EC_future_gap", 'iterables': [5, 10, 15, 20], 'iterable_type': int}
 # runs["Test_HOD_indicator_RSF"] = {'iterable': "HOD_indicator", 'iterables': ["sincos", "regDummy"], 'iterable_type': str}
