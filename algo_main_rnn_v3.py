@@ -267,7 +267,26 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     # concatenating the preds and targets for the whole epoch (iterating over test_loader once)
     semifinal_preds = np.concatenate(preds).ravel()
     semifinal_targs = np.concatenate(targets).ravel()
-    mse_loss = np.mean((semifinal_targs - semifinal_preds) ** 2)
+    #mse_loss = np.mean((semifinal_targs - semifinal_preds) ** 2)
+    target = semifinal_targs
+    output = semifinal_preds
+    resid = target - output
+
+    # alpha = 10
+    # tau = 0.9
+    # huber1 = (resid**2 / (2*alpha)) * np.logical_and(0 <= np.abs(resid), np.abs(resid) <= alpha)
+    # huber2 = (np.abs(resid) - (alpha/2)) * (np.abs(resid) > alpha)
+    # huber = huber1 + huber2
+    # loss1 = (tau * huber) * (resid >= 0)
+    # loss2 = ((tau-1) * huber) * (resid < 0)
+    # loss = loss1 + loss2
+    # mse_loss = np.mean(loss)
+
+    tau = 0.1
+    alpha = 0.01
+    log_term = np.log(1 + np.exp(-resid / alpha))
+    loss = resid * tau + alpha * log_term
+    mse_loss = np.mean(loss)
 
     # loading the training data stats for de-normalization purpose
     file_loc = file_prefix + '/train_stats.json'
@@ -304,6 +323,29 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     errors = {"mse_loss": mse_loss, "rmse": rmse, "nmbe": nmbe, "cvrmse": cvrmse, "gof": gof}
 
     return predictions, errors
+
+
+def quantile_loss(output, target):
+    #loss = torch.mean((output - target)**2)
+    resid = target - output
+
+    # alpha = 10
+    # tau = 0.9
+    # huber1 = torch.div(torch.pow(resid, 2), 2*alpha) * (0 <= torch.abs(resid)).float() * (torch.abs(resid) <= alpha).float()
+    # huber2 = (torch.abs(resid) - (alpha/2)) * (torch.abs(resid) > alpha).float()
+    # huber = huber1 + huber2
+    # loss1 = (tau * huber) * (resid >= 0).float()
+    # loss2 = ((tau-1) * huber) * (resid < 0).float()
+    # loss = loss1 + loss2
+    # loss = torch.mean(loss)
+
+    tau = 0.1
+    alpha = 0.01
+    log_term = torch.log(1 + torch.exp(-resid / alpha))
+    loss = resid * tau + alpha * log_term
+    loss = torch.mean(loss)
+
+    return loss
 
 
 def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method,
@@ -380,7 +422,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         cuda_avail = torch.cuda.is_available()
 
         # Instantiating Loss Class
-        criterion = nn.MSELoss()
+        #criterion = nn.MSELoss()
 
         # Instantiate Optimizer Class
         optimizer = torch.optim.Adam(model.parameters(), lr=configs['lr_config']['base'], weight_decay=weight_decay)
@@ -444,7 +486,8 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                 # train_y_at_t_nump = train_y_at_t.detach().numpy()
 
                 # Calculate Loss: softmax --> cross entropy loss
-                loss = criterion(outputs.squeeze(), target)
+                #loss = criterion(outputs.squeeze(), target)
+                loss = quantile_loss(outputs.squeeze(), target)
 
                 train_loss.append(loss.data.item())
                 train_iter.append(n_iter)

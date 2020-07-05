@@ -196,6 +196,8 @@ def data_iterable_random(train_data, test_data, run_train, train_batch_size, tes
         # Output variable
         y_train = train_data[configs['target_var']]
         y_train = y_train.values.astype(dtype='float32')
+        y_train = np.tile(y_train, (len(configs['qs']), 1))
+        y_train = np.transpose(y_train)
 
         # Convert to iterable tensors
         train_feat_tensor = torch.from_numpy(X_train).type(torch.FloatTensor)
@@ -213,6 +215,8 @@ def data_iterable_random(train_data, test_data, run_train, train_batch_size, tes
 
     y_test = test_data[configs['target_var']]
     y_test = y_test.values.astype(dtype='float32')
+    y_test = np.tile(y_test, (len(configs['qs']), 1))
+    y_test = np.transpose(y_test)
 
     test_feat_tensor = torch.from_numpy(X_test).type(torch.FloatTensor)
     test_target_tensor = torch.from_numpy(y_test).type(torch.FloatTensor)
@@ -265,9 +269,32 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
         targets.append(values.data.numpy())
 
     # concatenating the preds and targets for the whole epoch (iterating over test_loader once)
-    semifinal_preds = np.concatenate(preds).ravel()
-    semifinal_targs = np.concatenate(targets).ravel()
-    mse_loss = np.mean((semifinal_targs - semifinal_preds) ** 2)
+    # semifinal_preds = np.concatenate(preds).ravel()
+    # semifinal_targs = np.concatenate(targets).ravel()
+    semifinal_preds = np.concatenate(preds)
+    #semifinal_preds = semifinal_preds[:, int(semifinal_preds.shape[1] / 2)]
+    semifinal_targs = np.concatenate(targets)
+    #semifinal_targs = semifinal_targs[:, int(semifinal_targs.shape[1] / 2)]
+    #mse_loss = np.mean((semifinal_targs - semifinal_preds) ** 2)
+    target = semifinal_targs
+    output = semifinal_preds
+    resid = target - output
+
+    # alpha = 10
+    # tau = 0.9
+    # huber1 = (resid**2 / (2*alpha)) * np.logical_and(0 <= np.abs(resid), np.abs(resid) <= alpha)
+    # huber2 = (np.abs(resid) - (alpha/2)) * (np.abs(resid) > alpha)
+    # huber = huber1 + huber2
+    # loss1 = (tau * huber) * (resid >= 0)
+    # loss2 = ((tau-1) * huber) * (resid < 0)
+    # loss = loss1 + loss2
+    # mse_loss = np.mean(loss)
+
+    tau = np.array(configs["qs"])
+    alpha = 0.01
+    log_term = np.log(1 + np.exp(-resid / alpha))
+    loss = resid * tau + alpha * log_term
+    mse_loss = np.mean(np.mean(loss, 0))
 
     # loading the training data stats for de-normalization purpose
     file_loc = file_prefix + '/train_stats.json'
@@ -278,6 +305,9 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     train_min = pd.DataFrame(train_stats['train_min'], index=[1]).iloc[0]
     train_mean = pd.DataFrame(train_stats['train_mean'], index=[1]).iloc[0]
     train_std = pd.DataFrame(train_stats['train_std'], index=[1]).iloc[0]
+
+    semifinal_preds = semifinal_preds[:, int(semifinal_preds.shape[1] / 2)]
+    semifinal_targs = semifinal_targs[:, int(semifinal_targs.shape[1] / 2)]
 
     # Do do-normalization process on predictions from test set
     if transformation_method == "minmaxscale":
@@ -304,6 +334,29 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     errors = {"mse_loss": mse_loss, "rmse": rmse, "nmbe": nmbe, "cvrmse": cvrmse, "gof": gof}
 
     return predictions, errors
+
+
+def quantile_loss(output, target, configs):
+    #loss = torch.mean((output - target)**2)
+    resid = target - output
+
+    # alpha = 10
+    # tau = 0.9
+    # huber1 = torch.div(torch.pow(resid, 2), 2*alpha) * (0 <= torch.abs(resid)).float() * (torch.abs(resid) <= alpha).float()
+    # huber2 = (torch.abs(resid) - (alpha/2)) * (torch.abs(resid) > alpha).float()
+    # huber = huber1 + huber2
+    # loss1 = (tau * huber) * (resid >= 0).float()
+    # loss2 = ((tau-1) * huber) * (resid < 0).float()
+    # loss = loss1 + loss2
+    # loss = torch.mean(loss)
+
+    tau = torch.FloatTensor(configs["qs"])
+    alpha = 0.01
+    log_term = torch.log(1 + torch.exp(-resid / alpha))
+    loss = resid * tau + alpha * log_term
+    loss = torch.mean(torch.mean(loss, 0))
+
+    return loss
 
 
 def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method,
@@ -380,7 +433,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         cuda_avail = torch.cuda.is_available()
 
         # Instantiating Loss Class
-        criterion = nn.MSELoss()
+        #criterion = nn.MSELoss()
 
         # Instantiate Optimizer Class
         optimizer = torch.optim.Adam(model.parameters(), lr=configs['lr_config']['base'], weight_decay=weight_decay)
@@ -444,7 +497,9 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                 # train_y_at_t_nump = train_y_at_t.detach().numpy()
 
                 # Calculate Loss: softmax --> cross entropy loss
-                loss = criterion(outputs.squeeze(), target)
+                #loss = criterion(outputs.squeeze(), target)
+                #loss = quantile_loss(outputs.squeeze(), target)
+                loss = quantile_loss(outputs, target, configs)
 
                 train_loss.append(loss.data.item())
                 train_iter.append(n_iter)
@@ -575,6 +630,10 @@ def eval_trained_model(file_prefix, train_data, train_batch_size, data_time_inde
     X_train = train_data.drop(configs['target_var'], axis=1).values.astype(dtype='float32')
     y_train = train_data[configs['target_var']]
     y_train = y_train.values.astype(dtype='float32')
+
+    y_train = np.tile(y_train, (len(configs['qs']), 1))
+    y_train = np.transpose(y_train)
+
     train_feat_tensor = torch.from_numpy(X_train).type(torch.FloatTensor)
     train_target_tensor = torch.from_numpy(y_train).type(torch.FloatTensor)
     train = data_utils.TensorDataset(train_feat_tensor, train_target_tensor)
@@ -594,8 +653,13 @@ def eval_trained_model(file_prefix, train_data, train_batch_size, data_time_inde
         targets.append(values.data.numpy())
 
     # concatenating the preds and targets for the whole epoch (iterating over test_loader once)
-    semifinal_preds = np.concatenate(preds).ravel()
-    semifinal_targs = np.concatenate(targets).ravel()  # Last 5 entries are nan
+    # semifinal_preds = np.concatenate(preds).ravel()
+    # semifinal_targs = np.concatenate(targets).ravel()  # Last 5 entries are nan
+
+    semifinal_preds = np.concatenate(preds)
+    #semifinal_preds = semifinal_preds[:, int(semifinal_preds.shape[1] / 2)]
+    semifinal_targs = np.concatenate(targets)
+    #semifinal_targs = semifinal_targs[:, int(semifinal_targs.shape[1] / 2)]
 
     mask_file = os.path.join("data", "mask_{}_{}.json".format(configs['building'], "-".join(configs['year'])))
     with open(mask_file, "r") as read_file:
@@ -605,9 +669,13 @@ def eval_trained_model(file_prefix, train_data, train_batch_size, data_time_inde
     target_index = data_time_index[msk] + pd.DateOffset(
         minutes=(configs["EC_future_gap"] * configs["resample_bin_min"]))
     processed_data = pd.DataFrame(index=target_index)
-    processed_data['Training fit'] = semifinal_preds
-    processed_data['Target'] = semifinal_targs
-    processed_data['Residual'] = semifinal_targs - semifinal_preds
+    i = 0
+    for q in configs["qs"]:
+        processed_data["{}_fit".format(q)] = semifinal_preds[:, i]
+        i = i+1
+    #processed_data['Training fit'] = semifinal_preds
+    processed_data['Target'] = semifinal_targs[:, 0]
+    processed_data['Residual'] = semifinal_targs[:, 0] - semifinal_preds[:, int(semifinal_preds.shape[1] / 2)]
     processed_data.to_hdf(os.path.join(file_prefix, "evaluated_training_model.h5"), key='df', mode='w')
 
 
@@ -619,6 +687,7 @@ def plot_processed_model(file_prefix):
     :return:
     """
     processed_data = pd.read_hdf(os.path.join(file_prefix, "evaluated_training_model.h5"), key='df')
+    # = processed_data.drop("Residual", axis=1)
     # plt.figure(figsize=(9, 3))
     # plt.plot(processed_data["Target"], label='Targets')
     # plt.plot(processed_data["Training fit"], label='Training fit')
@@ -627,8 +696,13 @@ def plot_processed_model(file_prefix):
     # plt.show()
 
     f, axarr = plt.subplots(2, sharex=True)
-    axarr[0].plot(processed_data["Target"], label='Targets')
-    axarr[0].plot(processed_data["Training fit"], label='Training fit')
+    axarr[0].plot(processed_data["Target"], label='Target')
+    axarr[0].plot(processed_data["0.5_fit"], label='q=0.5')
+    axarr[0].fill_between(processed_data.index, processed_data["0.1_fit"], processed_data["0.9_fit"],
+                          color='k',
+                          alpha=0.1,
+                          label="Bounds")
+    #model_preformance.plot(ax=axarr[0])
     axarr[0].set_ylabel("target variable")
     axarr[0].legend()
     axarr[1].plot(processed_data['Residual'], label='Targets')

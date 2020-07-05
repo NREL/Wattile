@@ -7,13 +7,15 @@
     "run_train": true,
     "num_epochs": 500,
     "tr_batch_size": 3716,
-    "te_batch_size": 100,
+    "te_batch_size": 1000,
     "run_resume": false,
     "preprocess": false,
     "arch_type": "RNN",
     "train_exp_num": "Cafe",
     "test_exp_num": "dev",
     "hidden_nodes": "10",
+    "layer_dim": 1,
+    "output_dim": 3,
     "weight_decay": "0.001",
     "fetch_n_parse": false,
     "LAN_path": "Z:\\Data",
@@ -43,14 +45,14 @@
     "HOD_indicator": "sincos",
     "window": 5,
     "EC_future_gap": 5,
-    "learning_rate_base": 1e-03,
     "lr_schedule": false,
     "lr_config": {
         "base": 0.001,
         "factor": 0.1,
-        "min": 1e-04,
-        "patience": 50
+        "min": 1e-03,
+        "patience": 200
     },
+    "qs": [0.1, 0.5, 0.9],
     "results_dir": "EnergyForecasting_Results",
     "holidays_file": "C:\\dev\\intelligentcampus-2020summer\\loads\\Stats_Models_Loads\\holidays.json"
 }

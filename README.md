@@ -11,7 +11,7 @@ This repository contains the source code for forecasting energy consumption usin
 * Version: this is the initial version (0.1) of this project
 
 
-### How do I get set up to run the code? ###
+### How do I get set up?
 
 * Conda environment for running the code:
  A conda environment file is provided for convenience. Assuming you have Anaconda python distribution available on your computer, you can create a new conda environment with the necessary packages using the following command:
@@ -21,6 +21,78 @@ This repository contains the source code for forecasting energy consumption usin
 * Change the configuration variables in configs.json.
 * Change the `shared_dir` variable at the top of entry_point.py to map to the location of external files (described below)
 * Run entry_point.py
+
+### How do I train a single model?
+
+* Description coming soon...
+
+### How do I run a hyperparamter study? 
+
+* Description coming soon...
+
+### What are the parameters in configs.json?
+Descriptions coming soon...
+
+```
+{
+    "train_start_date": "2018-01-01",
+    "train_end_date": "2018-10-31",
+    "test_start_date": "2018-11-01",
+    "test_end_date": "2018-12-31",
+    "transformation_method": "minmaxscale",
+    "run_train": true,
+    "num_epochs": 500,
+    "tr_batch_size": 3716,
+    "te_batch_size": 1000,
+    "run_resume": false,
+    "preprocess": false,
+    "arch_type": "RNN",
+    "train_exp_num": "Cafe",
+    "test_exp_num": "dev",
+    "hidden_nodes": "10",
+    "layer_dim": 1,
+    "output_dim": 3,
+    "weight_decay": "0.001",
+    "fetch_n_parse": false,
+    "LAN_path": "Z:\\Data",
+    "building": "Cafe",
+    "year": [
+        "2018",
+        "2019"
+    ],
+    "target_var": "Cafe Main Power (kW)",
+    "weather_include": [
+        "SRRL BMS Global Horizontal Irradiance (W/m\u00b2_irr)",
+        "SRRL BMS Wind Speed at 19' (mph)",
+        "SRRL BMS Dry Bulb Temperature (\u00b0F)",
+        "SRRL BMS Opaque Cloud Cover (%)",
+        "SRRL BMS Relative Humidity (%RH)",
+        "SRRL BMS Barometric Pressure (mbar)"
+    ],
+    "TrainTestSplit": "Random",
+    "test_start": "12/28/2019 23:45:00",
+    "test_end": "12/31/2019 23:45:00",
+    "resample": true,
+    "resample_bin_min": 15,
+    "HOD": true,
+    "DOW": true,
+    "MOY": true,
+    "Holidays": true,
+    "HOD_indicator": "sincos",
+    "window": 5,
+    "EC_future_gap": 5,
+    "lr_schedule": false,
+    "lr_config": {
+        "base": 0.001,
+        "factor": 0.1,
+        "min": 1e-03,
+        "patience": 200
+    },
+    "qs": [0.1, 0.5, 0.9],
+    "results_dir": "EnergyForecasting_Results",
+    "holidays_file": "C:\\dev\\intelligentcampus-2020summer\\loads\\Stats_Models_Loads\\holidays.json"
+}
+```
 
 ---
 ### Local Files
@@ -33,11 +105,23 @@ This repository contains the source code for forecasting energy consumption usin
  
 #### algo_main_rnn_v1.py
 
-* Works with preprocessed STM whole-campus data only. Uses previous timestep for prediction feedback. No major architecture changes besides bug fixes.
+* Works with preprocessed STM whole-campus data only. Uses previous timestep for prediction feedback. 
+* No major architecture changes besides bug fixes.
 
 #### algo_main_rnn_v2.py
 
-* Currently being iterated upon. 
+* Predicts the conditional mean of the data.
+* Works with individual buildings or whole-campus data, as do all future versions. 
+
+#### algo_main_rnn_v3.py
+
+* Probabilistic forecasting
+* Predict any *single* quantile in a single training session using a smoothed or huber-norm approximation of the pinball loss function.
+
+#### algo_main_rnn_v4.py
+
+* Probabilistic forecasting
+* Predicts *any number* of discrete quantiles in a single training session. 
 
 #### testing_round.py
 
@@ -51,7 +135,8 @@ This repository contains the source code for forecasting energy consumption usin
 * `iterables`: What values of that parameter do you want to test? (list)
 * `iterable_type`: What class is the iterable in the configs.json file? (class)
 
-## Externally referenced files
+---
+### Externally referenced files
 
 The code in this repo references some files that are held in external repos. The descriptions below describe how to reference these files. 
 
@@ -64,3 +149,4 @@ The code in this repo references some files that are held in external repos. The
 
 * JSON file containing holidays specific to the region being tested. 
 * File path specified in configs.json
+

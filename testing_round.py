@@ -10,10 +10,12 @@ import os
 # User inputs: What configurations will be run for this test? Each line is a separate study run in series
 runs = {}
 # runs["Test_wd"] = {'iterable': "weight_decay", 'iterables': [0.1, 0.01, 0.001, 0.0001], 'iterable_type': str}
-# runs["Test_hn"] = {'iterable': "hidden_nodes", 'iterables': [4, 7, 10, 13, 16], 'iterable_type': str}
+runs["Test_hn"] = {'iterable': "hidden_nodes", 'iterables': [1, 2, 3, 4, 5, 6, 8, 10, 12], 'iterable_type': str}
 # runs["Test_lr"] = {'iterable': "learning_rate_base", 'iterables': [1e-1, 1e-2, 1e-3, 1e-4], 'iterable_type': float}
 # runs["Test_ec_gap"] = {'iterable': "EC_future_gap", 'iterables': [5, 10, 15, 20], 'iterable_type': int}
-runs["Test_HOD_indicator_RSF"] = {'iterable': "HOD_indicator", 'iterables': ["sincos", "regDummy"], 'iterable_type': str}
+# runs["Test_HOD_indicator_RSF"] = {'iterable': "HOD_indicator", 'iterables': ["sincos", "regDummy"], 'iterable_type': str}
+#runs["Test_layer_dim"] = {'iterable': "layer_dim", 'iterables': [1, 2], 'iterable_type': int}
+
 
 # Run tests
 for test in runs:

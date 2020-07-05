@@ -1,6 +1,8 @@
 import sys
 import data_preprocessing
 import algo_main_rnn_v2
+import algo_main_rnn_v3
+import algo_main_rnn_v4
 import algo_main_ffnn
 import algo_main_lstm
 import algo_main_gru
@@ -33,7 +35,7 @@ def main(configs):
     if configs['arch_type'] == 'FFNN':
         algo_main_ffnn.main(train_df, test_df, configs)
     elif configs['arch_type'] == 'RNN':
-        algo_main_rnn_v2.main(train_df, test_df, data_time_index, configs)
+        algo_main_rnn_v4.main(train_df, test_df, data_time_index, configs)
     elif configs['arch_type'] == 'LSTM':
         algo_main_lstm.main(train_df, test_df, configs)
     elif configs['arch_type'] == 'RNN':
