@@ -11,7 +11,10 @@ import argparser
 import json
 
 # Import shared files from other project
-shared_dir = 'C:\\dev\\intelligentcampus-2020summer\\loads\\Stats_Models_Loads'
+if sys.platform == 'linux':
+    shared_dir = '/media/reopt/REopt-extraDisk/intelligentcampus-2020summer/loads/Stats_Models_Loads'
+else:
+    shared_dir = 'C:\\dev\\intelligentcampus-2020summer\\loads\\Stats_Models_Loads'
 sys.path.append(shared_dir)
 import buildings_processing as bp
 
