@@ -96,12 +96,14 @@ def data_iterable(train_data, test_data, run_train, window, tr_desired_batch_siz
                                                          te_desired_batch_size)
 
     if run_train:
+
         # Create lagged INPUT variables, i.e. columns: w1_(t-1), w1_(t-2)...
         # Does this for all input variables for times up to "window"
         X_train = train_data.drop('STM_Xcel_Meter', axis=1).values.astype(dtype='float32')
         X_train = seq_pad(X_train, window)
 
         # Lag output variable, i.e. input for t=5 maps to EC at t=10, t=6 maps to EC t=11, etc.
+
         y_train = train_data['STM_Xcel_Meter'].shift(-window).fillna(method='ffill')
         y_train = y_train.values.astype(dtype='float32')
 
@@ -115,6 +117,7 @@ def data_iterable(train_data, test_data, run_train, window, tr_desired_batch_siz
 
     else:
         train_loader = []
+
 
     # Do the same as above for the test set
     X_test = test_data.drop('STM_Xcel_Meter', axis=1).values.astype(dtype='float32')
@@ -178,7 +181,6 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     predictions = pd.DataFrame(final_preds)
     denormalized_rmse = np.array(np.sqrt(np.mean((predictions.values.squeeze() - test_df.STM_Xcel_Meter.values) ** 2)),
                                  ndmin=1)
-
     return predictions, denormalized_rmse, mse
 
 
