@@ -242,6 +242,15 @@ def save_model(model, epoch, n_iter):
     model_dict = {'epoch_num': epoch, 'n_iter': n_iter, 'torch_model': model}
     torch.save(model_dict, file_prefix + '/torch_model')
 
+def pinball_np(resid, configs):
+    tau = np.array(configs["qs"])
+    alpha = configs["smoothing_alpha"]["base"]
+    log_term = np.zeros_like(resid)
+    log_term[resid < 0] = (np.log(1+np.exp(resid[resid < 0]/alpha)) - (resid[resid < 0]/alpha))
+    log_term[resid >= 0] = np.log(1 + np.exp(-resid[resid >= 0]/alpha))
+    loss = resid * tau + alpha * log_term
+    return loss
+
 
 def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method, configs):
     """
@@ -273,14 +282,9 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     target = semifinal_targs
     output = semifinal_preds
 
-    # Calculate loss
+    # Calculate pinball loss
     resid = target - output
-    tau = np.array(configs["qs"])
-    alpha = configs["smoothing_alpha"]["base"]
-    log_term = np.zeros_like(resid)
-    log_term[resid < 0] = (np.log(1+np.exp(resid[resid < 0]/alpha)) - (resid[resid < 0]/alpha))
-    log_term[resid >= 0] = np.log(1 + np.exp(-resid[resid >= 0]/alpha))
-    loss = resid * tau + alpha * log_term
+    loss = pinball_np(resid, configs)
     pinball_loss = np.mean(np.mean(loss, 0))
 
     # Loading the training data stats for de-normalization purpose
@@ -294,6 +298,19 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     train_mean = pd.DataFrame(train_stats['train_mean'], index=[1]).iloc[0]
     train_std = pd.DataFrame(train_stats['train_std'], index=[1]).iloc[0]
 
+    # Do quantile-related (q != 0.5) error statistics
+    # QS
+    resid = target - output
+    loss = pinball_np(resid, configs)
+    QS = loss.sum()
+
+    # Compare theoretical and actual Q's
+    act_prob = (output > target).sum(axis=0)/(target.shape[0])
+    Q_vals = pd.DataFrame()
+    Q_vals["q_requested"] = configs["qs"]
+    Q_vals["q_actual"] = act_prob
+
+    # Do quantile-related (q == 0.5) error statistics
     # Only do reportable error statistics on the q=0.5 predictions. Crop np arrays accordingly
     semifinal_preds = semifinal_preds[:, int(semifinal_preds.shape[1] / 2)]
     semifinal_targs = semifinal_targs[:, int(semifinal_targs.shape[1] / 2)]
@@ -320,9 +337,9 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     gof = (np.sqrt(2) / 2) * np.sqrt(cvrmse ** 2 + nmbe ** 2)
 
     # Add different error statistics to a dictionary
-    errors = {"pinball_loss": pinball_loss, "rmse": rmse, "nmbe": nmbe, "cvrmse": cvrmse, "gof": gof}
+    errors = {"pinball_loss": pinball_loss, "rmse": rmse, "nmbe": nmbe, "cvrmse": cvrmse, "gof": gof, "qs": QS}
 
-    return predictions, errors
+    return predictions, errors, Q_vals
 
 
 def quantile_loss(output, target, configs):
@@ -334,18 +351,6 @@ def quantile_loss(output, target, configs):
     :param configs: (Dictionary)
     :return: (Tensor) Loss for this study (single number)
     """
-    # resid = target - output
-    # tau = torch.FloatTensor(configs["qs"])
-    # alpha = configs["smoothing_alpha"]["base"]
-    # log_term = torch.log(1 + torch.exp(-resid / alpha))
-    # loss = resid * tau + alpha * log_term
-    # loss = torch.mean(torch.mean(loss, 0))
-    #
-    # # Extra statistics to return optionally
-    # stats = [resid.data.numpy().min(), resid.data.numpy().max()]
-    #
-    # # See histogram of residuals
-    # # graph = pd.DataFrame(resid.data.numpy()).plot(kind="hist", alpha=0.5, bins=50, ec='black', stacked=True)
 
     resid = target - output
     tau = torch.FloatTensor(configs["qs"])
@@ -549,7 +554,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                 # Do a test batch every ___ iterations
                 if n_iter % 200 == 0:
                     # Evaluate test set
-                    predictions, errors = test_processing(test_df, test_loader, model, seq_dim, input_dim,
+                    predictions, errors, Q_vals = test_processing(test_df, test_loader, model, seq_dim, input_dim,
                                                           test_batch_size, transformation_method, configs)
                     test_iter.append(n_iter)
                     # test_loss.append(errors['mse_loss'])
@@ -587,12 +592,14 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         save_model(model, epoch, n_iter)
 
         # Once model is done training, process a final test set
-        predictions, errors = test_processing(test_df, test_loader, model, seq_dim, input_dim,
+        predictions, errors, Q_vals = test_processing(test_df, test_loader, model, seq_dim, input_dim,
                                               test_batch_size, transformation_method, configs)
 
-        # Save the final predictions and error statistics to a file
+        # Save the final predictions to a file
         predictions.to_csv(file_prefix + '/predictions.csv', index=False)
-        # np.savetxt(file_prefix + '/final_rmse.csv', errors['rmse'], delimiter=",")
+
+        # Save the QQ information to a file
+        Q_vals.to_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df', mode='w')
 
     # If you just want to immediately test the model on the existing (saved) model
     else:
@@ -600,7 +607,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         model = torch_model['torch_model']
         prtime("Loaded model from file, given run_train=False\n")
 
-        predictions, errors = test_processing(test_df, test_loader, model, seq_dim, input_dim,
+        predictions, errors, Q_vals = test_processing(test_df, test_loader, model, seq_dim, input_dim,
                                               test_batch_size, transformation_method, configs)
         # test_loss.append(errors['mse_loss'])
         # test_rmse.append(errors['rmse'])
@@ -609,9 +616,11 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
         # Save the final predictions and error statistics to a file
         predictions.to_csv(file_prefix + '/predictions.csv', index=False)
-        # np.savetxt(file_prefix + '/final_rmse.csv', errors['rmse'], delimiter=",")
 
-    # Start training timer
+        # Save the QQ information to a file
+        Q_vals.to_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df', mode='w')
+
+    # End training timer
     train_end_time = timeit.default_timer()
     train_time = train_end_time - train_start_time
 
@@ -625,12 +634,12 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     if not pathlib.Path("Training_history.csv").exists():
         with open(r'Training_history.csv', 'a') as f:
             writer = csv.writer(f, lineterminator='\n')
-            writer.writerow(["File Path", "RMSE", "CV(RMSE)", "NMBE", "GOF", "Train time"])
+            writer.writerow(["File Path", "RMSE", "CV(RMSE)", "NMBE", "GOF", "QS", "Train time"])
 
     # Save the errors statistics to a file once everything is done
     with open(r'Training_history.csv', 'a') as f:
         writer = csv.writer(f, lineterminator='\n')
-        writer.writerow([file_prefix, errors["rmse"], errors["cvrmse"], errors["nmbe"], errors["gof"], train_time])
+        writer.writerow([file_prefix, errors["rmse"], errors["cvrmse"], errors["nmbe"], errors["gof"], errors["qs"], train_time])
 
 
 def eval_trained_model(file_prefix, train_data, train_batch_size, data_time_index, configs):
@@ -726,6 +735,23 @@ def plot_processed_model(file_prefix):
     plt.show()
 
 
+def plot_QQ(file_prefix):
+    QQ_data = pd.read_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df')
+    fig2, ax2 = plt.subplots()
+    ax2.scatter(QQ_data["q_requested"], QQ_data["q_actual"], s=20)
+    strait_line = np.linspace(min(min(QQ_data["q_requested"]), min(QQ_data["q_actual"])),
+                              max(max(QQ_data["q_requested"]), max(QQ_data["q_actual"])), 5)
+    ax2.plot([0, 1], [0, 1], c='k', alpha=0.5)
+    ax2.set_xlabel('Requested')
+    ax2.set_ylabel('Actual')
+    #ax2.axhline(y=0, color='k')
+    #ax2.axvline(x=0, color='k')
+    ax2.set_xlim(left=0, right=1)
+    ax2.set_ylim(bottom=0, top=1)
+    #ax2.axis('equal')
+    plt.show()
+
+
 def main(train_df, test_df, data_time_index, configs):
     """
     Main executable for prepping data for input to RNN model.
@@ -799,3 +825,4 @@ def main(train_df, test_df, data_time_index, configs):
     if configs["TrainTestSplit"] == 'Random':
         eval_trained_model(file_prefix, train_data, train_batch_size, data_time_index, configs)
         # plot_processed_model(file_prefix)
+        plot_QQ(file_prefix)
