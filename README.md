@@ -150,7 +150,7 @@ The code in this repo references some files that are held in external repos. The
 #### buildings_processing.py
 
 * Contains functions for data manipulation and cleaning. (Same file is used for both Quantile Regression and ML methods)
-* File path specified at top of entry_point_building.py
+* Directory path specified in configs.json
 
 #### holidays.json
 

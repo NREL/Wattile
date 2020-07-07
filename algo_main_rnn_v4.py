@@ -277,7 +277,9 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     resid = target - output
     tau = np.array(configs["qs"])
     alpha = configs["smoothing_alpha"]["base"]
-    log_term = np.log(1 + np.exp(-resid / alpha))
+    log_term = np.zeros_like(resid)
+    log_term[resid < 0] = (np.log(1+np.exp(resid[resid < 0]/alpha)) - (resid[resid < 0]/alpha))
+    log_term[resid >= 0] = np.log(1 + np.exp(-resid[resid >= 0]/alpha))
     loss = resid * tau + alpha * log_term
     pinball_loss = np.mean(np.mean(loss, 0))
 
@@ -332,10 +334,25 @@ def quantile_loss(output, target, configs):
     :param configs: (Dictionary)
     :return: (Tensor) Loss for this study (single number)
     """
+    # resid = target - output
+    # tau = torch.FloatTensor(configs["qs"])
+    # alpha = configs["smoothing_alpha"]["base"]
+    # log_term = torch.log(1 + torch.exp(-resid / alpha))
+    # loss = resid * tau + alpha * log_term
+    # loss = torch.mean(torch.mean(loss, 0))
+    #
+    # # Extra statistics to return optionally
+    # stats = [resid.data.numpy().min(), resid.data.numpy().max()]
+    #
+    # # See histogram of residuals
+    # # graph = pd.DataFrame(resid.data.numpy()).plot(kind="hist", alpha=0.5, bins=50, ec='black', stacked=True)
+
     resid = target - output
     tau = torch.FloatTensor(configs["qs"])
     alpha = configs["smoothing_alpha"]["base"]
-    log_term = torch.log(1 + torch.exp(-resid / alpha))
+    log_term = torch.zeros_like(resid)
+    log_term[resid < 0] = (torch.log(1+torch.exp(resid[resid < 0]/alpha)) - (resid[resid < 0]/alpha))
+    log_term[resid >= 0] = torch.log(1 + torch.exp(-resid[resid >= 0]/alpha))
     loss = resid * tau + alpha * log_term
     loss = torch.mean(torch.mean(loss, 0))
 
@@ -344,6 +361,7 @@ def quantile_loss(output, target, configs):
 
     # See histogram of residuals
     # graph = pd.DataFrame(resid.data.numpy()).plot(kind="hist", alpha=0.5, bins=50, ec='black', stacked=True)
+
     return loss
 
 
@@ -525,11 +543,11 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                                                       "dt5": time6 - time5}, n_iter)
 
                 # Save the model every ___ iterations
-                if n_iter % 400 == 0:
+                if n_iter % 200 == 0:
                     save_model(model, epoch, n_iter)
 
                 # Do a test batch every ___ iterations
-                if n_iter % 400 == 0:
+                if n_iter % 200 == 0:
                     # Evaluate test set
                     predictions, errors = test_processing(test_df, test_loader, model, seq_dim, input_dim,
                                                           test_batch_size, transformation_method, configs)

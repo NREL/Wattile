@@ -14,7 +14,7 @@
     "arch_version": 4,
     "train_exp_num": "Cafe",
     "test_exp_num": "dev",
-    "hidden_nodes": 10,
+    "hidden_nodes": 15,
     "layer_dim": 1,
     "output_dim": 5,
     "weight_decay": 0.001,
@@ -55,7 +55,7 @@
     },
     "qs": [0.025, 0.1, 0.5, 0.9, 0.975],
     "smoothing_alpha": {
-        "base": 0.018,
+        "base": 0.001,
         "factor": 0.5,
         "num_epochs": 40
     },
