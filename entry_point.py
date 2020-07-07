@@ -1,22 +1,19 @@
 import sys
+import importlib
 import data_preprocessing
-import algo_main_rnn_v2
-import algo_main_rnn_v3
-import algo_main_rnn_v4
 import algo_main_ffnn
 import algo_main_lstm
 import algo_main_gru
-import pandas as pd
-import argparser
 import json
-
-# Import shared files from other project
-shared_dir = 'C:\\dev\\intelligentcampus-2020summer\\loads\\Stats_Models_Loads'
-sys.path.append(shared_dir)
-import buildings_processing as bp
 
 
 def main(configs):
+    """
+    Main function for processing and structuring data.
+    Feeds training and testing data to the requested model by calling the script where the model architecture is defined
+    :param configs: Dictionary
+    :return: None
+    """
     # Preprocess if needed
     if configs['preprocess']:
         train_df, test_df, configs = data_preprocessing.main(configs)
@@ -28,29 +25,32 @@ def main(configs):
         # preprocessing module defines target_feat_name list and sends it back.
         configs['target_feat_name'] = [configs['target_var']]
 
-    # For individual building use:
+    # Import buildings module to preprocess data
+    sys.path.append(configs["shared_dir"])
+    bp = importlib.import_module("buildings_processing")
+
+    # Prepare data for the RNN model type
     train_df, test_df, data_time_index = bp.prep_for_rnn(configs)
 
     # Choose what ML architecture to use and execute the corresponding script
     if configs['arch_type'] == 'FFNN':
         algo_main_ffnn.main(train_df, test_df, configs)
     elif configs['arch_type'] == 'RNN':
-        algo_main_rnn_v4.main(train_df, test_df, data_time_index, configs)
+        # Further specify what RNN version you are implementing, specified in configs
+        rnn_mod = importlib.import_module("algo_main_rnn_v{}".format(configs["arch_version"]))
+        rnn_mod.main(train_df, test_df, data_time_index, configs)
     elif configs['arch_type'] == 'LSTM':
         algo_main_lstm.main(train_df, test_df, configs)
     elif configs['arch_type'] == 'RNN':
         algo_main_gru.main(train_df, test_df, configs)
 
-    train_exp_num = configs['train_exp_num']
-    test_exp_num = configs['test_exp_num']
-    arch_type = configs['arch_type']
-    print('Run with arch: {}, train_num= {}, test_num= {} and target= {} is done!'.format(arch_type, train_exp_num,
-                                                                                      test_exp_num,
-                                                                                      configs['target_var']))
+    print('Run with arch: {}, train_num= {}, test_num= {} and target= {} is done!'.format(configs['arch_type'],
+                                                                                          configs['train_exp_num'],
+                                                                                          configs['test_exp_num'],
+                                                                                          configs['target_var']))
 
-
+# If the model is being run locally (i.e. a single model is being trained), read in configs.json and pass to main()
 if __name__ == "__main__":
-    # Read in configs from json
     with open("configs.json", "r") as read_file:
-        configs = json.load(read_file)
-    main(configs)
+        config = json.load(read_file)
+    main(config)
