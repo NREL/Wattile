@@ -314,7 +314,6 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     output = semifinal_preds
 
     # Calculate pinball loss
-    #resid = target - output
     loss = pinball_np(output, target, configs)
     pinball_loss = np.mean(np.mean(loss, 0))
 
@@ -323,17 +322,36 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     with open(file_loc, 'r') as f:
         train_stats = json.load(f)
 
-    # Get statistics
+    # Get normalization statistics
     train_max = pd.DataFrame(train_stats['train_max'], index=[1]).iloc[0]
     train_min = pd.DataFrame(train_stats['train_min'], index=[1]).iloc[0]
     train_mean = pd.DataFrame(train_stats['train_mean'], index=[1]).iloc[0]
     train_std = pd.DataFrame(train_stats['train_std'], index=[1]).iloc[0]
 
     # Do quantile-related (q != 0.5) error statistics
-    # QS
-    #resid = target - output
+    # QS (single point)
     loss = pinball_np(output, target, configs)
     QS = loss.sum()
+    # PICP (single point for each bound)
+    target_1D = target[:, 0]
+    bounds = np.zeros((target.shape[0], int(len(configs["qs"])/2)))
+    PINC = []
+    for i, q in enumerate(configs["qs"]):
+        if q == 0.5:
+            break
+        bounds[:, i] = np.logical_and(output[:, i] < target_1D, target_1D < output[:, -(i + 1)])
+        PINC.append(configs["qs"][-(i+1)] - configs["qs"][i])
+    PINC = np.array(PINC)
+    PICP = bounds.mean(axis=0)
+    # ACE (single point)
+    ACE = np.sum(np.abs(PICP - PINC))
+    # IS (single point)
+    lower = output[:, :int(len(configs["qs"])/2)]
+    upper = np.flip(output[:, int(len(configs["qs"])/2)+1:], 1)
+    alph = 1-PINC
+    x = target[:, :int(len(configs["qs"]) / 2)]
+    IS = (upper - lower) + (2 / alph) * (lower - x) * (x < lower) + (2 / alph) * (x - upper) * (x > upper)
+    IS = IS.mean()
 
     # Compare theoretical and actual Q's
     act_prob = (output > target).sum(axis=0)/(target.shape[0])
@@ -381,7 +399,14 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
         hist_data = []
 
     # Add different error statistics to a dictionary
-    errors = {"pinball_loss": pinball_loss, "rmse": rmse, "nmbe": nmbe, "cvrmse": cvrmse, "gof": gof, "qs": QS}
+    errors = {"pinball_loss": pinball_loss,
+              "rmse": rmse,
+              "nmbe": nmbe,
+              "cvrmse": cvrmse,
+              "gof": gof,
+              "qs": QS,
+              "ace": ACE,
+              "is": IS}
 
     return predictions, errors, Q_vals, hist_data
 
@@ -658,12 +683,20 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     if not pathlib.Path("Training_history.csv").exists():
         with open(r'Training_history.csv', 'a') as f:
             writer = csv.writer(f, lineterminator='\n')
-            writer.writerow(["File Path", "RMSE", "CV(RMSE)", "NMBE", "GOF", "QS", "Train time"])
+            writer.writerow(["File Path", "RMSE", "CV(RMSE)", "NMBE", "GOF", "QS", "ACE", "IS", "Train time"])
 
     # Save the errors statistics to a file once everything is done
     with open(r'Training_history.csv', 'a') as f:
         writer = csv.writer(f, lineterminator='\n')
-        writer.writerow([file_prefix, errors["rmse"], errors["cvrmse"], errors["nmbe"], errors["gof"], errors["qs"], train_time])
+        writer.writerow([file_prefix,
+                         errors["rmse"],
+                         errors["cvrmse"],
+                         errors["nmbe"],
+                         errors["gof"],
+                         errors["qs"],
+                         errors["ace"],
+                         errors["is"],
+                         train_time])
 
 
 def eval_trained_model(file_prefix, train_data, train_batch_size, data_time_index, configs):
