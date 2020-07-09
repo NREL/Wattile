@@ -175,7 +175,7 @@ def data_iterable(train_data, test_data, run_train, train_batch_size, test_batch
     test = data_utils.TensorDataset(test_feat_tensor, test_target_tensor)
     test_loader = DataLoader(dataset=test, batch_size=test_batch_size, shuffle=False)
 
-    return train_loader, test_loader, train_batch_size, test_batch_size
+    return train_loader, test_loader
 
 
 def data_iterable_random(train_data, test_data, run_train, train_batch_size, test_batch_size, configs):
@@ -242,17 +242,48 @@ def save_model(model, epoch, n_iter):
     model_dict = {'epoch_num': epoch, 'n_iter': n_iter, 'torch_model': model}
     torch.save(model_dict, file_prefix + '/torch_model')
 
-def pinball_np(resid, configs):
+
+def pinball_np(output, target, configs):
+    resid = target - output
     tau = np.array(configs["qs"])
-    alpha = configs["smoothing_alpha"]["base"]
+    alpha = configs["smoothing_alpha"]
     log_term = np.zeros_like(resid)
     log_term[resid < 0] = (np.log(1+np.exp(resid[resid < 0]/alpha)) - (resid[resid < 0]/alpha))
     log_term[resid >= 0] = np.log(1 + np.exp(-resid[resid >= 0]/alpha))
     loss = resid * tau + alpha * log_term
+
     return loss
 
 
-def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method, configs):
+def quantile_loss(output, target, configs):
+    """
+    Computes loss for quantile methods.
+
+    :param output: (Tensor)
+    :param target: (Tensor)
+    :param configs: (Dictionary)
+    :return: (Tensor) Loss for this study (single number)
+    """
+
+    resid = target - output
+    tau = torch.FloatTensor(configs["qs"])
+    alpha = configs["smoothing_alpha"]
+    log_term = torch.zeros_like(resid)
+    log_term[resid < 0] = (torch.log(1+torch.exp(resid[resid < 0]/alpha)) - (resid[resid < 0]/alpha))
+    log_term[resid >= 0] = torch.log(1 + torch.exp(-resid[resid >= 0]/alpha))
+    loss = resid * tau + alpha * log_term
+    loss = torch.mean(torch.mean(loss, 0))
+
+    # Extra statistics to return optionally
+    stats = [resid.data.numpy().min(), resid.data.numpy().max()]
+
+    # See histogram of residuals
+    # graph = pd.DataFrame(resid.data.numpy()).plot(kind="hist", alpha=0.5, bins=50, ec='black', stacked=True)
+
+    return loss
+
+
+def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method, configs, last_run):
     """
     Process the test set and report error statistics.
 
@@ -283,8 +314,8 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     output = semifinal_preds
 
     # Calculate pinball loss
-    resid = target - output
-    loss = pinball_np(resid, configs)
+    #resid = target - output
+    loss = pinball_np(output, target, configs)
     pinball_loss = np.mean(np.mean(loss, 0))
 
     # Loading the training data stats for de-normalization purpose
@@ -300,8 +331,8 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
 
     # Do quantile-related (q != 0.5) error statistics
     # QS
-    resid = target - output
-    loss = pinball_np(resid, configs)
+    #resid = target - output
+    loss = pinball_np(output, target, configs)
     QS = loss.sum()
 
     # Compare theoretical and actual Q's
@@ -336,38 +367,23 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     cvrmse = (1 / (np.mean(measured))) * np.sqrt(np.sum((measured - predicted) ** 2) / (len(measured) - p_cvrmse))
     gof = (np.sqrt(2) / 2) * np.sqrt(cvrmse ** 2 + nmbe ** 2)
 
+    # If this is the last test run of training, get histogram data of residuals for each quantile
+    if last_run:
+        resid = target - output
+        hist_data = pd.DataFrame()
+        for i, q in enumerate(configs["qs"]):
+            tester = np.histogram(resid[:, i], bins=200)
+            y_vals = tester[0]
+            x_vals = 0.5*(tester[1][1:]+tester[1][:-1])
+            hist_data["{}_x".format(q)] = x_vals
+            hist_data["{}_y".format(q)] = y_vals
+    else:
+        hist_data = []
+
     # Add different error statistics to a dictionary
     errors = {"pinball_loss": pinball_loss, "rmse": rmse, "nmbe": nmbe, "cvrmse": cvrmse, "gof": gof, "qs": QS}
 
-    return predictions, errors, Q_vals
-
-
-def quantile_loss(output, target, configs):
-    """
-    Computes loss for quantile methods.
-
-    :param output: (Tensor)
-    :param target: (Tensor)
-    :param configs: (Dictionary)
-    :return: (Tensor) Loss for this study (single number)
-    """
-
-    resid = target - output
-    tau = torch.FloatTensor(configs["qs"])
-    alpha = configs["smoothing_alpha"]["base"]
-    log_term = torch.zeros_like(resid)
-    log_term[resid < 0] = (torch.log(1+torch.exp(resid[resid < 0]/alpha)) - (resid[resid < 0]/alpha))
-    log_term[resid >= 0] = torch.log(1 + torch.exp(-resid[resid >= 0]/alpha))
-    loss = resid * tau + alpha * log_term
-    loss = torch.mean(torch.mean(loss, 0))
-
-    # Extra statistics to return optionally
-    stats = [resid.data.numpy().min(), resid.data.numpy().max()]
-
-    # See histogram of residuals
-    # graph = pd.DataFrame(resid.data.numpy()).plot(kind="hist", alpha=0.5, bins=50, ec='black', stacked=True)
-
-    return loss
+    return predictions, errors, Q_vals, hist_data
 
 
 def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method,
@@ -554,8 +570,8 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                 # Do a test batch every ___ iterations
                 if n_iter % 200 == 0:
                     # Evaluate test set
-                    predictions, errors, Q_vals = test_processing(test_df, test_loader, model, seq_dim, input_dim,
-                                                          test_batch_size, transformation_method, configs)
+                    predictions, errors, Q_vals, hist_data = test_processing(test_df, test_loader, model, seq_dim, input_dim,
+                                                          test_batch_size, transformation_method, configs, False)
                     test_iter.append(n_iter)
                     # test_loss.append(errors['mse_loss'])
                     # test_rmse.append(errors['rmse'])
@@ -592,8 +608,11 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         save_model(model, epoch, n_iter)
 
         # Once model is done training, process a final test set
-        predictions, errors, Q_vals = test_processing(test_df, test_loader, model, seq_dim, input_dim,
-                                              test_batch_size, transformation_method, configs)
+        predictions, errors, Q_vals, hist_data = test_processing(test_df, test_loader, model, seq_dim, input_dim,
+                                              test_batch_size, transformation_method, configs, True)
+
+        # Save the residual distribution to a file
+        hist_data.to_hdf(os.path.join(file_prefix, "residual_distribution.h5"), key='df', mode='w')
 
         # Save the final predictions to a file
         predictions.to_csv(file_prefix + '/predictions.csv', index=False)
@@ -607,12 +626,17 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         model = torch_model['torch_model']
         prtime("Loaded model from file, given run_train=False\n")
 
-        predictions, errors, Q_vals = test_processing(test_df, test_loader, model, seq_dim, input_dim,
-                                              test_batch_size, transformation_method, configs)
+        predictions, errors, Q_vals, hist_data = test_processing(test_df, test_loader, model, seq_dim, input_dim,
+                                              test_batch_size, transformation_method, configs, True)
         # test_loss.append(errors['mse_loss'])
         # test_rmse.append(errors['rmse'])
         writer.add_scalars("Loss", {"Test": errors['pinball_loss']})
         prtime('Test_MSE: {}'.format(errors['pinball_loss']))
+
+        # Save the residual distribution to a file
+        path = file_prefix + '/residual_distribution.h5.json'
+        with open(path, 'w') as fp:
+            json.dump(hist_data, fp, indent=1)
 
         # Save the final predictions and error statistics to a file
         predictions.to_csv(file_prefix + '/predictions.csv', index=False)
@@ -736,6 +760,12 @@ def plot_processed_model(file_prefix):
 
 
 def plot_QQ(file_prefix):
+    """
+    Plots a QQ plot for a specific study specified by an input file directory string.
+
+    :param file_prefix: (str) Relative path to the training results directory in question.
+    :return: None
+    """
     QQ_data = pd.read_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df')
     fig2, ax2 = plt.subplots()
     ax2.scatter(QQ_data["q_requested"], QQ_data["q_actual"], s=20)
@@ -749,6 +779,63 @@ def plot_QQ(file_prefix):
     ax2.set_xlim(left=0, right=1)
     ax2.set_ylim(bottom=0, top=1)
     #ax2.axis('equal')
+    plt.show()
+
+
+def plot_training_history(x):
+    """
+    Platform for plotting results recorded in the shared csv results file. In development.
+
+    :param x:
+    :return:
+    """
+    data = pd.read_csv("Training_history.csv")
+    data["iterable"] = x
+    data.plot(x="iterable", subplots=True)
+
+
+def plot_resid_dist(study_path, building, alphas, q):
+    """
+    Plot the residual distribution over the smooth approximations for different values of the alpha smoothing parameter.
+
+    :param study_path: (str) Relative path to the study directory in question.
+    :param building: (str) Name of the building in question
+    :param alphas: (list) Numerical values of alphas to consider for plotting
+    :param q: (float) Quantile value to consider for plotting.
+    :return: None
+    """
+    fig, ax1 = plt.subplots()
+    ax2 = ax1.twinx()
+    resid = np.linspace(-1, 1, 1000)
+    max_dist = 0
+
+    for alpha in alphas:
+        c = np.random.rand(3, )
+        # Plot the residual distribution for this alpha value
+        sub_study_path = "RNN_M{}_Tsmoothing_alpha_{}".format(building, alpha)
+        data = pd.read_hdf(os.path.join(study_path, sub_study_path, "residual_distribution.h5"), key='df')
+        # ax2.plot(data["{}_x".format(q)], data["{}_y".format(q)], c=c, alpha=0.5)
+        ax2.fill_between(data["{}_x".format(q)], data["{}_y".format(q)], 0, alpha=0.4, color=c, zorder=1)
+
+        # Store data to later scale axis
+        if data["{}_y".format(q)].max() > max_dist:
+            max_dist = data["{}_y".format(q)].max()
+
+        # Plot the PLF for this alpha value
+        log_term = np.zeros_like(resid)
+        log_term[resid < 0] = (np.log(1 + np.exp(resid[resid < 0] / alpha)) - (resid[resid < 0] / alpha))
+        log_term[resid >= 0] = np.log(1 + np.exp(-resid[resid >= 0] / alpha))
+        loss = resid * q + alpha * log_term
+        ax1.plot(resid, loss, c=c, label="$\\alpha$={}".format(alpha), zorder=10)
+
+    ax1.set_xlabel('Normalized Residual')
+    ax2.set_xlim(left=-0.5, right=0.5)
+    ax1.set_ylim(top=0.6)
+    ax1.set_ylabel('Smoothed PLF')
+    #ax1.set_ylim(bottom=-0.5)
+    ax2.set_ylim(top=4*max_dist)
+    ax2.set_ylabel('Frequency')
+    ax1.legend()
     plt.show()
 
 
@@ -806,9 +893,8 @@ def main(train_df, test_df, data_time_index, configs):
 
     # Normal: Convert to iterable dataset (DataLoaders)
     if configs["TrainTestSplit"] == 'Sequential':
-        train_loader, test_loader, train_batch_size, test_batch_size = data_iterable(train_data, test_data, run_train,
-                                                                                     train_batch_size,
-                                                                                     test_batch_size, configs)
+        train_loader, test_loader = data_iterable(train_data, test_data, run_train, train_batch_size,
+                                                  test_batch_size, configs)
 
     # Already did sequential padding: Convert to iterable dataset (DataLoaders)
     elif configs["TrainTestSplit"] == 'Random':
@@ -825,4 +911,4 @@ def main(train_df, test_df, data_time_index, configs):
     if configs["TrainTestSplit"] == 'Random':
         eval_trained_model(file_prefix, train_data, train_batch_size, data_time_index, configs)
         # plot_processed_model(file_prefix)
-        plot_QQ(file_prefix)
+        #plot_QQ(file_prefix)
