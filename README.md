@@ -16,7 +16,12 @@ This repository contains the source code for forecasting energy consumption usin
 * Conda environment for running the code:
  A conda environment file is provided for convenience. Assuming you have Anaconda python distribution available on your computer, you can create a new conda environment with the necessary packages using the following command:
 
-`conda env create -f rnn-env.yml -n "ic-lf-deploy"`
+For windows users:
+`conda env create -f rnn-env-win.yml -n "ic-lf-deploy"`
+
+For linux users:
+`conda env create -f rnn-env-lnx.yml -n "ic-lf-deploy"`
+
 
 * Change the configuration variables in configs.json.
 * Change the `shared_dir` variable at the top of entry_point.py to map to the location of external files (described below)
