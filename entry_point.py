@@ -1,9 +1,8 @@
 import sys
+import pandas as pd
 import importlib
 import data_preprocessing
 import algo_main_ffnn
-import algo_main_lstm
-import algo_main_gru
 import json
 
 
@@ -25,24 +24,41 @@ def main(configs):
         # preprocessing module defines target_feat_name list and sends it back.
         configs['target_feat_name'] = [configs['target_var']]
 
-    # Import buildings module to preprocess data
-    sys.path.append(configs["shared_dir"])
-    bp = importlib.import_module("buildings_processing")
-
-    # Prepare data for the RNN model type
-    train_df, test_df, data_time_index = bp.prep_for_rnn(configs)
-
     # Choose what ML architecture to use and execute the corresponding script
-    if configs['arch_type'] == 'FFNN':
-        algo_main_ffnn.main(train_df, test_df, configs)
-    elif configs['arch_type'] == 'RNN':
-        # Further specify what RNN version you are implementing, specified in configs
+    if configs['arch_type'] == 'RNN':
+        # What RNN version you are implementing?
+        # Specified in configs
         rnn_mod = importlib.import_module("algo_main_rnn_v{}".format(configs["arch_version"]))
-        rnn_mod.main(train_df, test_df, data_time_index, configs)
+        if configs["arch_version"] == 1:
+            # read the preprocessed data from csvs
+            train_df = pd.read_csv('./data/STM_Train_Data_processed.csv')
+            test_df = pd.read_csv('./data/STM_Test_Data_processed.csv')
+            print("read data from locally stored csvs")
+            rnn_mod.main(train_df, test_df, configs)
+        else:
+            # Import buildings module to preprocess data
+            sys.path.append(configs["shared_dir"])
+            bp = importlib.import_module("buildings_processing")
+
+            # Prepare data for the RNN model type
+            train_df, test_df, data_time_index = bp.prep_for_rnn(configs)
+            rnn_mod.main(train_df, test_df, data_time_index, configs)
+
     elif configs['arch_type'] == 'LSTM':
-        algo_main_lstm.main(train_df, test_df, configs)
-    elif configs['arch_type'] == 'RNN':
-        algo_main_gru.main(train_df, test_df, configs)
+
+        # What LSTM version you are implementing?
+        # Specified in configs
+
+        lstm_mod = importlib.import_module("algo_main_lstm_v{}".format(configs["arch_version"]))
+
+        if configs["arch_version"] == 1:
+            # read the preprocessed data from csvs
+            train_df = pd.read_csv('./data/STM_Train_Data_processed.csv')
+            test_df = pd.read_csv('./data/STM_Test_Data_processed.csv')
+
+            print("read data from locally stored csvs")
+            lstm_mod.main(train_df, test_df, configs)
+
 
     print('Run with arch: {}, train_num= {}, test_num= {} and target= {} is done!'.format(configs['arch_type'],
                                                                                           configs['train_exp_num'],
