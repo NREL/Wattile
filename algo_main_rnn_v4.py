@@ -521,6 +521,8 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         # Initialize re-trainable matrix
         # train_y_at_t = torch.zeros(train_batch_size, seq_dim, 1)  # 960 x 5 x 1
 
+        mid_train_error_stats = pd.DataFrame()
+
         # Loop through epochs
         epoch_num = 1
         for epoch in epoch_range:
@@ -597,6 +599,11 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                     # Evaluate test set
                     predictions, errors, Q_vals, hist_data = test_processing(test_df, test_loader, model, seq_dim, input_dim,
                                                           test_batch_size, transformation_method, configs, False)
+
+                    temp_holder = errors
+                    temp_holder.update({"n_iter": n_iter, "epoch": epoch})
+                    mid_train_error_stats = mid_train_error_stats.append(temp_holder, ignore_index=True)
+
                     test_iter.append(n_iter)
                     # test_loss.append(errors['mse_loss'])
                     # test_rmse.append(errors['rmse'])
@@ -644,6 +651,10 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
         # Save the QQ information to a file
         Q_vals.to_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df', mode='w')
+
+        # Save the mid-train error statistics to a file
+        mid_train_error_stats.to_hdf(os.path.join(file_prefix, "mid_train_error_stats.h5"), key='df', mode='w')
+
 
     # If you just want to immediately test the model on the existing (saved) model
     else:
@@ -870,6 +881,11 @@ def plot_resid_dist(study_path, building, alphas, q):
     ax2.set_ylabel('Frequency')
     ax1.legend()
     plt.show()
+
+
+def plot_mid_train_stats(file_prefix):
+    data = pd.read_hdf(os.path.join(file_prefix, "mid_train_error_stats.h5"), key='df')
+    data.plot(x="n_iter", subplots=True)
 
 
 def main(train_df, test_df, data_time_index, configs):
