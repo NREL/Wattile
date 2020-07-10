@@ -334,6 +334,7 @@ def target_df(train_parsed_dict, test_parsed_dict, run_train, train_start_date, 
 
     return train_df_target, test_df_target
 
+
 def target_df_garage(train_target_df, test_target_df, run_train, train_start_date, train_end_date, test_start_date,
               test_end_date, target_feat_name):
 
@@ -465,28 +466,23 @@ def merge_n_resample(train_df_dict, test_df_dict, train_df_target, test_df_targe
 
 
 def get_static_features(train_df, test_df, run_train, target_feat_name):
-
     if run_train:
-        # inserting new columns at index 7 and onward
+        #Iinserting new columns: Day of year, day of week, and time in seconds. At index 7 and onward.
         idx = 7
         new_col = train_df.datetime_str.dt.dayofyear.astype(np.float32)
         train_df.insert(loc=idx, column='doy', value=new_col)
-
         idx = idx + 1
         new_col = train_df.datetime_str.dt.dayofweek.astype(np.float32)
         train_df.insert(loc=idx, column='dow', value=new_col)
-
         idx = idx + 1
         new_col = pd.to_timedelta(train_df.datetime_str.dt.strftime('%H:%M:%S')).dt.total_seconds().astype(int)
         train_df.insert(loc=idx, column='timeinSec', value=new_col)
 
-        # conversion to cyclic coordinates
+        # Add cyclic time variables to training set
         seconds_in_day = 24 * 60 * 60
-
         idx = idx + 1
         new_col = np.sin(2 * np.pi * train_df.timeinSec / seconds_in_day)
         train_df.insert(loc=idx, column='sin_time', value=new_col)
-
         idx = idx + 1
         new_col = np.cos(2 * np.pi * train_df.timeinSec / seconds_in_day)
         train_df.insert(loc=idx, column='cos_time', value=new_col)
@@ -520,13 +516,11 @@ def get_static_features(train_df, test_df, run_train, target_feat_name):
     new_col = pd.to_timedelta(test_df.datetime_str.dt.strftime('%H:%M:%S')).dt.total_seconds().astype(int)
     test_df.insert(loc=idx, column='timeinSec', value=new_col)
 
-    # conversion to cyclic coordinates
+    # Add cyclic time variables to test set
     seconds_in_day = 24 * 60 * 60
-
     idx = idx + 1
     new_col = np.sin(2 * np.pi * test_df.timeinSec / seconds_in_day)
     test_df.insert(loc=idx, column='sin_time', value=new_col)
-
     idx = idx + 1
     new_col = np.cos(2 * np.pi * test_df.timeinSec / seconds_in_day)
     test_df.insert(loc=idx, column='cos_time', value=new_col)
@@ -550,7 +544,7 @@ def get_static_features(train_df, test_df, run_train, target_feat_name):
 
     return train_df, test_df
 
-
+# Not currently used
 def fill_nan(train_df, test_df, run_train):
 
     # carefully filling in the nan values created during the shift operation
@@ -660,21 +654,23 @@ def main(configs):
     # RSF2 Main= 'Real_Power_Total': '@p:stm_campus:r:1f587071-6a7f739d'
     # Cafe Main= 'Energy Net' : '@p:stm_campus:r:23752630-93eb705e'
 
-
-
     root_url = 'https://internal-apis.nrel.gov/intelligentcampus/hisRead?id='
-    reference_id = ['@p:stm_campus:r:20ed5e0a-275dbdc2', '@p:stm_campus:r:20ed5e0a-53e174aa',
-                    '@p:stm_campus:r:20ed5e0a-fe755c80', '@p:stm_campus:r:20ed5df2-2c0e126b', '@p:stm_campus:r:20ed5e0a-acc8beff',
-                    '@p:stm_campus:r:20ed5df2-fd2eecc5']
+    reference_id = ['@p:stm_campus:r:23295bf9-933c18ac',
+                    '@p:stm_campus:r:20ed5e0a-275dbdc2', '@p:stm_campus:r:20ed5e0a-53e174aa',
+                    '@p:stm_campus:r:20ed5e0a-fe755c80', '@p:stm_campus:r:20ed5df2-2c0e126b',
+                    '@p:stm_campus:r:20ed5e0a-acc8beff', '@p:stm_campus:r:20ed5df2-fd2eecc5']
     train_date_range = '&range=\"' + train_start_date + '%2c' + train_end_date + '\"'
     test_date_range = '&range=\"' + test_start_date + '%2c' + test_end_date + '\"'
-    feat_name = ['RH', 'BP', 'DBT', 'GHI', 'TCC', 'WS']
+    #feat_name = ['RH', 'BP', 'DBT', 'GHI', 'TCC', 'WS']
+    feat_name = ['EC','RH', 'BP', 'DBT', 'GHI', 'TCC', 'WS']
     input_feat_name = ['RH', 'BP', 'DBT', 'GHI', 'TCC', 'WS']
     target_feat_name = ['Garage_Real_Power_Total']
 
+    # If we need to fetch data from the API, get it and put it in a JSON
     if fetch_n_parse:
-
+        print("starting fetch data")
         train_response_dict, test_response_dict = fetch_data(root_url, reference_id, train_date_range, test_date_range, feat_name, run_train)
+        print("finished fetch data")
         train_parsed_dict, test_parsed_dict = parse_data(train_response_dict, test_response_dict, feat_name, run_train)
         prtime("data fetched and parsed in a dictionary successfully, dumping it to json")
 
@@ -683,6 +679,7 @@ def main(configs):
         with open('test_parsed.json', 'w') as fw:
             json.dump(test_parsed_dict, fw)
 
+    # If we just need to read existing JSON files
     else:
         prtime("data being read from stored jsons and will be fed to dataframe construction function")
         with open('train_parsed.json', 'r') as fr:
