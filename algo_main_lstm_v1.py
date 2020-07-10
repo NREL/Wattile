@@ -326,8 +326,8 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                                                       "dt4": time5-time4,
                                                       "dt5": time6-time5}, n_iter)
 
-                # save the model every 25 iterations
-                if n_iter % 25 == 0:
+                # save the model every 50 iterations
+                if n_iter % 50 == 0:
                     save_model(model, epoch, n_iter)
 
                 # Do a test batch every 100 iterations
