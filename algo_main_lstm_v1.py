@@ -236,7 +236,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
             # hidden_dim: the number of features in the hidden state h
             # layer_dim: Number of recurrent layers. i.e. if 2, it is stacking two LSTMs together to form a stacked LSTM
             # Initialize the model
-            model = LSTM.LSTMModel(input_dim, hidden_dim, layer_dim, output_dim)
+            model = lstm.LSTM_Model(input_dim, hidden_dim, layer_dim, output_dim)
             epoch_range = np.arange(num_epochs)
             prtime("A new {} model instantiated, with run_train=True".format("lstm"))
 
