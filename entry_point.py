@@ -59,6 +59,15 @@ def main(configs):
             print("read data from locally stored csvs")
             lstm_mod.main(train_df, test_df, configs)
 
+        else:
+            # Import buildings module to preprocess data
+            sys.path.append(configs["shared_dir"])
+            bp = importlib.import_module("buildings_processing")
+
+            # Prepare data for the RNN model type
+            train_df, test_df, data_time_index = bp.prep_for_rnn(configs)
+            lstm_mod.main(train_df, test_df, data_time_index, configs)
+
 
     print('Run with arch: {}, train_num= {}, test_num= {} and target= {} is done!'.format(configs['arch_type'],
                                                                                           configs['train_exp_num'],
