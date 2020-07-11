@@ -327,7 +327,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                                                       "dt5": time6-time5}, n_iter)
 
                 # save the model every 25 iterations
-                if n_iter % 25 == 0:
+                if n_iter % 50 == 0:
                     save_model(model, epoch, n_iter)
 
                 # Do a test batch every 100 iterations
@@ -339,20 +339,31 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                     test_rmse.append(denorm_rmse)
                     writer.add_scalars("Loss", {"Test": mse}, n_iter)
                     # Add matplotlib plot to compare actual test set vs predicted
-                    fig, ax = plt.subplots()
-                    ax.plot(predictions, label='Prediction')
-                    ax.plot(test_df['STM_Xcel_Meter'], label='Actual')
-                    ax.legend()
-                    writer.add_figure('Predictions',fig)
-                    print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}'.format(epoch, n_iter, loss.data.item(),
-                                                                                        mse))
+                    if (epoch == 199):
+                        fig = plt.figure()
+                        ax1 = fig.add_subplot(2, 1, 1)
+                        ax1.plot(predictions, label='Prediction')
+                        ax2 = fig.add_subplot(2, 1, 2)
+                        ax2.plot(test_df['STM_Xcel_Meter'], label='Actual')
+                        fig.savefig(file_prefix + '/test_graph.png')
+                        writer.add_figure('Predictions', fig)
+
+                        plt.plot(predictions, label='Prediction')
+                        plt.plot(test_df['STM_Xcel_Meter'], label='Actual')
+                        plt.savefig(file_prefix + '/overlayed-comparison.png')
+
+                    print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}'.format(epoch, n_iter, loss.data.item(),mse))
 
         # Once model training is done, save it
         save_model(model, epoch, n_iter)
 
-        predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, seq_dim, input_dim,
-                                                        test_batch_size, transformation_method)
-        predictions.to_csv(file_prefix + '/predictions.csv', index=False)
+        predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method)
+
+        actual_values = pd.DataFrame(test_df['STM_Xcel_Meter'])
+        preds_targets = pd.concat([actual_values, predictions], axis=1)
+        preds_targets.columns = ['actual_consumption', 'predictions']
+        # writing both predictions and target values to the csv
+        preds_targets.to_csv(file_prefix + '/predictions.csv', index=False)
         np.savetxt(file_prefix + '/final_rmse.csv', denorm_rmse, delimiter=",")
 
     # If you just want to immediately test the model on the existing (saved) model

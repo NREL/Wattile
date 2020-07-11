@@ -339,7 +339,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                     test_rmse.append(denorm_rmse)
                     writer.add_scalars("Loss", {"Test": mse}, n_iter)
                     # Add matplotlib plot to compare actual test set vs predicted
-                    if (epoch == 149):
+                    if (epoch == 199):
                         fig = plt.figure()
                         ax1 = fig.add_subplot(2,1,1)
                         ax1.plot(predictions, label='Prediction')
