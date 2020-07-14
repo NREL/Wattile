@@ -11,6 +11,7 @@
     "run_resume": false,
     "preprocess": false,
     "arch_type": "RNN",
+    "arch_type_variant": "vanilla",
     "arch_version": 5,
     "train_exp_num": "Cafe",
     "test_exp_num": "dev",

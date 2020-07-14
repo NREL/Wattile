@@ -4,6 +4,7 @@ import pandas as pd
 import json
 from util import prtime, factors, tile
 import rnn
+import lstm
 
 import torch
 from torch.utils.data.dataloader import DataLoader
@@ -236,9 +237,12 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
             # hidden_dim: the number of features in the hidden state h
             # layer_dim: Number of recurrent layers. i.e. if 2, it is stacking two RNNs together to form a stacked RNN
             # Initialize the model
-            model = rnn.RNNModel(input_dim, hidden_dim, layer_dim, output_dim)
+            if configs["arch_type_variant"] == "vanilla":
+                model = rnn.RNNModel(input_dim, hidden_dim, layer_dim, output_dim)
+            elif configs["arch_type_variant"] == "lstm":
+                model = lstm.LSTM_Model(input_dim, hidden_dim, layer_dim, output_dim)
             epoch_range = np.arange(num_epochs)
-            prtime("A new {} model instantiated, with run_train=True".format("rnn"))
+            prtime("A new {} {} model instantiated, with run_train=True".format(configs["arch_type_variant"], configs["arch_type"]))
 
         # Check if gpu support is available
         cuda_avail = torch.cuda.is_available()
@@ -326,7 +330,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                                                       "dt4": time5-time4,
                                                       "dt5": time6-time5}, n_iter)
 
-                # save the model every 25 iterations
+                # save the model every 50 iterations
                 if n_iter % 50 == 0:
                     save_model(model, epoch, n_iter)
 

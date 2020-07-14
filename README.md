@@ -52,6 +52,7 @@ Descriptions coming soon...
     "run_resume": false,
     "preprocess": false,
     "arch_type": "RNN",
+    "arch_type_variant": "vanilla",
     "arch_version": 5,
     "train_exp_num": "Cafe",
     "test_exp_num": "dev",
@@ -119,20 +120,29 @@ Descriptions coming soon...
 #### algo_main_rnn_v2.py
 
 * Predicts the conditional mean of the data.
+* Single time point prediction
 * Works with individual buildings or whole-campus data, as do all future versions. 
 
 #### algo_main_rnn_v3.py
 
 * Probabilistic forecasting
-* Predict any *single* quantile in a single training session using a smoothed or huber-norm approximation of the pinball loss function.
+* In one training session:
+    * Predict a single point in future time
+    * Predicts any single quantile prediction
 
 #### algo_main_rnn_v4.py
 
-* Probabilistic forecasting
-* Predicts *any number* of discrete quantiles in a single training session. 
+* Probabilistic forecasting 
+* In one training session:
+    * Predict a single point in future time
+    * Predicts any number of discrete quantiles
 
 #### algo_main_rnn_v5.py
 
+* Probabilistic forecasting 
+* In one training session:
+    * Predict a future time sequence
+    * Predicts any number of discrete quantiles 
 
 
 #### testing_round.py
