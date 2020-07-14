@@ -331,7 +331,7 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     # Do quantile-related (q != 0.5) error statistics
     # QS (single point)
     loss = pinball_np(output, target, configs)
-    QS = loss.sum()
+    QS = loss.mean()
     # PICP (single point for each bound)
     target_1D = target[:, 0]
     bounds = np.zeros((target.shape[0], int(len(configs["qs"])/2)))
@@ -477,7 +477,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
             # Initialize the model
             model = lstm.LSTM_Model(input_dim, hidden_dim, layer_dim, output_dim)
             epoch_range = np.arange(num_epochs)
-            print("A new {} model instantiated, with run_train=True".format("lstm"))
+            print("A new {} model instantiated, with run_train=True".format("LSTM"))
 
         # Check if gpu support is available
         cuda_avail = torch.cuda.is_available()

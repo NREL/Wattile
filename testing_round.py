@@ -31,7 +31,7 @@ for test in runs:
         configs = json.load(read_file)
 
     # Make a sub-directory in the main results directory specific to this test study
-    configs["results_dir"] = os.path.join(configs["results_dir"], "{}_study_{}".format(configs["arch_type"], runs[test]['iterable']))
+    configs["results_dir"] = os.path.join(configs["results_dir"], "STUDY_{}".format(runs[test]['iterable']))
 
     # Test the model
     for i in runs[test]['iterables']:

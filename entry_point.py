@@ -35,6 +35,15 @@ def main(configs):
             test_df = pd.read_csv('./data/STM_Test_Data_processed.csv')
             print("read data from locally stored csvs")
             rnn_mod.main(train_df, test_df, configs)
+        elif configs["arch_version"] == 5:
+            # Import buildings module to preprocess data
+            sys.path.append(configs["shared_dir"])
+            bp = importlib.import_module("buildings_processing")
+
+            # Prepare data for the RNN model type
+            train_df, test_df, data_time_index = bp.prep_for_seq2seq(configs)
+            rnn_mod.main(train_df, test_df, data_time_index, configs)
+
         else:
             # Import buildings module to preprocess data
             sys.path.append(configs["shared_dir"])

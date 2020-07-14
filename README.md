@@ -46,18 +46,18 @@ Descriptions coming soon...
     "test_end_date": "2018-12-31",
     "transformation_method": "minmaxscale",
     "run_train": true,
-    "num_epochs": 800,
-    "tr_batch_size": 3716,
-    "te_batch_size": 1000,
+    "num_epochs": 138,
+    "tr_batch_size": 3900,
+    "te_batch_size": 6949,
     "run_resume": false,
     "preprocess": false,
     "arch_type": "RNN",
-    "arch_version": 4,
+    "arch_version": 5,
     "train_exp_num": "Cafe",
     "test_exp_num": "dev",
-    "hidden_nodes": 10,
+    "hidden_nodes": 50,
     "layer_dim": 1,
-    "output_dim": 5,
+    "output_dim": 7,
     "weight_decay": 0.001,
     "fetch_n_parse": false,
     "LAN_path": "Z:\\Data",
@@ -85,8 +85,8 @@ Descriptions coming soon...
     "MOY": true,
     "Holidays": true,
     "HOD_indicator": "sincos",
-    "window": 8,
-    "EC_future_gap": 8,
+    "window": 20,
+    "EC_future_gap": 20,
     "lr_schedule": false,
     "lr_config": {
         "base": 0.001,
@@ -94,12 +94,8 @@ Descriptions coming soon...
         "min": 1e-03,
         "patience": 200
     },
-    "qs": [0.025, 0.1, 0.5, 0.9, 0.975],
-    "smoothing_alpha": {
-        "base": 0.018,
-        "factor": 0.5,
-        "num_epochs": 40
-    },
+    "qs": [0.025, 0.2, 0.5, 0.8, 0.975],
+    "smoothing_alpha": 0.001,
     "results_dir": "EnergyForecasting_Results",
     "holidays_file": "C:\\dev\\intelligentcampus-2020summer\\loads\\Stats_Models_Loads\\holidays.json",
     "shared_dir": "C:\\dev\\intelligentcampus-2020summer\\loads\\Stats_Models_Loads"
@@ -134,6 +130,10 @@ Descriptions coming soon...
 
 * Probabilistic forecasting
 * Predicts *any number* of discrete quantiles in a single training session. 
+
+#### algo_main_rnn_v5.py
+
+
 
 #### testing_round.py
 

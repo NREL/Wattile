@@ -331,7 +331,7 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     # Do quantile-related (q != 0.5) error statistics
     # QS (single point)
     loss = pinball_np(output, target, configs)
-    QS = loss.sum()
+    QS = loss.mean()
     # PICP (single point for each bound)
     target_1D = target[:, 0]
     bounds = np.zeros((target.shape[0], int(len(configs["qs"])/2)))
