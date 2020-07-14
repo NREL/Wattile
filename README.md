@@ -126,23 +126,23 @@ Descriptions coming soon...
 #### algo_main_rnn_v3.py
 
 * Probabilistic forecasting
-* In one training session:
-    * Predict a single point in future time
-    * Predicts any single quantile prediction
+* In one training session, predict:
+    * Number of future times: 1
+    * Number of quantiles per time: 1
 
 #### algo_main_rnn_v4.py
 
 * Probabilistic forecasting 
-* In one training session:
-    * Predict a single point in future time
-    * Predicts any number of discrete quantiles
+* In one training session, predict:
+    * Number of future times: 1
+    * Number of quantiles per time: *Q*
 
 #### algo_main_rnn_v5.py
 
 * Probabilistic forecasting 
-* In one training session:
-    * Predict a future time sequence
-    * Predicts any number of discrete quantiles 
+* In one training session, predict:
+    * Number of future times: *T*
+    * Number of quantiles per time: *Q*
 
 
 #### testing_round.py

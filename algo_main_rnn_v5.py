@@ -195,7 +195,7 @@ def data_iterable_random(train_data, test_data, run_train, train_batch_size, tes
     if run_train:
         # Create lagged INPUT variables, i.e. columns: w1_(t-1), w1_(t-2)...
         # Does this for all input variables for times up to "window"
-        #X_train = train_data.drop(configs['target_var'], axis=1).values.astype(dtype='float32')
+        # X_train = train_data.drop(configs['target_var'], axis=1).values.astype(dtype='float32')
         X_train = train_data.drop(train_data.filter(like=configs["target_var"], axis=1).columns, axis=1).values.astype(
             dtype='float32')
 
@@ -204,10 +204,11 @@ def data_iterable_random(train_data, test_data, run_train, train_batch_size, tes
         # y_train = y_train.values.astype(dtype='float32')
         # y_train = np.tile(y_train, (len(configs['qs']), 1))
         # y_train = np.transpose(y_train)
-        y_train = train_data[train_data.filter(like=configs["target_var"], axis=1).columns].values.astype(dtype='float32')
+        y_train = train_data[train_data.filter(like=configs["target_var"], axis=1).columns].values.astype(
+            dtype='float32')
         y_train = np.tile(y_train, len(configs['qs']))
         # y_train = np.tile(y_train, (len(configs['qs']), 1))
-        #y_train = np.tile(y_train, (len(configs['qs']), 1, 1))
+        # y_train = np.tile(y_train, (len(configs['qs']), 1, 1))
         # y_train = np.swapaxes(y_train, 0, 2)
         # y_train = np.swapaxes(y_train, 0, 1)
 
@@ -223,7 +224,7 @@ def data_iterable_random(train_data, test_data, run_train, train_batch_size, tes
         train_loader = []
 
     # Do the same as above, but for the test set
-    #X_test = test_data.drop(configs['target_var'], axis=1).values.astype(dtype='float32')
+    # X_test = test_data.drop(configs['target_var'], axis=1).values.astype(dtype='float32')
     X_test = test_data.drop(test_data.filter(like=configs["target_var"], axis=1).columns, axis=1).values.astype(
         dtype='float32')
 
@@ -264,8 +265,8 @@ def pinball_np(output, target, configs):
     tau = np.repeat(configs["qs"], configs["EC_future_gap"])
     alpha = configs["smoothing_alpha"]
     log_term = np.zeros_like(resid)
-    log_term[resid < 0] = (np.log(1+np.exp(resid[resid < 0]/alpha)) - (resid[resid < 0]/alpha))
-    log_term[resid >= 0] = np.log(1 + np.exp(-resid[resid >= 0]/alpha))
+    log_term[resid < 0] = (np.log(1 + np.exp(resid[resid < 0] / alpha)) - (resid[resid < 0] / alpha))
+    log_term[resid >= 0] = np.log(1 + np.exp(-resid[resid >= 0] / alpha))
     loss = resid * tau + alpha * log_term
 
     return loss
@@ -285,13 +286,13 @@ def quantile_loss(output, target, configs):
     tau = torch.FloatTensor(np.repeat(configs["qs"], configs["EC_future_gap"]))
     alpha = configs["smoothing_alpha"]
     log_term = torch.zeros_like(resid)
-    log_term[resid < 0] = (torch.log(1+torch.exp(resid[resid < 0]/alpha)) - (resid[resid < 0]/alpha))
-    log_term[resid >= 0] = torch.log(1 + torch.exp(-resid[resid >= 0]/alpha))
+    log_term[resid < 0] = (torch.log(1 + torch.exp(resid[resid < 0] / alpha)) - (resid[resid < 0] / alpha))
+    log_term[resid >= 0] = torch.log(1 + torch.exp(-resid[resid >= 0] / alpha))
     loss = resid * tau + alpha * log_term
     loss = torch.mean(torch.mean(loss, 0))
 
     # Extra statistics to return optionally
-    #stats = [resid.data.numpy().min(), resid.data.numpy().max()]
+    # stats = [resid.data.numpy().min(), resid.data.numpy().max()]
 
     # See histogram of residuals
     # graph = pd.DataFrame(resid.data.numpy()).plot(kind="hist", alpha=0.5, bins=50, ec='black', stacked=True)
@@ -299,7 +300,8 @@ def quantile_loss(output, target, configs):
     return loss
 
 
-def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method, configs, last_run):
+def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method, configs,
+                    last_run):
     """
     Process the test set and report error statistics.
 
@@ -348,57 +350,68 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     # QS (single point)
     loss = pinball_np(output, target, configs)
     QS = loss.mean()
+
     # PICP (single point for each bound)
-    target_1D = target[:, 0]
-    bounds = np.zeros((target.shape[0], int(len(configs["qs"])/2)))
+    target_1D = target[:, range(configs["EC_future_gap"])]
+    bounds = np.zeros((target.shape[0], int(len(configs["qs"]) / 2)))
     PINC = []
+    split_arrays = np.split(output, len(configs["qs"]), axis=1)
     for i, q in enumerate(configs["qs"]):
         if q == 0.5:
             break
-        bounds[:, i] = np.logical_and(output[:, i] < target_1D, target_1D < output[:, -(i + 1)])
-        PINC.append(configs["qs"][-(i+1)] - configs["qs"][i])
+        filtered_low = split_arrays[i]
+        filtered_high = split_arrays[-(i+1)]
+        low_check = filtered_low < target_1D
+        high_check = filtered_high > target_1D
+        check_across_time = np.logical_and(low_check, high_check)
+        time_averaged = check_across_time.mean(axis=1)
+        bounds[:, i] = time_averaged
+
+        # Calculate theoretical PI
+        PINC.append(configs["qs"][-(i + 1)] - configs["qs"][i])
     PINC = np.array(PINC)
     PICP = bounds.mean(axis=0)
+
     # ACE (single point)
     ACE = np.sum(np.abs(PICP - PINC))
+
     # IS (single point)
-    lower = output[:, :int(len(configs["qs"])/2)]
-    upper = np.flip(output[:, int(len(configs["qs"])/2)+1:], 1)
-    alph = 1-PINC
-    x = target[:, :int(len(configs["qs"]) / 2)]
-    IS = (upper - lower) + (2 / alph) * (lower - x) * (x < lower) + (2 / alph) * (x - upper) * (x > upper)
-    IS = IS.mean()
+    ISs = []
+    # Iterate through Prediction intervals
+    for i, q in enumerate(configs["qs"]):
+        if q == 0.5:
+            break
+        low = split_arrays[i]   # (batches * time) for a single quantile
+        high = split_arrays[-(i+1)]     # (batches * time) for a single quantile
+        x = target_1D   # (batches * time) for nominal results
+        alph = 1 - (configs["qs"][-(i + 1)] - configs["qs"][i])     # Single float
+        IS = (high - low) + (2 / alph) * (low - x) * (x < low) + (2 / alph) * (x - high) * (x > high)   # (batches * time) for a single quantile
+        IS = IS.mean(axis=1)    # (batches * 1)
+        ISs.append(IS)
+    IS = np.concatenate(ISs).mean() # Mean of all values in ISs
 
     # Compare theoretical and actual Q's
-    act_prob = (output > target).sum(axis=0)/(target.shape[0])
+    temp_actual = []
+    for i, q in enumerate(configs["qs"]):
+        act_prob = (split_arrays[i] > target_1D).mean()
+        temp_actual.append(act_prob)
+
     Q_vals = pd.DataFrame()
     Q_vals["q_requested"] = configs["qs"]
-    Q_vals["q_actual"] = act_prob
+    Q_vals["q_actual"] = temp_actual
 
     # Do quantile-related (q == 0.5) error statistics
-    # Only do reportable error statistics on the q=0.5 predictions. Crop np arrays accordingly
-    # semifinal_preds = semifinal_preds[:, int(semifinal_preds.shape[1] / 2)]
-    # semifinal_targs = semifinal_targs[:, int(semifinal_targs.shape[1] / 2)]
-    # semifinal_preds = semifinal_preds[:, (configs["EC_future_gap"] * int(len(configs["qs"]) / 2)):(
-    #             configs["EC_future_gap"] * (int(len(configs["qs"]) / 2) + 1))]
-    # semifinal_targs = semifinal_targs[:, (configs["EC_future_gap"] * int(len(configs["qs"]) / 2)):(
-    #             configs["EC_future_gap"] * (int(len(configs["qs"]) / 2) + 1))]
-
-    # Do do-normalization process on predictions from test set
+    # Do de-normalization process on predictions from test set
     if transformation_method == "minmaxscale":
         maxs = np.tile(train_max[train_max.filter(like=configs["target_var"], axis=0).index].values, len(configs["qs"]))
         mins = np.tile(train_min[train_min.filter(like=configs["target_var"], axis=0).index].values, len(configs["qs"]))
-        final_preds = ((maxs - mins) * semifinal_preds) + mins
-        # final_preds = ((train_max[configs['target_var']] - train_min[configs['target_var']]) * semifinal_preds) + \
-        #               train_min[configs['target_var']]
-    #else:
-        #final_preds = ((semifinal_preds * train_std[configs['target_var']]) + train_mean[configs['target_var']])
+        final_preds = ((maxs - mins) * semifinal_preds) + mins  # (batch x (num time predictions * num q's)))
+    # else:
+    # final_preds = ((semifinal_preds * train_std[configs['target_var']]) + train_mean[configs['target_var']])
 
-    final_preds_median = final_preds[:, (configs["EC_future_gap"] * int(len(configs["qs"]) / 2)):(
-                configs["EC_future_gap"] * (int(len(configs["qs"]) / 2) + 1))]
-
+    # Get the predictions for the q=0.5 case
+    final_preds_median = np.split(final_preds, len(configs["qs"]), axis=1)[int(len(configs["qs"]) / 2)]
     predicted = pd.DataFrame(final_preds_median).values.squeeze()
-    # measured = test_df[configs['target_var']].values
     measured = test_df[test_df.filter(like=configs["target_var"], axis=1).columns].values
 
     # Set "Number of adjustable model parameters for each type of error statistic
@@ -424,24 +437,18 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     # else:
     #     hist_data = []
 
-    # # Add different error statistics to a dictionary
-    # errors = {"pinball_loss": pinball_loss,
-    #           "rmse": rmse,
-    #           "nmbe": nmbe,
-    #           "cvrmse": cvrmse,
-    #           "gof": gof,
-    #           "qs": QS,
-    #           "ace": ACE,
-    #           "is": IS}
     # Add different error statistics to a dictionary
     errors = {"pinball_loss": pinball_loss,
               "rmse": rmse,
               "nmbe": nmbe,
               "cvrmse": cvrmse,
-              "gof": gof}
+              "gof": gof,
+              "qs": QS,
+              "ace": ACE,
+              "is": IS}
 
-    #return predictions, errors, Q_vals, hist_data
-    return final_preds, errors, measured
+    # return predictions, errors, Q_vals, hist_data
+    return final_preds, errors, measured, Q_vals
 
 
 def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method,
@@ -468,7 +475,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     num_epochs = num_epochs
     lr_schedule = configs['lr_schedule']
     hidden_dim = int(configs['hidden_nodes'])
-    #output_dim = configs["output_dim"]
+    # output_dim = configs["output_dim"]
     output_dim = configs["EC_future_gap"] * len(configs["qs"])
     weight_decay = float(configs['weight_decay'])
     input_dim = configs['input_dim']
@@ -514,7 +521,8 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
             if configs["arch_type_variant"] == "lstm":
                 model = lstm.LSTM_Model(input_dim, hidden_dim, layer_dim, output_dim)
             epoch_range = np.arange(num_epochs)
-            print("A new {} {} model instantiated, with run_train=True".format(configs["arch_type_variant"], configs["arch_type"]))
+            print("A new {} {} model instantiated, with run_train=True".format(configs["arch_type_variant"],
+                                                                               configs["arch_type"]))
 
         # Check if gpu support is available
         cuda_avail = torch.cuda.is_available()
@@ -634,8 +642,9 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                 # Do a test batch every ___ iterations
                 if n_iter % 100 == 0:
                     # Evaluate test set
-                    predictions, errors, measured = test_processing(test_df, test_loader, model, seq_dim, input_dim,
-                                                          test_batch_size, transformation_method, configs, False)
+                    predictions, errors, measured, Q_vals = test_processing(test_df, test_loader, model, seq_dim, input_dim,
+                                                                    test_batch_size, transformation_method, configs,
+                                                                    False)
 
                     temp_holder = errors
                     temp_holder.update({"n_iter": n_iter, "epoch": epoch})
@@ -666,7 +675,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                     # ax2.axis('equal')
                     # writer.add_figure('Parody', fig2, n_iter)
 
-                    print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}, LR: {}'.format(epoch, n_iter,
+                    print('Epoch: {} Iteration: {}. Train_loss: {}. Test_loss: {}, LR: {}'.format(epoch, n_iter,
                                                                                                 loss.data.item(),
                                                                                                 errors['pinball_loss'],
                                                                                                 optimizer.param_groups[
@@ -677,22 +686,21 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         save_model(model, epoch, n_iter)
 
         # Once model is done training, process a final test set
-        predictions, errors, measured = test_processing(test_df, test_loader, model, seq_dim, input_dim,
-                                              test_batch_size, transformation_method, configs, True)
+        predictions, errors, measured, Q_vals = test_processing(test_df, test_loader, model, seq_dim, input_dim,
+                                                        test_batch_size, transformation_method, configs, True)
 
         # Save the residual distribution to a file
-        #hist_data.to_hdf(os.path.join(file_prefix, "residual_distribution.h5"), key='df', mode='w')
+        # hist_data.to_hdf(os.path.join(file_prefix, "residual_distribution.h5"), key='df', mode='w')
 
         # Save the final predictions to a file
-        #predictions.to_csv(file_prefix + '/predictions.csv', index=False)
         pd.DataFrame(predictions).to_hdf(os.path.join(file_prefix, "predictions.h5"), key='df', mode='w')
         pd.DataFrame(measured).to_hdf(os.path.join(file_prefix, "measured.h5"), key='df', mode='w')
 
         # Save the QQ information to a file
-        #Q_vals.to_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df', mode='w')
+        Q_vals.to_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df', mode='w')
 
         # Save the mid-train error statistics to a file
-        #mid_train_error_stats.to_hdf(os.path.join(file_prefix, "mid_train_error_stats.h5"), key='df', mode='w')
+        mid_train_error_stats.to_hdf(os.path.join(file_prefix, "mid_train_error_stats.h5"), key='df', mode='w')
 
 
     # If you just want to immediately test the model on the existing (saved) model
@@ -701,23 +709,22 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         model = torch_model['torch_model']
         prtime("Loaded model from file, given run_train=False\n")
 
-        predictions, errors, measured = test_processing(test_df, test_loader, model, seq_dim, input_dim,
-                                              test_batch_size, transformation_method, configs, True)
+        predictions, errors, measured, Q_vals = test_processing(test_df, test_loader, model, seq_dim, input_dim,
+                                                        test_batch_size, transformation_method, configs, True)
         # test_loss.append(errors['mse_loss'])
         # test_rmse.append(errors['rmse'])
         writer.add_scalars("Loss", {"Test": errors['pinball_loss']})
-        prtime('Test_MSE: {}'.format(errors['pinball_loss']))
+        prtime('Test_loss: {}'.format(errors['pinball_loss']))
 
-        # # Save the residual distribution to a file
-        # path = file_prefix + '/residual_distribution.h5.json'
-        # with open(path, 'w') as fp:
-        #     json.dump(hist_data, fp, indent=1)
+        # Save the residual distribution to a file
+        # hist_data.to_hdf(os.path.join(file_prefix, "residual_distribution.h5"), key='df', mode='w')
 
-        # Save the final predictions and error statistics to a file
-        predictions.to_csv(file_prefix + '/predictions.csv', index=False)
+        # Save the final predictions to a file
+        pd.DataFrame(predictions).to_hdf(os.path.join(file_prefix, "predictions.h5"), key='df', mode='w')
+        pd.DataFrame(measured).to_hdf(os.path.join(file_prefix, "measured.h5"), key='df', mode='w')
 
         # Save the QQ information to a file
-        #Q_vals.to_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df', mode='w')
+        Q_vals.to_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df', mode='w')
 
     # End training timer
     train_end_time = timeit.default_timer()
@@ -729,24 +736,24 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     # ax3.plot(np.array(resid_stats)[:, 1], label="Max")
     # plt.show()
 
-    ## If a training history csv file does not exist, make one
-    # if not pathlib.Path("Training_history.csv").exists():
-    #     with open(r'Training_history.csv', 'a') as f:
-    #         writer = csv.writer(f, lineterminator='\n')
-    #         writer.writerow(["File Path", "RMSE", "CV(RMSE)", "NMBE", "GOF", "QS", "ACE", "IS", "Train time"])
+    # If a training history csv file does not exist, make one
+    if not pathlib.Path("Training_history.csv").exists():
+        with open(r'Training_history.csv', 'a') as f:
+            writer = csv.writer(f, lineterminator='\n')
+            writer.writerow(["File Path", "RMSE", "CV(RMSE)", "NMBE", "GOF", "QS", "ACE", "IS", "Train time"])
 
-    ## Save the errors statistics to a file once everything is done
-    # with open(r'Training_history.csv', 'a') as f:
-    #     writer = csv.writer(f, lineterminator='\n')
-    #     writer.writerow([file_prefix,
-    #                      errors["rmse"],
-    #                      errors["cvrmse"],
-    #                      errors["nmbe"],
-    #                      errors["gof"],
-    #                      errors["qs"],
-    #                      errors["ace"],
-    #                      errors["is"],
-    #                      train_time])
+    # Save the errors statistics to a file once everything is done
+    with open(r'Training_history.csv', 'a') as f:
+        writer = csv.writer(f, lineterminator='\n')
+        writer.writerow([file_prefix,
+                         errors["rmse"],
+                         errors["cvrmse"],
+                         errors["nmbe"],
+                         errors["gof"],
+                         errors["qs"],
+                         errors["ace"],
+                         errors["is"],
+                         train_time])
 
 
 def eval_trained_model(file_prefix, train_data, train_batch_size, data_time_index, configs):
@@ -857,11 +864,11 @@ def plot_QQ(file_prefix):
     ax2.plot([0, 1], [0, 1], c='k', alpha=0.5)
     ax2.set_xlabel('Requested')
     ax2.set_ylabel('Actual')
-    #ax2.axhline(y=0, color='k')
-    #ax2.axvline(x=0, color='k')
+    # ax2.axhline(y=0, color='k')
+    # ax2.axvline(x=0, color='k')
     ax2.set_xlim(left=0, right=1)
     ax2.set_ylim(bottom=0, top=1)
-    #ax2.axis('equal')
+    # ax2.axis('equal')
     plt.show()
 
 
@@ -915,8 +922,8 @@ def plot_resid_dist(study_path, building, alphas, q):
     ax2.set_xlim(left=-0.5, right=0.5)
     ax1.set_ylim(top=0.6)
     ax1.set_ylabel('Smoothed PLF')
-    #ax1.set_ylim(bottom=-0.5)
-    ax2.set_ylim(top=4*max_dist)
+    # ax1.set_ylim(bottom=-0.5)
+    ax2.set_ylim(top=4 * max_dist)
     ax2.set_ylabel('Frequency')
     ax1.legend()
     plt.show()
@@ -937,7 +944,7 @@ def eval_tests(file_prefix, configs):
     batch = 1
     fig, ax1 = plt.subplots()
     ax1.plot(measured.iloc[batch, :], label="Actual")
-    ax1.plot(data[batch, int(len(configs["qs"])/2), :], label='q = 0.5', color="blue")
+    ax1.plot(data[batch, int(len(configs["qs"]) / 2), :], label='q = 0.5', color="blue")
 
     for i, q in enumerate(configs["qs"]):
         if q == 0.5:
@@ -1019,6 +1026,6 @@ def main(train_df, test_df, data_time_index, configs):
     # TODO: Currently only supported for random test/train split
     if configs["TrainTestSplit"] == 'Random':
         eval_tests(file_prefix, configs)
-        #eval_trained_model(file_prefix, train_data, train_batch_size, data_time_index, configs)
+        # eval_trained_model(file_prefix, train_data, train_batch_size, data_time_index, configs)
         # plot_processed_model(file_prefix)
-        #plot_QQ(file_prefix)
+        # plot_QQ(file_prefix)

@@ -633,7 +633,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                     ax2.axis('equal')
                     writer.add_figure('Parody', fig2, n_iter)
 
-                    print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}, LR: {}'.format(epoch, n_iter,
+                    print('Epoch: {} Iteration: {}. Train_loss: {}. Test_loss: {}, LR: {}'.format(epoch, n_iter,
                                                                                                 loss.data.item(),
                                                                                                 errors['pinball_loss'],
                                                                                                 optimizer.param_groups[
@@ -671,7 +671,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         # test_loss.append(errors['mse_loss'])
         # test_rmse.append(errors['rmse'])
         writer.add_scalars("Loss", {"Test": errors['pinball_loss']})
-        prtime('Test_MSE: {}'.format(errors['pinball_loss']))
+        prtime('Test_loss: {}'.format(errors['pinball_loss']))
 
         # Save the residual distribution to a file
         path = file_prefix + '/residual_distribution.h5.json'
