@@ -424,18 +424,19 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     cvrmse = (1 / (np.mean(measured))) * np.sqrt(np.sum((measured - predicted) ** 2) / (len(measured) - p_cvrmse))
     gof = (np.sqrt(2) / 2) * np.sqrt(cvrmse ** 2 + nmbe ** 2)
 
-    # # If this is the last test run of training, get histogram data of residuals for each quantile
-    # if last_run:
-    #     resid = target - output
-    #     hist_data = pd.DataFrame()
-    #     for i, q in enumerate(configs["qs"]):
-    #         tester = np.histogram(resid[:, i], bins=200)
-    #         y_vals = tester[0]
-    #         x_vals = 0.5*(tester[1][1:]+tester[1][:-1])
-    #         hist_data["{}_x".format(q)] = x_vals
-    #         hist_data["{}_y".format(q)] = y_vals
-    # else:
-    #     hist_data = []
+    # If this is the last test run of training, get histogram data of residuals for each quantile
+    if last_run:
+        resid = target - output
+        split_arrays = np.split(resid, len(configs["qs"]), axis=1)
+        hist_data = pd.DataFrame()
+        for i, q in enumerate(configs["qs"]):
+            tester = np.histogram(split_arrays[i], bins=200)
+            y_vals = tester[0]
+            x_vals = 0.5*(tester[1][1:]+tester[1][:-1])
+            hist_data["{}_x".format(q)] = x_vals
+            hist_data["{}_y".format(q)] = y_vals
+    else:
+        hist_data = []
 
     # Add different error statistics to a dictionary
     errors = {"pinball_loss": pinball_loss,
