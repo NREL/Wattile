@@ -261,8 +261,9 @@ def save_model(model, epoch, n_iter):
 
 
 def pinball_np(output, target, configs):
+    num_future_time_instances = (configs["S2S_stagger"]["initial_num"] + configs["S2S_stagger"]["secondary_num"])
     resid = target - output
-    tau = np.repeat(configs["qs"], configs["EC_future_gap"])
+    tau = np.repeat(configs["qs"], num_future_time_instances)
     alpha = configs["smoothing_alpha"]
     log_term = np.zeros_like(resid)
     log_term[resid < 0] = (np.log(1 + np.exp(resid[resid < 0] / alpha)) - (resid[resid < 0] / alpha))
@@ -282,8 +283,9 @@ def quantile_loss(output, target, configs):
     :return: (Tensor) Loss for this study (single number)
     """
 
+    num_future_time_instances = (configs["S2S_stagger"]["initial_num"] + configs["S2S_stagger"]["secondary_num"])
     resid = target - output
-    tau = torch.FloatTensor(np.repeat(configs["qs"], configs["EC_future_gap"]))
+    tau = torch.FloatTensor(np.repeat(configs["qs"], num_future_time_instances))
     alpha = configs["smoothing_alpha"]
     log_term = torch.zeros_like(resid)
     log_term[resid < 0] = (torch.log(1 + torch.exp(resid[resid < 0] / alpha)) - (resid[resid < 0] / alpha))
@@ -316,6 +318,7 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     :return:
     """
 
+    num_timestamps = configs["S2S_stagger"]["initial_num"] + configs["S2S_stagger"]["secondary_num"]
     model.eval()
     preds = []
     targets = []
@@ -352,7 +355,7 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     QS = loss.mean()
 
     # PICP (single point for each bound)
-    target_1D = target[:, range(configs["EC_future_gap"])]
+    target_1D = target[:, range(num_timestamps)]
     bounds = np.zeros((target.shape[0], int(len(configs["qs"]) / 2)))
     PINC = []
     split_arrays = np.split(output, len(configs["qs"]), axis=1)
@@ -477,7 +480,8 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     lr_schedule = configs['lr_schedule']
     hidden_dim = int(configs['hidden_nodes'])
     # output_dim = configs["output_dim"]
-    output_dim = configs["EC_future_gap"] * len(configs["qs"])
+    #output_dim = configs["EC_future_gap"] * len(configs["qs"])
+    output_dim = (configs["S2S_stagger"]["initial_num"] + configs["S2S_stagger"]["secondary_num"]) * len(configs["qs"])
     weight_decay = float(configs['weight_decay'])
     input_dim = configs['input_dim']
     layer_dim = configs['layer_dim']
@@ -637,11 +641,11 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                                                       "Step": time6 - time5}, n_iter)
 
                 # Save the model every ___ iterations
-                if n_iter % 100 == 0:
+                if n_iter % 50 == 0:
                     save_model(model, epoch, n_iter)
 
                 # Do a test batch every ___ iterations
-                if n_iter % 100 == 0:
+                if n_iter % 50 == 0:
                     # Evaluate test set
                     predictions, errors, measured, Q_vals = test_processing(test_df, test_loader, model, seq_dim, input_dim,
                                                                     test_batch_size, transformation_method, configs,
@@ -655,6 +659,13 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                     # test_loss.append(errors['mse_loss'])
                     # test_rmse.append(errors['rmse'])
                     writer.add_scalars("Loss", {"Test": errors['pinball_loss']}, n_iter)
+
+                    # Save the final predictions to a file
+                    pd.DataFrame(predictions).to_hdf(os.path.join(file_prefix, "predictions.h5"), key='df', mode='w')
+                    pd.DataFrame(measured).to_hdf(os.path.join(file_prefix, "measured.h5"), key='df', mode='w')
+
+                    # Save the QQ information to a file
+                    Q_vals.to_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df', mode='w')
 
                     # Add matplotlib plot to TensorBoard to compare actual test set vs predicted
                     # fig1, ax1 = plt.subplots(figsize=(20, 5))
@@ -682,6 +693,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                                                                                                 optimizer.param_groups[
                                                                                                     0]['lr']))
                     epoch_num += 1
+
 
         # Once model training is done, save the current model state
         save_model(model, epoch, n_iter)
@@ -761,6 +773,7 @@ def eval_trained_model(file_prefix, train_data, train_batch_size, configs):
     """
     Pass the entire training set through the trained model and get the predictions.
     Compute the residual and save to a DataFrame.
+    Not used for Seq2Seq models
 
     :param file_prefix: (str)
     :param train_data: (DataFrame)
@@ -960,18 +973,33 @@ def eval_tests(file_prefix, batch_num):
     with open(os.path.join(file_prefix, "configs.json"), "r") as read_file:
         configs = json.load(read_file)
 
+    num_timestamps = configs["S2S_stagger"]["initial_num"] + configs["S2S_stagger"]["secondary_num"]
+
     # Read in mask from file
     mask_file = os.path.join("data", "mask_{}_{}.h5".format(configs['building'], "-".join(configs['year'])))
     mask = pd.read_hdf(mask_file, key='df')
     msk = mask['msk'].values
-    start_index = np.searchsorted(np.cumsum(~msk), batch_num) + 1
-    end_index = start_index + configs["EC_future_gap"]
-    time_index = mask.index[start_index:end_index]
+
+    # start_index = np.searchsorted(np.cumsum(~msk), batch_num) + 1
+    # end_index = start_index + configs["EC_future_gap"]
+    # time_index = mask.index[start_index:end_index]
+
+    start_index_init = np.searchsorted(np.cumsum(~msk), batch_num) + 1
+    end_index_init = start_index_init + configs["S2S_stagger"]["initial_num"]
+    #time_index_init = mask.index[start_index_init:end_index_init]
+    init_indices = np.arange(start_index_init, end_index_init)
+
+    if configs["S2S_stagger"]["secondary_num"] > 0:
+        second_indices = np.arange(end_index_init + (configs["S2S_stagger"]["decay"] - 1), end_index_init + (configs["S2S_stagger"]["secondary_num"] * configs["S2S_stagger"]["decay"]), configs["S2S_stagger"]["decay"])
+        indices = np.append(init_indices, second_indices)
+        time_index = mask.index[indices]
+    else:
+        time_index = mask.index[init_indices]
 
     # Read in predictions from file
     data = pd.read_hdf(os.path.join(file_prefix, "predictions.h5"), key='df')
     data = np.array(data)
-    data = data.reshape((data.shape[0], len(configs["qs"]), configs["EC_future_gap"]))
+    data = data.reshape((data.shape[0], len(configs["qs"]), num_timestamps))
 
     # Read in predictions from file
     measured = pd.read_hdf(os.path.join(file_prefix, "measured.h5"), key='df')

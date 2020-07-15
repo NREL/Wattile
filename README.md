@@ -38,6 +38,11 @@ For linux users:
 ### What are the parameters in configs.json?
 Descriptions coming soon...
 
+| Variable | Type | Description | v1 |
+| --- | --- | --- | --- |
+| foo | str |  | x |
+| foo | str |   | |
+
 ```
 {
     "train_start_date": "2018-01-01",
@@ -46,19 +51,19 @@ Descriptions coming soon...
     "test_end_date": "2018-12-31",
     "transformation_method": "minmaxscale",
     "run_train": true,
-    "num_epochs": 138,
+    "num_epochs": 200,
     "tr_batch_size": 3900,
     "te_batch_size": 6949,
-    "run_resume": false,
+    "run_resume": true,
     "preprocess": false,
     "arch_type": "RNN",
-    "arch_type_variant": "vanilla",
-    "arch_version": 5,
+    "arch_type_variant": "lstm",
+    "arch_version": 6,
     "train_exp_num": "Cafe",
     "test_exp_num": "dev",
-    "hidden_nodes": 50,
+    "hidden_nodes": 100,
     "layer_dim": 1,
-    "output_dim": 7,
+    "output_dim": 5,
     "weight_decay": 0.001,
     "fetch_n_parse": false,
     "LAN_path": "Z:\\Data",
@@ -87,16 +92,21 @@ Descriptions coming soon...
     "Holidays": true,
     "HOD_indicator": "sincos",
     "window": 20,
-    "EC_future_gap": 20,
-    "lr_schedule": false,
+    "EC_future_gap": 16,
+    "lr_schedule": true,
     "lr_config": {
         "base": 0.001,
         "factor": 0.1,
         "min": 1e-03,
-        "patience": 200
+        "patience": 20
     },
     "qs": [0.025, 0.2, 0.5, 0.8, 0.975],
     "smoothing_alpha": 0.001,
+    "S2S_stagger": {
+        "initial_num": 4,
+        "decay": 4,
+        "secondary_num": 17
+    },
     "results_dir": "EnergyForecasting_Results",
     "holidays_file": "C:\\dev\\intelligentcampus-2020summer\\loads\\Stats_Models_Loads\\holidays.json",
     "shared_dir": "C:\\dev\\intelligentcampus-2020summer\\loads\\Stats_Models_Loads"
@@ -148,15 +158,7 @@ Descriptions coming soon...
     * Number of future times: *T*
     * Number of quantiles per time: *Q*
 * Vanilla and LSTM variants available
-
-#### algo_main_rnn_v6.py
-
-* Probabilistic forecasting 
-* In one training session, predict:
-    * Number of future times: *T*
-    * Number of quantiles per time: *Q*
-* Vanilla and LSTM variants available
-* Supports future time predictions with variable spacing 
+* Supports future time predictions with constant spacing or variable spacing 
 
 
 #### testing_round.py
