@@ -324,11 +324,11 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
                 # Compute time per iteration
                 time6 = timeit.default_timer()
-                writer.add_scalars("Iteration time", {"dt1": time2-time1,
-                                                      "dt2": time3-time2,
-                                                      "dt3": time4-time3,
-                                                      "dt4": time5-time4,
-                                                      "dt5": time6-time5}, n_iter)
+                writer.add_scalars("Iteration time", {"Package_variables": time2 - time1,
+                                                      "Evaluate_model": time3 - time2,
+                                                      "Calc_loss": time4 - time3,
+                                                      "Backprop": time5 - time4,
+                                                      "Step": time6 - time5}, n_iter)
 
                 # save the model every 50 iterations
                 if n_iter % 50 == 0:

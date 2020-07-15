@@ -116,12 +116,14 @@ Descriptions coming soon...
 
 * Works with preprocessed STM whole-campus data only. Uses previous timestep for prediction feedback. 
 * No major architecture changes besides bug fixes.
+* Vanilla and LSTM variants available
 
 #### algo_main_rnn_v2.py
 
 * Predicts the conditional mean of the data.
 * Single time point prediction
 * Works with individual buildings or whole-campus data, as do all future versions. 
+* Vanilla variant available
 
 #### algo_main_rnn_v3.py
 
@@ -129,6 +131,7 @@ Descriptions coming soon...
 * In one training session, predict:
     * Number of future times: 1
     * Number of quantiles per time: 1
+* Vanilla variant available
 
 #### algo_main_rnn_v4.py
 
@@ -136,6 +139,7 @@ Descriptions coming soon...
 * In one training session, predict:
     * Number of future times: 1
     * Number of quantiles per time: *Q*
+* Vanilla and LSTM variants available
 
 #### algo_main_rnn_v5.py
 
@@ -143,6 +147,16 @@ Descriptions coming soon...
 * In one training session, predict:
     * Number of future times: *T*
     * Number of quantiles per time: *Q*
+* Vanilla and LSTM variants available
+
+#### algo_main_rnn_v6.py
+
+* Probabilistic forecasting 
+* In one training session, predict:
+    * Number of future times: *T*
+    * Number of quantiles per time: *Q*
+* Vanilla and LSTM variants available
+* Supports future time predictions with variable spacing 
 
 
 #### testing_round.py

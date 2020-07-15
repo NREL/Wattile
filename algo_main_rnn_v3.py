@@ -514,11 +514,11 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
                 # Compute time per iteration
                 time6 = timeit.default_timer()
-                writer.add_scalars("Iteration time", {"dt1": time2 - time1,
-                                                      "dt2": time3 - time2,
-                                                      "dt3": time4 - time3,
-                                                      "dt4": time5 - time4,
-                                                      "dt5": time6 - time5}, n_iter)
+                writer.add_scalars("Iteration time", {"Package_variables": time2 - time1,
+                                                      "Evaluate_model": time3 - time2,
+                                                      "Calc_loss": time4 - time3,
+                                                      "Backprop": time5 - time4,
+                                                      "Step": time6 - time5}, n_iter)
 
                 # save the model every ___ iterations
                 if n_iter % 200 == 0:
@@ -601,16 +601,18 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
 
 
-def eval_trained_model(file_prefix, train_data, train_batch_size, data_time_index, configs):
+def eval_trained_model(file_prefix, train_data, train_batch_size, configs):
     """
-    Pass the entire training set through the trained model and get the predictions. Compute the residual and save to a DataFrame.
+    Pass the entire training set through the trained model and get the predictions.
+    Compute the residual and save to a DataFrame.
+
     :param file_prefix:
     :param train_data:
     :param train_batch_size:
-    :param data_time_index:
     :param configs:
     :return:
     """
+
     # Evaluate the training model
     torch_model = torch.load(file_prefix + '/torch_model')
     model = torch_model['torch_model']
@@ -640,14 +642,25 @@ def eval_trained_model(file_prefix, train_data, train_batch_size, data_time_inde
     semifinal_preds = np.concatenate(preds).ravel()
     semifinal_targs = np.concatenate(targets).ravel()  # Last 5 entries are nan
 
+    # mask_file = os.path.join("data", "mask_{}_{}.json".format(configs['building'], "-".join(configs['year'])))
+    # with open(mask_file, "r") as read_file:
+    #     msk = json.load(read_file)
+
+    # Get the saved binary mask from file
     mask_file = os.path.join("data", "mask_{}_{}.json".format(configs['building'], "-".join(configs['year'])))
-    with open(mask_file, "r") as read_file:
-        msk = json.load(read_file)
+    mask = pd.read_hdf(mask_file, key='df')
+    msk = mask["msk"]
+
+    # # Adjust the datetime index so it is in line with the EC data
+    # target_index = data_time_index[msk] + pd.DateOffset(
+    #     minutes=(configs["EC_future_gap"] * configs["resample_bin_min"]))
+    # processed_data = pd.DataFrame(index=target_index)
 
     # Adjust the datetime index so it is in line with the EC data
-    target_index = data_time_index[msk] + pd.DateOffset(
+    target_index = mask.index[msk] + pd.DateOffset(
         minutes=(configs["EC_future_gap"] * configs["resample_bin_min"]))
     processed_data = pd.DataFrame(index=target_index)
+
     processed_data['Training fit'] = semifinal_preds
     processed_data['Target'] = semifinal_targs
     processed_data['Residual'] = semifinal_targs - semifinal_preds
@@ -680,7 +693,7 @@ def plot_processed_model(file_prefix):
     plt.show()
 
 
-def main(train_df, test_df, data_time_index, configs):
+def main(train_df, test_df, configs):
     """
     Main executable for prepping data for input to RNN model.
     :param train_df:
@@ -754,6 +767,6 @@ def main(train_df, test_df, data_time_index, configs):
     # Evaluate the trained model with the training set to diagnose training ability and plot residuals
     # TODO: Currently only supported for random test/train split
     if configs["TrainTestSplit"] == 'Random':
-        eval_trained_model(file_prefix, train_data, train_batch_size, data_time_index, configs)
+        eval_trained_model(file_prefix, train_data, train_batch_size, configs)
         # plot_processed_model(file_prefix)
 

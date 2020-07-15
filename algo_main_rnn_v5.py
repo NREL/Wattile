@@ -630,11 +630,11 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
                 # Compute time per iteration
                 time6 = timeit.default_timer()
-                writer.add_scalars("Iteration time", {"dt1": time2 - time1,
-                                                      "dt2": time3 - time2,
-                                                      "dt3": time4 - time3,
-                                                      "dt4": time5 - time4,
-                                                      "dt5": time6 - time5}, n_iter)
+                writer.add_scalars("Iteration time", {"Package_variables": time2 - time1,
+                                                      "Evaluate_model": time3 - time2,
+                                                      "Calc_loss": time4 - time3,
+                                                      "Backprop": time5 - time4,
+                                                      "Step": time6 - time5}, n_iter)
 
                 # Save the model every ___ iterations
                 if n_iter % 100 == 0:
@@ -757,7 +757,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                          train_time])
 
 
-def eval_trained_model(file_prefix, train_data, train_batch_size, data_time_index, configs):
+def eval_trained_model(file_prefix, train_data, train_batch_size, configs):
     """
     Pass the entire training set through the trained model and get the predictions.
     Compute the residual and save to a DataFrame.
@@ -765,7 +765,6 @@ def eval_trained_model(file_prefix, train_data, train_batch_size, data_time_inde
     :param file_prefix: (str)
     :param train_data: (DataFrame)
     :param train_batch_size: (Float)
-    :param data_time_index: (Datetime index)
     :param configs: (Dictionary)
     :return: None
     """
@@ -795,13 +794,23 @@ def eval_trained_model(file_prefix, train_data, train_batch_size, data_time_inde
     semifinal_preds = np.concatenate(preds)
     semifinal_targs = np.concatenate(targets)
 
+    # # Get the saved binary mask from file
+    # mask_file = os.path.join("data", "mask_{}_{}.json".format(configs['building'], "-".join(configs['year'])))
+    # with open(mask_file, "r") as read_file:
+    #     msk = json.load(read_file)
+
     # Get the saved binary mask from file
     mask_file = os.path.join("data", "mask_{}_{}.json".format(configs['building'], "-".join(configs['year'])))
-    with open(mask_file, "r") as read_file:
-        msk = json.load(read_file)
+    mask = pd.read_hdf(mask_file, key='df')
+    msk = mask["msk"]
+
+    # # Adjust the datetime index so it is in line with the EC data
+    # target_index = data_time_index[msk] + pd.DateOffset(
+    #     minutes=(configs["EC_future_gap"] * configs["resample_bin_min"]))
+    # processed_data = pd.DataFrame(index=target_index)
 
     # Adjust the datetime index so it is in line with the EC data
-    target_index = data_time_index[msk] + pd.DateOffset(
+    target_index = mask.index[msk] + pd.DateOffset(
         minutes=(configs["EC_future_gap"] * configs["resample_bin_min"]))
     processed_data = pd.DataFrame(index=target_index)
 
@@ -888,6 +897,7 @@ def plot_training_history(x):
 def plot_resid_dist(study_path, building, alphas, q):
     """
     Plot the residual distribution over the smooth approximations for different values of the alpha smoothing parameter.
+    Can be used with V4 and V5 algorithms
 
     :param study_path: (str) Relative path to the study directory in question.
     :param building: (str) Name of the building in question
@@ -895,6 +905,7 @@ def plot_resid_dist(study_path, building, alphas, q):
     :param q: (float) Quantile value to consider for plotting.
     :return: None
     """
+
     fig, ax1 = plt.subplots()
     ax2 = ax1.twinx()
     resid = np.linspace(-1, 1, 1000)
@@ -935,28 +946,51 @@ def plot_mid_train_stats(file_prefix):
     data.plot(x="n_iter", subplots=True)
 
 
-def eval_tests(file_prefix, configs):
-    # Read in forcasted test data
+def eval_tests(file_prefix, batch_num):
+    """
+    Plot test results from file.
+    Can be used with V5 algorithm.
+
+    :param file_prefix:
+    :param configs:
+    :return:
+    """
+
+    # Read in configs from file
+    with open(os.path.join(file_prefix, "configs.json"), "r") as read_file:
+        configs = json.load(read_file)
+
+    # Read in mask from file
+    mask_file = os.path.join("data", "mask_{}_{}.h5".format(configs['building'], "-".join(configs['year'])))
+    mask = pd.read_hdf(mask_file, key='df')
+    msk = mask['msk'].values
+    start_index = np.searchsorted(np.cumsum(~msk), batch_num) + 1
+    end_index = start_index + configs["EC_future_gap"]
+    time_index = mask.index[start_index:end_index]
+
+    # Read in predictions from file
     data = pd.read_hdf(os.path.join(file_prefix, "predictions.h5"), key='df')
     data = np.array(data)
     data = data.reshape((data.shape[0], len(configs["qs"]), configs["EC_future_gap"]))
+
+    # Read in predictions from file
     measured = pd.read_hdf(os.path.join(file_prefix, "measured.h5"), key='df')
 
-    batch = 1
+    # Plot results
+    cmap = plt.get_cmap('Reds')
     fig, ax1 = plt.subplots()
-    ax1.plot(measured.iloc[batch, :], label="Actual")
-    ax1.plot(data[batch, int(len(configs["qs"]) / 2), :], label='q = 0.5', color="blue")
-
+    ax1.plot(time_index, measured.iloc[batch_num, :], label="Actual", color='black')
+    ax1.plot(time_index, data[batch_num, int(len(configs["qs"]) / 2), :], label='q = 0.5', color="red")
     for i, q in enumerate(configs["qs"]):
         if q == 0.5:
             break
-        ax1.fill_between(np.arange(data.shape[2]), data[batch, i, :], data[batch, -(i + 1), :], color="blue", alpha=0.2,
+        ax1.fill_between(time_index, data[batch_num, i, :], data[batch_num, -(i + 1), :], color=cmap(q), alpha=1,
                          label="{}%".format(round((configs["qs"][-(i + 1)] - q) * 100)), lw=0)
     ax1.legend()
     plt.show()
 
 
-def main(train_df, test_df, data_time_index, configs):
+def main(train_df, test_df, configs):
     """
     Main executable for prepping data for input to RNN model.
 
@@ -1025,8 +1059,8 @@ def main(train_df, test_df, data_time_index, configs):
 
     # Evaluate the trained model with the training set to diagnose training ability and plot residuals
     # TODO: Currently only supported for random test/train split
-    if configs["TrainTestSplit"] == 'Random':
-        eval_tests(file_prefix, configs)
-        # eval_trained_model(file_prefix, train_data, train_batch_size, data_time_index, configs)
+    #if configs["TrainTestSplit"] == 'Random':
+        #eval_tests(file_prefix)
+        # eval_trained_model(file_prefix, train_data, train_batch_size, configs)
         # plot_processed_model(file_prefix)
         # plot_QQ(file_prefix)
