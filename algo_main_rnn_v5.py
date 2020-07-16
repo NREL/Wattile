@@ -318,6 +318,7 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     :return:
     """
 
+    # Plug the test set into the model
     num_timestamps = configs["S2S_stagger"]["initial_num"] + configs["S2S_stagger"]["secondary_num"]
     model.eval()
     preds = []
@@ -328,14 +329,12 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
         preds.append(outputs.data.numpy())
         targets.append(values.data.numpy())
 
-    # Concatenating the preds and targets for the whole epoch (iterating over test_loader once)
+    # (Normalized Data) Concatenate the predictions and targets for the whole test set
     semifinal_preds = np.concatenate(preds)
     semifinal_targs = np.concatenate(targets)
-    target = semifinal_targs
-    output = semifinal_preds
 
-    # Calculate pinball loss
-    loss = pinball_np(output, target, configs)
+    # Calculate pinball loss (done on normalized data)
+    loss = pinball_np(semifinal_preds, semifinal_targs, configs)
     pinball_loss = np.mean(np.mean(loss, 0))
 
     # Loading the training data stats for de-normalization purpose
@@ -349,11 +348,23 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     train_mean = pd.DataFrame(train_stats['train_mean'], index=[1]).iloc[0]
     train_std = pd.DataFrame(train_stats['train_std'], index=[1]).iloc[0]
 
+    # Do de-normalization process on predictions and targets from test set
+    if transformation_method == "minmaxscale":
+        maxs = np.tile(train_max[train_max.filter(like=configs["target_var"], axis=0).index].values, len(configs["qs"]))
+        mins = np.tile(train_min[train_min.filter(like=configs["target_var"], axis=0).index].values, len(configs["qs"]))
+        final_preds = ((maxs - mins) * semifinal_preds) + mins  # (batch x (num time predictions * num q's)))
+        final_targs = ((maxs - mins) * semifinal_targs) + mins  # (batch x (num time predictions * num q's)))
+    # else:
+    # final_preds = ((semifinal_preds * train_std[configs['target_var']]) + train_mean[configs['target_var']])
+
+    # (De-Normalized Data) Assign target and output variables
+    target = final_targs
+    output = final_preds
+
     # Do quantile-related (q != 0.5) error statistics
     # QS (single point)
     loss = pinball_np(output, target, configs)
     QS = loss.mean()
-
     # PICP (single point for each bound)
     target_1D = target[:, range(num_timestamps)]
     bounds = np.zeros((target.shape[0], int(len(configs["qs"]) / 2)))
@@ -369,18 +380,15 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
         check_across_time = np.logical_and(low_check, high_check)
         time_averaged = check_across_time.mean(axis=1)
         bounds[:, i] = time_averaged
-
         # Calculate theoretical PI
         PINC.append(configs["qs"][-(i + 1)] - configs["qs"][i])
     PINC = np.array(PINC)
     PICP = bounds.mean(axis=0)
-
     # ACE (single point)
     ACE = np.sum(np.abs(PICP - PINC))
-
     # IS (single point)
     ISs = []
-    # Iterate through Prediction intervals
+    # Iterate through Prediction Intervals (pair of quantiles)
     for i, q in enumerate(configs["qs"]):
         if q == 0.5:
             break
@@ -398,38 +406,27 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     for i, q in enumerate(configs["qs"]):
         act_prob = (split_arrays[i] > target_1D).mean()
         temp_actual.append(act_prob)
-
     Q_vals = pd.DataFrame()
     Q_vals["q_requested"] = configs["qs"]
     Q_vals["q_actual"] = temp_actual
 
     # Do quantile-related (q == 0.5) error statistics
-    # Do de-normalization process on predictions from test set
-    if transformation_method == "minmaxscale":
-        maxs = np.tile(train_max[train_max.filter(like=configs["target_var"], axis=0).index].values, len(configs["qs"]))
-        mins = np.tile(train_min[train_min.filter(like=configs["target_var"], axis=0).index].values, len(configs["qs"]))
-        final_preds = ((maxs - mins) * semifinal_preds) + mins  # (batch x (num time predictions * num q's)))
-    # else:
-    # final_preds = ((semifinal_preds * train_std[configs['target_var']]) + train_mean[configs['target_var']])
-
     # Get the predictions for the q=0.5 case
     final_preds_median = np.split(final_preds, len(configs["qs"]), axis=1)[int(len(configs["qs"]) / 2)]
-    predicted = pd.DataFrame(final_preds_median).values.squeeze()
-    measured = test_df[test_df.filter(like=configs["target_var"], axis=1).columns].values
-
-    # Set "Number of adjustable model parameters for each type of error statistic
+    output = pd.DataFrame(final_preds_median).values.squeeze()
+    target = np.split(final_targs, len(configs["qs"]), axis=1)[int(len(configs["qs"]) / 2)]
+    # Set "Number of adjustable model parameters" for each type of error statistic
     p_nmbe = 0
     p_cvrmse = 1
-
     # Calculate different error metrics
-    rmse = np.sqrt(np.mean((predicted - measured) ** 2))
-    nmbe = (1 / (np.mean(measured))) * (np.sum(measured - predicted)) / (len(measured) - p_nmbe)
-    cvrmse = (1 / (np.mean(measured))) * np.sqrt(np.sum((measured - predicted) ** 2) / (len(measured) - p_cvrmse))
+    rmse = np.sqrt(np.mean((output - target) ** 2))
+    nmbe = (1 / (np.mean(target))) * (np.sum(target - output)) / (len(target) - p_nmbe)
+    cvrmse = (1 / (np.mean(target))) * np.sqrt(np.sum((target - output) ** 2) / (len(target) - p_cvrmse))
     gof = (np.sqrt(2) / 2) * np.sqrt(cvrmse ** 2 + nmbe ** 2)
 
-    # If this is the last test run of training, get histogram data of residuals for each quantile
+    # If this is the last test run of training, get histogram data of residuals for each quantile (use normalized data)
     if last_run:
-        resid = target - output
+        resid = semifinal_targs - semifinal_preds
         split_arrays = np.split(resid, len(configs["qs"]), axis=1)
         hist_data = pd.DataFrame()
         for i, q in enumerate(configs["qs"]):
@@ -452,7 +449,7 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
               "is": IS}
 
     # return predictions, errors, Q_vals, hist_data
-    return final_preds, errors, measured, Q_vals
+    return final_preds, errors, target, Q_vals
 
 
 def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method,
@@ -641,11 +638,11 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                                                       "Step": time6 - time5}, n_iter)
 
                 # Save the model every ___ iterations
-                if n_iter % 50 == 0:
+                if n_iter % 10 == 0:
                     save_model(model, epoch, n_iter)
 
                 # Do a test batch every ___ iterations
-                if n_iter % 50 == 0:
+                if n_iter % 10 == 0:
                     # Evaluate test set
                     predictions, errors, measured, Q_vals = test_processing(test_df, test_loader, model, seq_dim, input_dim,
                                                                     test_batch_size, transformation_method, configs,

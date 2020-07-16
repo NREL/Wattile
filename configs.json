@@ -12,12 +12,12 @@
     "preprocess": false,
     "arch_type": "RNN",
     "arch_type_variant": "lstm",
-    "arch_version": 5,
+    "arch_version": 3,
     "train_exp_num": "Cafe",
     "test_exp_num": "dev",
     "hidden_nodes": 20,
     "layer_dim": 1,
-    "output_dim": 5,
+    "output_dim": 1,
     "weight_decay": 0.001,
     "fetch_n_parse": false,
     "LAN_path": "Z:\\Data",
@@ -46,7 +46,7 @@
     "Holidays": true,
     "HOD_indicator": "sincos",
     "window": 20,
-    "EC_future_gap": 16,
+    "EC_future_gap": 4,
     "lr_schedule": true,
     "lr_config": {
         "base": 0.001,
@@ -54,7 +54,7 @@
         "min": 1e-03,
         "patience": 20
     },
-    "qs": [0.025, 0.2, 0.5, 0.8, 0.975],
+    "qs": [0.5],
     "smoothing_alpha": 0.001,
     "S2S_stagger": {
         "initial_num": 4,

@@ -237,9 +237,21 @@ def save_model(model, epoch, n_iter):
     # prtime("RNN model checkpoint saved")
 
 
+def pinball_np(output, target, configs):
+    resid = target - output
+    tau = np.array(configs["qs"])
+    alpha = configs["smoothing_alpha"]
+    log_term = np.zeros_like(resid)
+    log_term[resid < 0] = (np.log(1+np.exp(resid[resid < 0]/alpha)) - (resid[resid < 0]/alpha))
+    log_term[resid >= 0] = np.log(1 + np.exp(-resid[resid >= 0]/alpha))
+    loss = resid * tau + alpha * log_term
+
+    return loss
+
 def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method, configs):
     """
     Process the test set and report error statistics
+
     :param test_df: DataFrame
     :param test_loader: Data Loader
     :param model:
@@ -250,49 +262,36 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     :param configs:
     :return:
     """
-    # test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method
+
+    # Plug the test set into the model
     model.eval()
-    # test_y_at_t = torch.zeros(test_batch_size, seq_dim, 1)
     preds = []
     targets = []
     for i, (feats, values) in enumerate(test_loader):
-        # features = Variable(feats.view(-1, seq_dim, input_dim - 1))
-        # outputs = model(torch.cat((features, test_y_at_t), dim=2))
-        # test_y_at_t = tile(outputs.unsqueeze(2), 1, 5)
         features = Variable(feats.view(-1, seq_dim, input_dim))
         outputs = model(features)
         preds.append(outputs.data.numpy().squeeze())
         targets.append(values.data.numpy())
 
-    # concatenating the preds and targets for the whole epoch (iterating over test_loader once)
+    # (Normalized Data) Concatenate the predictions and targets for the whole test set
     semifinal_preds = np.concatenate(preds).ravel()
     semifinal_targs = np.concatenate(targets).ravel()
-    #mse_loss = np.mean((semifinal_targs - semifinal_preds) ** 2)
+
+    # (Normalized Data) Assign target and output variables
     target = semifinal_targs
     output = semifinal_preds
     resid = target - output
 
-    # alpha = 10
-    # tau = 0.9
-    # huber1 = (resid**2 / (2*alpha)) * np.logical_and(0 <= np.abs(resid), np.abs(resid) <= alpha)
-    # huber2 = (np.abs(resid) - (alpha/2)) * (np.abs(resid) > alpha)
-    # huber = huber1 + huber2
-    # loss1 = (tau * huber) * (resid >= 0)
-    # loss2 = ((tau-1) * huber) * (resid < 0)
-    # loss = loss1 + loss2
-    # mse_loss = np.mean(loss)
-
-    tau = 0.1
-    alpha = 0.01
-    log_term = np.log(1 + np.exp(-resid / alpha))
-    loss = resid * tau + alpha * log_term
-    mse_loss = np.mean(loss)
+    # Calculate pinball loss (done on normalized data)
+    loss = pinball_np(semifinal_preds, semifinal_targs, configs)
+    pinball_loss = np.mean(loss)
 
     # loading the training data stats for de-normalization purpose
     file_loc = file_prefix + '/train_stats.json'
     with open(file_loc, 'r') as f:
         train_stats = json.load(f)
 
+    # Get normalization statistics
     train_max = pd.DataFrame(train_stats['train_max'], index=[1]).iloc[0]
     train_min = pd.DataFrame(train_stats['train_min'], index=[1]).iloc[0]
     train_mean = pd.DataFrame(train_stats['train_mean'], index=[1]).iloc[0]
@@ -303,45 +302,45 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
         final_preds = ((train_max[configs['target_var']] - train_min[configs['target_var']]) * semifinal_preds) + \
                       train_min[
                           configs['target_var']]
+        final_targs = ((train_max[configs['target_var']] - train_min[configs['target_var']]) * semifinal_targs) + \
+                      train_min[
+                          configs['target_var']]
 
-    else:
-        final_preds = ((semifinal_preds * train_std[configs['target_var']]) + train_mean[configs['target_var']])
+    # else:
+    #     final_preds = ((semifinal_preds * train_std[configs['target_var']]) + train_mean[configs['target_var']])
 
     predictions = pd.DataFrame(final_preds)
-    predicted = predictions.values.squeeze()
-    measured = test_df[configs['target_var']].values
-    p_nmbe = 0  # Number of "adjustable model parameters"
-    p_cvrmse = 1
+    output = final_preds
+    target = final_targs
 
-    # Calculate different error metrics
-    rmse = np.sqrt(np.mean((predicted - measured) ** 2))
-    nmbe = (1 / (np.mean(measured))) * (np.sum(measured - predicted)) / (len(measured) - p_nmbe)
-    cvrmse = (1 / (np.mean(measured))) * np.sqrt(np.sum((measured-predicted)**2) / (len(measured) - p_cvrmse))
-    gof = (np.sqrt(2) / 2)  * np.sqrt(cvrmse**2 + nmbe**2)
+    # Calculate different error metrics for the requested quantile
+    # Set "Number of adjustable model parameters" for each type of error statistic
+    p_nmbe = 0
+    p_cvrmse = 1
+    rmse = np.sqrt(np.mean((output - target) ** 2))
+    nmbe = (1 / (np.mean(target))) * (np.sum(target - output)) / (len(target) - p_nmbe)
+    cvrmse = (1 / (np.mean(target))) * np.sqrt(np.sum((target-output)**2) / (len(target) - p_cvrmse))
+    gof = (np.sqrt(2) / 2) * np.sqrt(cvrmse**2 + nmbe**2)
 
     # Add different error statistics to a dictionary
-    errors = {"mse_loss": mse_loss, "rmse": rmse, "nmbe": nmbe, "cvrmse": cvrmse, "gof": gof}
+    errors = {"pinball_loss": pinball_loss,
+              "rmse": rmse,
+              "nmbe": nmbe,
+              "cvrmse": cvrmse,
+              "gof": gof
+              }
 
     return predictions, errors
 
 
-def quantile_loss(output, target):
-    #loss = torch.mean((output - target)**2)
+def quantile_loss(output, target, configs):
+
     resid = target - output
-
-    # alpha = 10
-    # tau = 0.9
-    # huber1 = torch.div(torch.pow(resid, 2), 2*alpha) * (0 <= torch.abs(resid)).float() * (torch.abs(resid) <= alpha).float()
-    # huber2 = (torch.abs(resid) - (alpha/2)) * (torch.abs(resid) > alpha).float()
-    # huber = huber1 + huber2
-    # loss1 = (tau * huber) * (resid >= 0).float()
-    # loss2 = ((tau-1) * huber) * (resid < 0).float()
-    # loss = loss1 + loss2
-    # loss = torch.mean(loss)
-
-    tau = 0.1
-    alpha = 0.01
-    log_term = torch.log(1 + torch.exp(-resid / alpha))
+    tau = torch.FloatTensor(configs["qs"])
+    alpha = configs["smoothing_alpha"]
+    log_term = torch.zeros_like(resid)
+    log_term[resid < 0] = (torch.log(1+torch.exp(resid[resid < 0]/alpha)) - (resid[resid < 0]/alpha))
+    log_term[resid >= 0] = torch.log(1 + torch.exp(-resid[resid >= 0]/alpha))
     loss = resid * tau + alpha * log_term
     loss = torch.mean(loss)
 
@@ -487,7 +486,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
                 # Calculate Loss: softmax --> cross entropy loss
                 #loss = criterion(outputs.squeeze(), target)
-                loss = quantile_loss(outputs.squeeze(), target)
+                loss = quantile_loss(outputs.squeeze(), target, configs)
 
                 train_loss.append(loss.data.item())
                 train_iter.append(n_iter)
@@ -521,18 +520,18 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                                                       "Step": time6 - time5}, n_iter)
 
                 # save the model every ___ iterations
-                if n_iter % 200 == 0:
+                if n_iter % 5 == 0:
                     save_model(model, epoch, n_iter)
 
                 # Do a test batch every ___ iterations
-                if n_iter % 200 == 0:
+                if n_iter % 5 == 0:
                     # Evaluate test set
                     predictions, errors = test_processing(test_df, test_loader, model, seq_dim, input_dim,
                                                           test_batch_size, transformation_method, configs)
                     test_iter.append(n_iter)
-                    #test_loss.append(errors['mse_loss'])
+                    #test_loss.append(errors['pinball_loss'])
                     #test_rmse.append(errors['rmse'])
-                    writer.add_scalars("Loss", {"Test": errors['mse_loss']}, n_iter)
+                    writer.add_scalars("Loss", {"Test": errors['pinball_loss']}, n_iter)
 
                     # Add matplotlib plot to TensorBoard to compare actual test set vs predicted
                     fig1, ax1 = plt.subplots(figsize=(20, 5))
@@ -554,9 +553,9 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                     ax2.axis('equal')
                     writer.add_figure('Parody', fig2, n_iter)
 
-                    print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}, LR: {}'.format(epoch, n_iter,
+                    print('Epoch: {} Iteration: {}. Train_loss: {}. Test_loss: {}, LR: {}'.format(epoch, n_iter,
                                                                                                 loss.data.item(),
-                                                                                                errors['mse_loss'],
+                                                                                                errors['pinball_loss'],
                                                                                                 optimizer.param_groups[
                                                                                                     0]['lr']))
 
@@ -579,10 +578,10 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
         predictions, errors = test_processing(test_df, test_loader, model, seq_dim, input_dim,
                                               test_batch_size, transformation_method, configs)
-        #test_loss.append(errors['mse_loss'])
+        #test_loss.append(errors['pinball_loss'])
         #test_rmse.append(errors['rmse'])
-        writer.add_scalars("Loss", {"Test": errors['mse_loss']})
-        prtime('Test_MSE: {}'.format(errors['mse_loss']))
+        writer.add_scalars("Loss", {"Test": errors['pinball_loss']})
+        prtime('Test_loss: {}'.format(errors['pinball_loss']))
 
         # Save the final predictions and error statistics to a file
         predictions.to_csv(file_prefix + '/predictions.csv', index=False)
