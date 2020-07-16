@@ -977,13 +977,8 @@ def eval_tests(file_prefix, batch_num):
     mask = pd.read_hdf(mask_file, key='df')
     msk = mask['msk'].values
 
-    # start_index = np.searchsorted(np.cumsum(~msk), batch_num) + 1
-    # end_index = start_index + configs["EC_future_gap"]
-    # time_index = mask.index[start_index:end_index]
-
-    start_index_init = np.searchsorted(np.cumsum(~msk), batch_num) + 1
+    start_index_init = np.searchsorted(np.cumsum(~msk), batch_num)
     end_index_init = start_index_init + configs["S2S_stagger"]["initial_num"]
-    #time_index_init = mask.index[start_index_init:end_index_init]
     init_indices = np.arange(start_index_init, end_index_init)
 
     if configs["S2S_stagger"]["secondary_num"] > 0:
