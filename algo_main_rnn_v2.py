@@ -670,7 +670,7 @@ def main(train_df, test_df, configs):
     if not os.path.exists(results_dir):
         os.mkdir(results_dir)
     global file_prefix
-    file_prefix = os.path.join(results_dir, arch_type + '_M' + str(building_ID) + '_T' + str(
+    file_prefix = os.path.join(results_dir, arch_type + '_M' + str(configs["target_var"].replace(" ", "")) + '_T' + str(
         test_exp_num))
 
     writer_path = file_prefix

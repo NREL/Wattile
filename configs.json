@@ -12,7 +12,7 @@
     "preprocess": false,
     "arch_type": "RNN",
     "arch_type_variant": "lstm",
-    "arch_version": 5,
+    "arch_version": 4,
     "test_exp_num": "dev",
     "hidden_nodes": 150,
     "layer_dim": 1,
@@ -20,7 +20,7 @@
     "weight_decay": 0.001,
     "fetch_n_parse": false,
     "LAN_path": "Z:\\Data",
-    "building": "FTLB",
+    "building": "ESEB",
     "year": [
         "2018",
         "2019"
@@ -44,8 +44,8 @@
     "MOY": true,
     "Holidays": true,
     "HOD_indicator": "sincos",
-    "window": 20,
-    "EC_future_gap": 4,
+    "window": 24,
+    "EC_future_gap": 0,
     "lr_schedule": false,
     "lr_config": {
         "base": 0.001,
