@@ -43,6 +43,9 @@ Descriptions coming soon...
 | foo | str |  | x |
 | foo | str |   | |
 
+General notes:
+- Currently only random test-train split is supported (as opposed to sequential). Users may experience unexpected behaviour if Sequential `"TestTrainSplit"` is specified in configs.json. 
+
 ```
 {
     "train_start_date": "2018-01-01",

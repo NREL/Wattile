@@ -708,7 +708,7 @@ def main(train_df, test_df, configs):
     tr_desired_batch_size = configs['tr_batch_size']
     te_desired_batch_size = configs['te_batch_size']
 
-    train_exp_num = configs['train_exp_num']
+    building_ID = configs["building"]
     test_exp_num = configs['test_exp_num']
     arch_type = configs['arch_type']
 
@@ -716,7 +716,7 @@ def main(train_df, test_df, configs):
     if not os.path.exists(results_dir):
         os.mkdir(results_dir)
     global file_prefix
-    file_prefix = os.path.join(results_dir, arch_type + '_M' + str(train_exp_num) + '_T' + str(
+    file_prefix = os.path.join(results_dir, arch_type + '_M' + str(building_ID) + '_T' + str(
         test_exp_num))
 
     writer_path = file_prefix
