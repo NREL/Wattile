@@ -18,7 +18,7 @@ meters = [
     ["S&TF", "S&TF Main Power (kW)"],
     ["EC", "EC Main Power (kW)"]
 ]
-test_ID = "dev"
+test_ID = "hourFourMoreQuantiles"
 
 # Run tests
 for meter_ID in meters:
