@@ -195,13 +195,22 @@ def data_iterable_random(train_data, test_data, run_train, train_batch_size, tes
     if run_train:
         # Create lagged INPUT variables, i.e. columns: w1_(t-1), w1_(t-2)...
         # Does this for all input variables for times up to "window"
-        X_train = train_data.drop(configs['target_var'], axis=1).values.astype(dtype='float32')
+        # X_train = train_data.drop(configs['target_var'], axis=1).values.astype(dtype='float32')
+        X_train = train_data.drop(train_data.filter(like=configs["target_var"], axis=1).columns, axis=1).values.astype(
+            dtype='float32')
 
         # Output variable
-        y_train = train_data[configs['target_var']]
-        y_train = y_train.values.astype(dtype='float32')
-        y_train = np.tile(y_train, (len(configs['qs']), 1))
-        y_train = np.transpose(y_train)
+        # y_train = train_data[configs['target_var']]
+        # y_train = y_train.values.astype(dtype='float32')
+        # y_train = np.tile(y_train, (len(configs['qs']), 1))
+        # y_train = np.transpose(y_train)
+        y_train = train_data[train_data.filter(like=configs["target_var"], axis=1).columns].values.astype(
+            dtype='float32')
+        y_train = np.tile(y_train, len(configs['qs']))
+        # y_train = np.tile(y_train, (len(configs['qs']), 1))
+        # y_train = np.tile(y_train, (len(configs['qs']), 1, 1))
+        # y_train = np.swapaxes(y_train, 0, 2)
+        # y_train = np.swapaxes(y_train, 0, 1)
 
         # Convert to iterable tensors
         train_feat_tensor = torch.from_numpy(X_train).type(torch.FloatTensor)
@@ -215,12 +224,19 @@ def data_iterable_random(train_data, test_data, run_train, train_batch_size, tes
         train_loader = []
 
     # Do the same as above, but for the test set
-    X_test = test_data.drop(configs['target_var'], axis=1).values.astype(dtype='float32')
+    # X_test = test_data.drop(configs['target_var'], axis=1).values.astype(dtype='float32')
+    X_test = test_data.drop(test_data.filter(like=configs["target_var"], axis=1).columns, axis=1).values.astype(
+        dtype='float32')
 
-    y_test = test_data[configs['target_var']]
-    y_test = y_test.values.astype(dtype='float32')
-    y_test = np.tile(y_test, (len(configs['qs']), 1))
-    y_test = np.transpose(y_test)
+    # y_test = test_data[configs['target_var']]
+    # y_test = y_test.values.astype(dtype='float32')
+    # y_test = np.tile(y_test, (len(configs['qs']), 1))
+    # y_test = np.transpose(y_test)
+    y_test = test_data[test_data.filter(like=configs["target_var"], axis=1).columns].values.astype(dtype='float32')
+    y_test = np.tile(y_test, len(configs['qs']))
+    # y_test = np.tile(y_test, (len(configs['qs']), 1, 1))
+    # y_test = np.swapaxes(y_test, 0, 2)
+    # y_test = np.swapaxes(y_test, 0, 1)
 
     test_feat_tensor = torch.from_numpy(X_test).type(torch.FloatTensor)
     test_target_tensor = torch.from_numpy(y_test).type(torch.FloatTensor)
@@ -245,12 +261,13 @@ def save_model(model, epoch, n_iter):
 
 
 def pinball_np(output, target, configs):
+    num_future_time_instances = (configs["S2S_stagger"]["initial_num"] + configs["S2S_stagger"]["secondary_num"])
     resid = target - output
-    tau = np.array(configs["qs"])
+    tau = np.repeat(configs["qs"], num_future_time_instances)
     alpha = configs["smoothing_alpha"]
     log_term = np.zeros_like(resid)
-    log_term[resid < 0] = (np.log(1+np.exp(resid[resid < 0]/alpha)) - (resid[resid < 0]/alpha))
-    log_term[resid >= 0] = np.log(1 + np.exp(-resid[resid >= 0]/alpha))
+    log_term[resid < 0] = (np.log(1 + np.exp(resid[resid < 0] / alpha)) - (resid[resid < 0] / alpha))
+    log_term[resid >= 0] = np.log(1 + np.exp(-resid[resid >= 0] / alpha))
     loss = resid * tau + alpha * log_term
 
     return loss
@@ -266,17 +283,18 @@ def quantile_loss(output, target, configs):
     :return: (Tensor) Loss for this study (single number)
     """
 
+    num_future_time_instances = (configs["S2S_stagger"]["initial_num"] + configs["S2S_stagger"]["secondary_num"])
     resid = target - output
-    tau = torch.FloatTensor(configs["qs"])
+    tau = torch.FloatTensor(np.repeat(configs["qs"], num_future_time_instances))
     alpha = configs["smoothing_alpha"]
     log_term = torch.zeros_like(resid)
-    log_term[resid < 0] = (torch.log(1+torch.exp(resid[resid < 0]/alpha)) - (resid[resid < 0]/alpha))
-    log_term[resid >= 0] = torch.log(1 + torch.exp(-resid[resid >= 0]/alpha))
+    log_term[resid < 0] = (torch.log(1 + torch.exp(resid[resid < 0] / alpha)) - (resid[resid < 0] / alpha))
+    log_term[resid >= 0] = torch.log(1 + torch.exp(-resid[resid >= 0] / alpha))
     loss = resid * tau + alpha * log_term
     loss = torch.mean(torch.mean(loss, 0))
 
     # Extra statistics to return optionally
-    stats = [resid.data.numpy().min(), resid.data.numpy().max()]
+    # stats = [resid.data.numpy().min(), resid.data.numpy().max()]
 
     # See histogram of residuals
     # graph = pd.DataFrame(resid.data.numpy()).plot(kind="hist", alpha=0.5, bins=50, ec='black', stacked=True)
@@ -284,7 +302,8 @@ def quantile_loss(output, target, configs):
     return loss
 
 
-def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method, configs, last_run):
+def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method, configs,
+                    last_run):
     """
     Process the test set and report error statistics.
 
@@ -300,13 +319,14 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     """
 
     # Plug the test set into the model
+    num_timestamps = configs["S2S_stagger"]["initial_num"] + configs["S2S_stagger"]["secondary_num"]
     model.eval()
     preds = []
     targets = []
     for i, (feats, values) in enumerate(test_loader):
         features = Variable(feats.view(-1, seq_dim, input_dim))
         outputs = model(features)
-        preds.append(outputs.data.numpy().squeeze())
+        preds.append(outputs.data.numpy())
         targets.append(values.data.numpy())
 
     # (Normalized Data) Concatenate the predictions and targets for the whole test set
@@ -330,12 +350,12 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
 
     # Do de-normalization process on predictions and targets from test set
     if transformation_method == "minmaxscale":
-        final_preds = ((train_max[configs['target_var']] - train_min[configs['target_var']]) * semifinal_preds) + \
-                      train_min[configs['target_var']]
-        final_targs = ((train_max[configs['target_var']] - train_min[configs['target_var']]) * semifinal_targs) + \
-                      train_min[configs['target_var']]
+        maxs = np.tile(train_max[train_max.filter(like=configs["target_var"], axis=0).index].values, len(configs["qs"]))
+        mins = np.tile(train_min[train_min.filter(like=configs["target_var"], axis=0).index].values, len(configs["qs"]))
+        final_preds = ((maxs - mins) * semifinal_preds) + mins  # (batch x (num time predictions * num q's)))
+        final_targs = ((maxs - mins) * semifinal_targs) + mins  # (batch x (num time predictions * num q's)))
     # else:
-    #     final_preds = ((semifinal_preds * train_std[configs['target_var']]) + train_mean[configs['target_var']])
+    # final_preds = ((semifinal_preds * train_std[configs['target_var']]) + train_mean[configs['target_var']])
 
     # (De-Normalized Data) Assign target and output variables
     target = final_targs
@@ -346,39 +366,55 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     loss = pinball_np(output, target, configs)
     QS = loss.mean()
     # PICP (single point for each bound)
-    target_1D = target[:, 0]
-    bounds = np.zeros((target.shape[0], int(len(configs["qs"])/2)))
+    target_1D = target[:, range(num_timestamps)]
+    bounds = np.zeros((target.shape[0], int(len(configs["qs"]) / 2)))
     PINC = []
+    split_arrays = np.split(output, len(configs["qs"]), axis=1)
     for i, q in enumerate(configs["qs"]):
         if q == 0.5:
             break
-        bounds[:, i] = np.logical_and(output[:, i] < target_1D, target_1D < output[:, -(i + 1)])
-        PINC.append(configs["qs"][-(i+1)] - configs["qs"][i])
+        filtered_low = split_arrays[i]
+        filtered_high = split_arrays[-(i+1)]
+        low_check = filtered_low < target_1D
+        high_check = filtered_high > target_1D
+        check_across_time = np.logical_and(low_check, high_check)
+        time_averaged = check_across_time.mean(axis=1)
+        bounds[:, i] = time_averaged
+        # Calculate theoretical PI
+        PINC.append(configs["qs"][-(i + 1)] - configs["qs"][i])
     PINC = np.array(PINC)
     PICP = bounds.mean(axis=0)
     # ACE (single point)
     ACE = np.sum(np.abs(PICP - PINC))
     # IS (single point)
-    lower = output[:, :int(len(configs["qs"])/2)]
-    upper = np.flip(output[:, int(len(configs["qs"])/2)+1:], 1)
-    alph = 1-PINC
-    x = target[:, :int(len(configs["qs"]) / 2)]
-    IS = (upper - lower) + (2 / alph) * (lower - x) * (x < lower) + (2 / alph) * (x - upper) * (x > upper)
-    IS = IS.mean()
+    ISs = []
+    # Iterate through Prediction Intervals (pair of quantiles)
+    for i, q in enumerate(configs["qs"]):
+        if q == 0.5:
+            break
+        low = split_arrays[i]   # (batches * time) for a single quantile
+        high = split_arrays[-(i+1)]     # (batches * time) for a single quantile
+        x = target_1D   # (batches * time) for nominal results
+        alph = 1 - (configs["qs"][-(i + 1)] - configs["qs"][i])     # Single float
+        IS = (high - low) + (2 / alph) * (low - x) * (x < low) + (2 / alph) * (x - high) * (x > high)   # (batches * time) for a single quantile
+        IS = IS.mean(axis=1)    # (batches * 1)
+        ISs.append(IS)
+    IS = np.concatenate(ISs).mean() # Mean of all values in ISs
 
     # Compare theoretical and actual Q's
-    act_prob = (output > target).sum(axis=0)/(target.shape[0])
+    temp_actual = []
+    for i, q in enumerate(configs["qs"]):
+        act_prob = (split_arrays[i] > target_1D).mean()
+        temp_actual.append(act_prob)
     Q_vals = pd.DataFrame()
     Q_vals["q_requested"] = configs["qs"]
-    Q_vals["q_actual"] = act_prob
+    Q_vals["q_actual"] = temp_actual
 
     # Do quantile-related (q == 0.5) error statistics
-    # Only do reportable error statistics on the q=0.5 predictions. Crop np arrays accordingly
-    final_preds_median = final_preds[:, int(semifinal_preds.shape[1] / 2)]
-    final_targs_median = final_targs[:, int(semifinal_targs.shape[1] / 2)]
-    predictions = pd.DataFrame(final_preds_median)
-    output = final_preds_median
-    target = final_targs_median
+    # Get the predictions for the q=0.5 case
+    final_preds_median = np.split(final_preds, len(configs["qs"]), axis=1)[int(len(configs["qs"]) / 2)]
+    output = pd.DataFrame(final_preds_median).values.squeeze()
+    target = np.split(final_targs, len(configs["qs"]), axis=1)[int(len(configs["qs"]) / 2)]
     # Set "Number of adjustable model parameters" for each type of error statistic
     p_nmbe = 0
     p_cvrmse = 1
@@ -388,12 +424,13 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     cvrmse = (1 / (np.mean(target))) * np.sqrt(np.sum((target - output) ** 2) / (len(target) - p_cvrmse))
     gof = (np.sqrt(2) / 2) * np.sqrt(cvrmse ** 2 + nmbe ** 2)
 
-    # If this is the last test run of training, get histogram data of residuals for each quantile
+    # If this is the last test run of training, get histogram data of residuals for each quantile (use normalized data)
     if last_run:
-        resid = target - output
+        resid = semifinal_targs - semifinal_preds
+        split_arrays = np.split(resid, len(configs["qs"]), axis=1)
         hist_data = pd.DataFrame()
         for i, q in enumerate(configs["qs"]):
-            tester = np.histogram(resid[:, i], bins=200)
+            tester = np.histogram(split_arrays[i], bins=200)
             y_vals = tester[0]
             x_vals = 0.5*(tester[1][1:]+tester[1][:-1])
             hist_data["{}_x".format(q)] = x_vals
@@ -411,7 +448,8 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
               "ace": ACE,
               "is": IS}
 
-    return predictions, errors, Q_vals, hist_data
+    # return predictions, errors, Q_vals, hist_data
+    return final_preds, errors, target, Q_vals
 
 
 def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method,
@@ -438,7 +476,9 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     num_epochs = num_epochs
     lr_schedule = configs['lr_schedule']
     hidden_dim = int(configs['hidden_nodes'])
-    output_dim = configs["output_dim"]
+    # output_dim = configs["output_dim"]
+    #output_dim = configs["EC_future_gap"] * len(configs["qs"])
+    output_dim = (configs["S2S_stagger"]["initial_num"] + configs["S2S_stagger"]["secondary_num"]) * len(configs["qs"])
     weight_decay = float(configs['weight_decay'])
     input_dim = configs['input_dim']
     layer_dim = configs['layer_dim']
@@ -480,10 +520,11 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
             # Initialize the model
             if configs["arch_type_variant"] == "vanilla":
                 model = rnn.RNNModel(input_dim, hidden_dim, layer_dim, output_dim)
-            elif configs["arch_type_variant"] == "lstm":
+            if configs["arch_type_variant"] == "lstm":
                 model = lstm.LSTM_Model(input_dim, hidden_dim, layer_dim, output_dim)
             epoch_range = np.arange(num_epochs)
-            print("A new {} {} model instantiated, with run_train=True".format(configs["arch_type"], configs["arch_type_variant"]))
+            print("A new {} {} model instantiated, with run_train=True".format(configs["arch_type_variant"],
+                                                                               configs["arch_type"]))
 
         # Check if gpu support is available
         cuda_avail = torch.cuda.is_available()
@@ -597,14 +638,15 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                                                       "Step": time6 - time5}, n_iter)
 
                 # Save the model every ___ iterations
-                if n_iter % 5 == 0:
+                if n_iter % 10 == 0:
                     save_model(model, epoch, n_iter)
 
                 # Do a test batch every ___ iterations
-                if n_iter % 5 == 0:
+                if n_iter % 10 == 0:
                     # Evaluate test set
-                    predictions, errors, Q_vals, hist_data = test_processing(test_df, test_loader, model, seq_dim, input_dim,
-                                                          test_batch_size, transformation_method, configs, False)
+                    predictions, errors, measured, Q_vals = test_processing(test_df, test_loader, model, seq_dim, input_dim,
+                                                                    test_batch_size, transformation_method, configs,
+                                                                    False)
 
                     temp_holder = errors
                     temp_holder.update({"n_iter": n_iter, "epoch": epoch})
@@ -615,25 +657,32 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                     # test_rmse.append(errors['rmse'])
                     writer.add_scalars("Loss", {"Test": errors['pinball_loss']}, n_iter)
 
-                    # Add matplotlib plot to TensorBoard to compare actual test set vs predicted
-                    fig1, ax1 = plt.subplots(figsize=(20, 5))
-                    ax1.plot(test_df[configs['target_var']], label='Actual', lw=0.5)
-                    ax1.plot(predictions, label='Prediction', lw=0.5)
-                    ax1.legend()
-                    writer.add_figure('Predictions', fig1, n_iter)
+                    # Save the final predictions to a file
+                    pd.DataFrame(predictions).to_hdf(os.path.join(file_prefix, "predictions.h5"), key='df', mode='w')
+                    pd.DataFrame(measured).to_hdf(os.path.join(file_prefix, "measured.h5"), key='df', mode='w')
 
-                    # Add parody plot to TensorBoard
-                    fig2, ax2 = plt.subplots()
-                    ax2.scatter(predictions, test_df[configs['target_var']], s=5, alpha=0.3)
-                    strait_line = np.linspace(min(min(predictions), min(test_df[configs['target_var']])),
-                                              max(max(predictions), max(test_df[configs['target_var']])), 5)
-                    ax2.plot(strait_line, strait_line, c='k')
-                    ax2.set_xlabel('Predicted')
-                    ax2.set_ylabel('Observed')
-                    ax2.axhline(y=0, color='k')
-                    ax2.axvline(x=0, color='k')
-                    ax2.axis('equal')
-                    writer.add_figure('Parody', fig2, n_iter)
+                    # Save the QQ information to a file
+                    Q_vals.to_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df', mode='w')
+
+                    # Add matplotlib plot to TensorBoard to compare actual test set vs predicted
+                    # fig1, ax1 = plt.subplots(figsize=(20, 5))
+                    # ax1.plot(test_df[configs['target_var']], label='Actual', lw=0.5)
+                    # ax1.plot(predictions, label='Prediction', lw=0.5)
+                    # ax1.legend()
+                    # writer.add_figure('Predictions', fig1, n_iter)
+                    #
+                    # # Add parody plot to TensorBoard
+                    # fig2, ax2 = plt.subplots()
+                    # ax2.scatter(predictions, test_df[configs['target_var']], s=5, alpha=0.3)
+                    # strait_line = np.linspace(min(min(predictions), min(test_df[configs['target_var']])),
+                    #                           max(max(predictions), max(test_df[configs['target_var']])), 5)
+                    # ax2.plot(strait_line, strait_line, c='k')
+                    # ax2.set_xlabel('Predicted')
+                    # ax2.set_ylabel('Observed')
+                    # ax2.axhline(y=0, color='k')
+                    # ax2.axvline(x=0, color='k')
+                    # ax2.axis('equal')
+                    # writer.add_figure('Parody', fig2, n_iter)
 
                     print('Epoch: {} Iteration: {}. Train_loss: {}. Test_loss: {}, LR: {}'.format(epoch, n_iter,
                                                                                                 loss.data.item(),
@@ -642,18 +691,20 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                                                                                                     0]['lr']))
                     epoch_num += 1
 
+
         # Once model training is done, save the current model state
         save_model(model, epoch, n_iter)
 
         # Once model is done training, process a final test set
-        predictions, errors, Q_vals, hist_data = test_processing(test_df, test_loader, model, seq_dim, input_dim,
-                                              test_batch_size, transformation_method, configs, True)
+        predictions, errors, measured, Q_vals = test_processing(test_df, test_loader, model, seq_dim, input_dim,
+                                                        test_batch_size, transformation_method, configs, True)
 
         # Save the residual distribution to a file
-        hist_data.to_hdf(os.path.join(file_prefix, "residual_distribution.h5"), key='df', mode='w')
+        # hist_data.to_hdf(os.path.join(file_prefix, "residual_distribution.h5"), key='df', mode='w')
 
         # Save the final predictions to a file
-        predictions.to_csv(file_prefix + '/predictions.csv', index=False)
+        pd.DataFrame(predictions).to_hdf(os.path.join(file_prefix, "predictions.h5"), key='df', mode='w')
+        pd.DataFrame(measured).to_hdf(os.path.join(file_prefix, "measured.h5"), key='df', mode='w')
 
         # Save the QQ information to a file
         Q_vals.to_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df', mode='w')
@@ -668,20 +719,19 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         model = torch_model['torch_model']
         prtime("Loaded model from file, given run_train=False\n")
 
-        predictions, errors, Q_vals, hist_data = test_processing(test_df, test_loader, model, seq_dim, input_dim,
-                                              test_batch_size, transformation_method, configs, True)
+        predictions, errors, measured, Q_vals = test_processing(test_df, test_loader, model, seq_dim, input_dim,
+                                                        test_batch_size, transformation_method, configs, True)
         # test_loss.append(errors['mse_loss'])
         # test_rmse.append(errors['rmse'])
         writer.add_scalars("Loss", {"Test": errors['pinball_loss']})
         prtime('Test_loss: {}'.format(errors['pinball_loss']))
 
         # Save the residual distribution to a file
-        path = file_prefix + '/residual_distribution.h5.json'
-        with open(path, 'w') as fp:
-            json.dump(hist_data, fp, indent=1)
+        # hist_data.to_hdf(os.path.join(file_prefix, "residual_distribution.h5"), key='df', mode='w')
 
-        # Save the final predictions and error statistics to a file
-        predictions.to_csv(file_prefix + '/predictions.csv', index=False)
+        # Save the final predictions to a file
+        pd.DataFrame(predictions).to_hdf(os.path.join(file_prefix, "predictions.h5"), key='df', mode='w')
+        pd.DataFrame(measured).to_hdf(os.path.join(file_prefix, "measured.h5"), key='df', mode='w')
 
         # Save the QQ information to a file
         Q_vals.to_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df', mode='w')
@@ -720,6 +770,7 @@ def eval_trained_model(file_prefix, train_data, train_batch_size, configs):
     """
     Pass the entire training set through the trained model and get the predictions.
     Compute the residual and save to a DataFrame.
+    Not used for Seq2Seq models
 
     :param file_prefix: (str)
     :param train_data: (DataFrame)
@@ -833,11 +884,11 @@ def plot_QQ(file_prefix):
     ax2.plot([0, 1], [0, 1], c='k', alpha=0.5)
     ax2.set_xlabel('Requested')
     ax2.set_ylabel('Actual')
-    #ax2.axhline(y=0, color='k')
-    #ax2.axvline(x=0, color='k')
+    # ax2.axhline(y=0, color='k')
+    # ax2.axvline(x=0, color='k')
     ax2.set_xlim(left=0, right=1)
     ax2.set_ylim(bottom=0, top=1)
-    #ax2.axis('equal')
+    # ax2.axis('equal')
     plt.show()
 
 
@@ -856,6 +907,7 @@ def plot_training_history(x):
 def plot_resid_dist(study_path, building, alphas, q):
     """
     Plot the residual distribution over the smooth approximations for different values of the alpha smoothing parameter.
+    Can be used with V4 and V5 algorithms
 
     :param study_path: (str) Relative path to the study directory in question.
     :param building: (str) Name of the building in question
@@ -863,6 +915,7 @@ def plot_resid_dist(study_path, building, alphas, q):
     :param q: (float) Quantile value to consider for plotting.
     :return: None
     """
+
     fig, ax1 = plt.subplots()
     ax2 = ax1.twinx()
     resid = np.linspace(-1, 1, 1000)
@@ -891,8 +944,8 @@ def plot_resid_dist(study_path, building, alphas, q):
     ax2.set_xlim(left=-0.5, right=0.5)
     ax1.set_ylim(top=0.6)
     ax1.set_ylabel('Smoothed PLF')
-    #ax1.set_ylim(bottom=-0.5)
-    ax2.set_ylim(top=4*max_dist)
+    # ax1.set_ylim(bottom=-0.5)
+    ax2.set_ylim(top=4 * max_dist)
     ax2.set_ylabel('Frequency')
     ax1.legend()
     plt.show()
@@ -901,6 +954,60 @@ def plot_resid_dist(study_path, building, alphas, q):
 def plot_mid_train_stats(file_prefix):
     data = pd.read_hdf(os.path.join(file_prefix, "mid_train_error_stats.h5"), key='df')
     data.plot(x="n_iter", subplots=True)
+
+
+def eval_tests(file_prefix, batch_num):
+    """
+    Plot test results from file.
+    Can be used with V5 algorithm.
+
+    :param file_prefix:
+    :param configs:
+    :return:
+    """
+
+    # Read in configs from file
+    with open(os.path.join(file_prefix, "configs.json"), "r") as read_file:
+        configs = json.load(read_file)
+
+    num_timestamps = configs["S2S_stagger"]["initial_num"] + configs["S2S_stagger"]["secondary_num"]
+
+    # Read in mask from file
+    mask_file = os.path.join("data", "mask_{}_{}.h5".format(configs['building'], "-".join(configs['year'])))
+    mask = pd.read_hdf(mask_file, key='df')
+    msk = mask['msk'].values
+
+    start_index_init = np.searchsorted(np.cumsum(~msk), batch_num)
+    end_index_init = start_index_init + configs["S2S_stagger"]["initial_num"]
+    init_indices = np.arange(start_index_init, end_index_init)
+
+    if configs["S2S_stagger"]["secondary_num"] > 0:
+        second_indices = np.arange(end_index_init + (configs["S2S_stagger"]["decay"] - 1), end_index_init + (configs["S2S_stagger"]["secondary_num"] * configs["S2S_stagger"]["decay"]), configs["S2S_stagger"]["decay"])
+        indices = np.append(init_indices, second_indices)
+        time_index = mask.index[indices]
+    else:
+        time_index = mask.index[init_indices]
+
+    # Read in predictions from file
+    data = pd.read_hdf(os.path.join(file_prefix, "predictions.h5"), key='df')
+    data = np.array(data)
+    data = data.reshape((data.shape[0], len(configs["qs"]), num_timestamps))
+
+    # Read in predictions from file
+    measured = pd.read_hdf(os.path.join(file_prefix, "measured.h5"), key='df')
+
+    # Plot results
+    cmap = plt.get_cmap('Reds')
+    fig, ax1 = plt.subplots()
+    ax1.plot(time_index, measured.iloc[batch_num, :], label="Actual", color='black')
+    ax1.plot(time_index, data[batch_num, int(len(configs["qs"]) / 2), :], label='q = 0.5', color="red")
+    for i, q in enumerate(configs["qs"]):
+        if q == 0.5:
+            break
+        ax1.fill_between(time_index, data[batch_num, i, :], data[batch_num, -(i + 1), :], color=cmap(q), alpha=1,
+                         label="{}%".format(round((configs["qs"][-(i + 1)] - q) * 100)), lw=0)
+    ax1.legend()
+    plt.show()
 
 
 def main(train_df, test_df, configs):
@@ -972,7 +1079,8 @@ def main(train_df, test_df, configs):
 
     # Evaluate the trained model with the training set to diagnose training ability and plot residuals
     # TODO: Currently only supported for random test/train split
-    if configs["TrainTestSplit"] == 'Random':
-        eval_trained_model(file_prefix, train_data, train_batch_size, configs)
+    #if configs["TrainTestSplit"] == 'Random':
+        #eval_tests(file_prefix)
+        # eval_trained_model(file_prefix, train_data, train_batch_size, configs)
         # plot_processed_model(file_prefix)
-        #plot_QQ(file_prefix)
+        # plot_QQ(file_prefix)

@@ -38,6 +38,14 @@ For linux users:
 ### What are the parameters in configs.json?
 Descriptions coming soon...
 
+| Variable | Type | Description | v1 |
+| --- | --- | --- | --- |
+| foo | str |  | x |
+| foo | str |   | |
+
+General notes:
+- Currently only random test-train split is supported (as opposed to sequential). Users may experience unexpected behaviour if Sequential `"TestTrainSplit"` is specified in configs.json. 
+
 ```
 {
     "train_start_date": "2018-01-01",
@@ -46,16 +54,17 @@ Descriptions coming soon...
     "test_end_date": "2018-12-31",
     "transformation_method": "minmaxscale",
     "run_train": true,
-    "num_epochs": 800,
-    "tr_batch_size": 3716,
-    "te_batch_size": 1000,
-    "run_resume": false,
+    "num_epochs": 200,
+    "tr_batch_size": 3900,
+    "te_batch_size": 6949,
+    "run_resume": true,
     "preprocess": false,
     "arch_type": "RNN",
-    "arch_version": 4,
+    "arch_type_variant": "lstm",
+    "arch_version": 6,
     "train_exp_num": "Cafe",
     "test_exp_num": "dev",
-    "hidden_nodes": 10,
+    "hidden_nodes": 100,
     "layer_dim": 1,
     "output_dim": 5,
     "weight_decay": 0.001,
@@ -85,20 +94,21 @@ Descriptions coming soon...
     "MOY": true,
     "Holidays": true,
     "HOD_indicator": "sincos",
-    "window": 8,
-    "EC_future_gap": 8,
-    "lr_schedule": false,
+    "window": 20,
+    "EC_future_gap": 16,
+    "lr_schedule": true,
     "lr_config": {
         "base": 0.001,
         "factor": 0.1,
         "min": 1e-03,
-        "patience": 200
+        "patience": 20
     },
-    "qs": [0.025, 0.1, 0.5, 0.9, 0.975],
-    "smoothing_alpha": {
-        "base": 0.018,
-        "factor": 0.5,
-        "num_epochs": 40
+    "qs": [0.025, 0.2, 0.5, 0.8, 0.975],
+    "smoothing_alpha": 0.001,
+    "S2S_stagger": {
+        "initial_num": 4,
+        "decay": 4,
+        "secondary_num": 17
     },
     "results_dir": "EnergyForecasting_Results",
     "holidays_file": "C:\\dev\\intelligentcampus-2020summer\\loads\\Stats_Models_Loads\\holidays.json",
@@ -119,21 +129,40 @@ Descriptions coming soon...
 
 * Works with preprocessed STM whole-campus data only. Uses previous timestep for prediction feedback. 
 * No major architecture changes besides bug fixes.
+* Vanilla and LSTM variants available
 
 #### algo_main_rnn_v2.py
 
 * Predicts the conditional mean of the data.
+* Single time point prediction
 * Works with individual buildings or whole-campus data, as do all future versions. 
+* Vanilla variant available
 
 #### algo_main_rnn_v3.py
 
 * Probabilistic forecasting
-* Predict any *single* quantile in a single training session using a smoothed or huber-norm approximation of the pinball loss function.
+* In one training session, predict:
+    * Number of future times: 1
+    * Number of quantiles per time: 1
+* Vanilla variant available
 
 #### algo_main_rnn_v4.py
 
-* Probabilistic forecasting
-* Predicts *any number* of discrete quantiles in a single training session. 
+* Probabilistic forecasting 
+* In one training session, predict:
+    * Number of future times: 1
+    * Number of quantiles per time: *Q*
+* Vanilla and LSTM variants available
+
+#### algo_main_rnn_v5.py
+
+* Probabilistic forecasting 
+* In one training session, predict:
+    * Number of future times: *T*
+    * Number of quantiles per time: *Q*
+* Vanilla and LSTM variants available
+* Supports future time predictions with constant spacing or variable spacing 
+
 
 #### testing_round.py
 
