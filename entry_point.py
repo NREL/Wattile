@@ -42,7 +42,12 @@ def main(configs):
     data = data.resample(resample_bin_size).mean()
     # Clean
     data = bp.clean_data(data, configs)
+    # Add time-based dummy variables
+    data = bp.time_dummies(data, configs)
 
+    # As of this point, "data" is assumed to have:
+    # only the weather features we want to train on, already resampled, cleaned, and have time-based indicators.
+    # The data has not been padded yet, or been split into a test/train split
 
     # Choose what ML architecture to use and execute the corresponding script
     if configs['arch_type'] == 'RNN':
