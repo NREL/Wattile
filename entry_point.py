@@ -12,6 +12,7 @@ def main(configs):
     :param configs: Dictionary
     :return: None
     """
+
     # Preprocess if needed
     if configs['preprocess']:
         train_df, test_df, configs = data_preprocessing.main(configs)
@@ -23,33 +24,49 @@ def main(configs):
         # preprocessing module defines target_feat_name list and sends it back.
         configs['target_feat_name'] = [configs['target_var']]
 
+    # Import buildings module to preprocess data
+    sys.path.append(configs["shared_dir"])
+    bp = importlib.import_module("buildings_processing")
+
+    # Get the full data
+    if configs["run_train"]:
+        data_full = bp.get_full_data(configs)
+    else:
+        data_full = bp.get_test_data(configs["external_test"]["building"], configs["external_test"]["year"],
+                                  configs["external_test"]["month"])
+    # Remove all data columns we dont care about
+    important_vars = configs['weather_include'] + [configs['target_var']]
+    data = data_full[important_vars]
+    # Resample
+    resample_bin_size = "{}T".format(configs['resample_bin_min'])
+    data = data.resample(resample_bin_size).mean()
+    # Clean
+    data = bp.clean_data(data, configs)
+
+
     # Choose what ML architecture to use and execute the corresponding script
     if configs['arch_type'] == 'RNN':
         # What RNN version you are implementing?
         # Specified in configs
         rnn_mod = importlib.import_module("algo_main_rnn_v{}".format(configs["arch_version"]))
+
         if configs["arch_version"] == 1:
             # read the preprocessed data from csvs
             train_df = pd.read_csv('./data/STM_Train_Data_processed.csv')
             test_df = pd.read_csv('./data/STM_Test_Data_processed.csv')
             print("read data from locally stored csvs")
             rnn_mod.main(train_df, test_df, configs)
-        elif configs["arch_version"] == 5:
-            # Import buildings module to preprocess data
-            sys.path.append(configs["shared_dir"])
-            bp = importlib.import_module("buildings_processing")
 
+        # Sequence to sequence model
+        elif configs["arch_version"] == 5:
             # Prepare data for the RNN model type
-            train_df, test_df = bp.prep_for_seq2seq(configs)
+            train_df, test_df = bp.prep_for_seq2seq(configs, data)
             rnn_mod.main(train_df, test_df, configs)
 
+        # All other models (2-4)
         else:
-            # Import buildings module to preprocess data
-            sys.path.append(configs["shared_dir"])
-            bp = importlib.import_module("buildings_processing")
-
             # Prepare data for the RNN model type
-            train_df, test_df = bp.prep_for_rnn(configs)
+            train_df, test_df = bp.prep_for_rnn(configs, data)
             rnn_mod.main(train_df, test_df, configs)
 
     print('Run with arch: {}, train_num= {}, test_num= {} and target= {} is done!'.format(configs['arch_type'],
