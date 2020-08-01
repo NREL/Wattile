@@ -45,9 +45,10 @@ def main(configs):
     # Add time-based dummy variables
     data = bp.time_dummies(data, configs)
 
-    # As of this point, "data" is assumed to have:
-    # only the weather features we want to train on, already resampled, cleaned, and have time-based indicators.
-    # The data has not been padded yet, or been split into a test/train split
+    # As of this point, "data" dataframe is assumed to have:
+    # only the weather features we want to train on, already resampled, cleaned, and have time-based features added.
+    # The data has not been padded yet, or been split into a test/train split.
+    # For feature selection, "data" can be passed into prep_for function. It needs to have gone through the equivilent steps as above.
 
     # Choose what ML architecture to use and execute the corresponding script
     if configs['arch_type'] == 'RNN':
