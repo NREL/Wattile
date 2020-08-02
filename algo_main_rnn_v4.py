@@ -665,8 +665,6 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         fig.savefig(os.path.join(configs["results_dir"], "{}_test.png".format(configs["target_var"])))
         #print("Hello")
 
-
-
         # Save the QQ information to a file
         #Q_vals.to_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df', mode='w')
 

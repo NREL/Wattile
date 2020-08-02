@@ -21,7 +21,7 @@ import pathlib
 file_prefix = '/default'
 
 
-def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_batch_size):
+def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_batch_size, configs):
     """
     Compute the batch sizes for training and test set
 
@@ -31,23 +31,30 @@ def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_ba
     :param te_desired_batch_size: (int)
     :return:
     """
-    # Find factors of the length of train and test df's and pick the closest one to the requested batch sizes
-    train_bth = factors(train_data.shape[0])
-    train_bt_size = min(train_bth, key=lambda x: abs(x - tr_desired_batch_size))
 
-    test_bth = factors(test_data.shape[0])
-    test_bt_size = min(test_bth, key=lambda x: abs(x - te_desired_batch_size))
+    if configs["run_train"]:
+        # Find factors of the length of train and test df's and pick the closest one to the requested batch sizes
+        test_bth = factors(test_data.shape[0])
+        test_bt_size = min(test_bth, key=lambda x: abs(x - te_desired_batch_size))
 
-    train_ratio = int(train_data.shape[0] * 100 / (train_data.shape[0] + test_data.shape[0]))
-    test_ratio = 100 - train_ratio
-    num_train_data = train_data.shape[0]
-    print("Train size: {}, Test size: {}, split {}:{}".format(train_data.shape[0], test_data.shape[0], train_ratio,
-                                                              test_ratio))
-    print("Available train batch sizes: {}".format(sorted(train_bth)))
-    print("Requested size of batches - Train: {}, Test: {}".format(tr_desired_batch_size, te_desired_batch_size))
-    print("Actual size of batches - Train: {}, Test: {}".format(train_bt_size, test_bt_size))
-    print("Number of batches in 1 epoch - Train: {}, Test: {}".format(train_data.shape[0] / train_bt_size,
-                                                                      test_data.shape[0] / test_bt_size))
+        train_bth = factors(train_data.shape[0])
+        train_bt_size = min(train_bth, key=lambda x: abs(x - tr_desired_batch_size))
+        train_ratio = int(train_data.shape[0] * 100 / (train_data.shape[0] + test_data.shape[0]))
+        test_ratio = 100 - train_ratio
+        num_train_data = train_data.shape[0]
+        print("Train size: {}, Test size: {}, split {}:{}".format(train_data.shape[0], test_data.shape[0], train_ratio,
+                                                                  test_ratio))
+        print("Available train batch sizes: {}".format(sorted(train_bth)))
+        print("Requested size of batches - Train: {}, Test: {}".format(tr_desired_batch_size, te_desired_batch_size))
+        print("Actual size of batches - Train: {}, Test: {}".format(train_bt_size, test_bt_size))
+        print("Number of batches in 1 epoch - Train: {}, Test: {}".format(train_data.shape[0] / train_bt_size,
+                                                                          test_data.shape[0] / test_bt_size))
+    else:
+        # test_bth = factors(test_data.shape[0])
+        # test_bt_size = min(test_bth, key=lambda x: abs(x - te_desired_batch_size))
+        test_bt_size = test_data.shape[0]
+        train_bt_size = 0
+        num_train_data = 0
 
     return train_bt_size, test_bt_size, num_train_data
 
@@ -613,6 +620,34 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         # Save the mid-train error statistics to a file
         mid_train_error_stats.to_hdf(os.path.join(file_prefix, "mid_train_error_stats.h5"), key='df', mode='w')
 
+        # End training timer
+        train_end_time = timeit.default_timer()
+        train_time = train_end_time - train_start_time
+
+        # Plot residual stats
+        # fig3, ax3 = plt.subplots()
+        # ax3.plot(np.array(resid_stats)[:, 0], label="Min")
+        # ax3.plot(np.array(resid_stats)[:, 1], label="Max")
+        # plt.show()
+
+        # If a training history csv file does not exist, make one
+        if not pathlib.Path("Training_history.csv").exists():
+            with open(r'Training_history.csv', 'a') as f:
+                writer = csv.writer(f, lineterminator='\n')
+                writer.writerow(["File Path", "RMSE", "CV(RMSE)", "NMBE", "GOF", "QS", "ACE", "IS", "Train time"])
+
+        # Save the errors statistics to a file once everything is done
+        with open(r'Training_history.csv', 'a') as f:
+            writer = csv.writer(f, lineterminator='\n')
+            writer.writerow([file_prefix,
+                             errors["rmse"],
+                             errors["cvrmse"],
+                             errors["nmbe"],
+                             errors["gof"],
+                             errors["qs"],
+                             errors["ace"],
+                             errors["is"],
+                             train_time])
 
     # If you just want to immediately test the model on the existing (saved) model
     else:
@@ -624,8 +659,8 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                                                         test_batch_size, transformation_method, configs, True)
         # test_loss.append(errors['mse_loss'])
         # test_rmse.append(errors['rmse'])
-        writer.add_scalars("Loss", {"Test": errors['pinball_loss']})
-        prtime('Test_loss: {}'.format(errors['pinball_loss']))
+        #writer.add_scalars("Loss", {"Test": errors['pinball_loss']})
+        #prtime('Test_loss: {}'.format(errors['pinball_loss']))
 
         # Save the residual distribution to a file
         # hist_data.to_hdf(os.path.join(file_prefix, "residual_distribution.h5"), key='df', mode='w')
@@ -635,36 +670,9 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         pd.DataFrame(measured).to_hdf(os.path.join(file_prefix, "measured.h5"), key='df', mode='w')
 
         # Save the QQ information to a file
-        Q_vals.to_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df', mode='w')
+        #Q_vals.to_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df', mode='w')
 
-    # End training timer
-    train_end_time = timeit.default_timer()
-    train_time = train_end_time - train_start_time
 
-    # Plot residual stats
-    # fig3, ax3 = plt.subplots()
-    # ax3.plot(np.array(resid_stats)[:, 0], label="Min")
-    # ax3.plot(np.array(resid_stats)[:, 1], label="Max")
-    # plt.show()
-
-    # If a training history csv file does not exist, make one
-    if not pathlib.Path("Training_history.csv").exists():
-        with open(r'Training_history.csv', 'a') as f:
-            writer = csv.writer(f, lineterminator='\n')
-            writer.writerow(["File Path", "RMSE", "CV(RMSE)", "NMBE", "GOF", "QS", "ACE", "IS", "Train time"])
-
-    # Save the errors statistics to a file once everything is done
-    with open(r'Training_history.csv', 'a') as f:
-        writer = csv.writer(f, lineterminator='\n')
-        writer.writerow([file_prefix,
-                         errors["rmse"],
-                         errors["cvrmse"],
-                         errors["nmbe"],
-                         errors["gof"],
-                         errors["qs"],
-                         errors["ace"],
-                         errors["is"],
-                         train_time])
 
 
 def eval_trained_model(file_prefix, train_data, train_batch_size, configs):
@@ -961,7 +969,7 @@ def main(train_df, test_df, configs):
 
     # Size the batches
     train_batch_size, test_batch_size, num_train_data = size_the_batches(train_data, test_data, tr_desired_batch_size,
-                                                                         te_desired_batch_size)
+                                                                         te_desired_batch_size, configs)
 
     # Already did sequential padding: Convert to iterable dataset (DataLoaders)
     if configs["TrainTestSplit"] == 'Random':
