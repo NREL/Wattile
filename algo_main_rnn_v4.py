@@ -21,36 +21,6 @@ import pathlib
 file_prefix = '/default'
 
 
-def seq_pad(a, window):
-    """
-    Append time-lagged versions of exogenous variables in input array.
-
-    :param a: (np.array)
-    :param window: (int)
-    :return: (np.array)
-    """
-    # Create lagged versions of exogenous variables
-    rows = a.shape[0]
-    cols = a.shape[1]
-    b = np.zeros((rows, window * cols))
-
-    # Make new columns for the time-lagged values. Lagged spaces filled with zeros.
-    for i in range(window):
-        # The first window isnt lagged and is just a copy of "a"
-        if i == 0:
-            b[:, 0:cols] = a
-        # For all remaining windows, just paste a slightly cropped version (so it fits) of "a" into "b"
-        else:
-            b[i:, i * cols:(i + 1) * cols] = a[:-i, :]
-
-    # The zeros are replaced with a copy of the first n rows
-    for i in list(np.arange(window - 1)):
-        j = (i * cols) + cols
-        b[i, j:] = np.tile(b[i, 0:cols], window - i - 1)
-
-    return b
-
-
 def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_batch_size, configs):
     """
     Compute the batch sizes for training and test set
@@ -80,9 +50,9 @@ def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_ba
         print("Number of batches in 1 epoch - Train: {}, Test: {}".format(train_data.shape[0] / train_bt_size,
                                                                           test_data.shape[0] / test_bt_size))
     else:
-        test_bth = factors(test_data.shape[0])
-        test_bt_size = min(test_bth, key=lambda x: abs(x - te_desired_batch_size))
-
+        # test_bth = factors(test_data.shape[0])
+        # test_bt_size = min(test_bth, key=lambda x: abs(x - te_desired_batch_size))
+        test_bt_size = test_data.shape[0]
         train_bt_size = 0
         num_train_data = 0
 
@@ -135,55 +105,6 @@ def data_transform(train_data, test_data, transformation_method, run_train):
         test_data = ((test_data - train_mean) / train_std)
 
     return train_data, test_data
-
-
-def data_iterable(train_data, test_data, run_train, train_batch_size, test_batch_size, configs):
-    """
-    Create lagged variables and convert train and test data to torch data types
-
-    :param train_data: DataFrame
-    :param test_data: DataFrame
-    :param run_train: Boolean
-    :param train_batch_size: int
-    :param test_batch_size: int
-    :param configs: dict
-    :return:
-    """
-    if run_train:
-        # Create lagged INPUT variables, i.e. columns: w1_(t-1), w1_(t-2)...
-        # Does this for all input variables for times up to "window"
-        X_train = train_data.drop(configs['target_var'], axis=1).values.astype(dtype='float32')
-        X_train = seq_pad(X_train, configs['window'])
-
-        # Lag output variable, i.e. input for t=5 maps to EC at t=10, t=6 maps to EC t=11, etc.
-        y_train = train_data[configs['target_var']].shift(-configs['EC_future_gap']).fillna(method='ffill')
-        y_train = y_train.values.astype(dtype='float32')
-
-        # Convert to iterable tensors
-        train_feat_tensor = torch.from_numpy(X_train).type(torch.FloatTensor)
-        train_target_tensor = torch.from_numpy(y_train).type(torch.FloatTensor)
-        train = data_utils.TensorDataset(train_feat_tensor, train_target_tensor)
-        train_loader = data_utils.DataLoader(train, batch_size=train_batch_size,
-                                             shuffle=True)  # Contains features and targets
-        print("data train made iterable")
-
-    else:
-        train_loader = []
-
-    # Do the same as above for the test set
-    X_test = test_data.drop(configs['target_var'], axis=1).values.astype(dtype='float32')
-    X_test = seq_pad(X_test, configs['window'])
-
-    y_test = test_data[configs['target_var']].shift(-configs['EC_future_gap']).fillna(method='ffill')
-    y_test = y_test.values.astype(dtype='float32')
-
-    test_feat_tensor = torch.from_numpy(X_test).type(torch.FloatTensor)
-    test_target_tensor = torch.from_numpy(y_test).type(torch.FloatTensor)
-
-    test = data_utils.TensorDataset(test_feat_tensor, test_target_tensor)
-    test_loader = DataLoader(dataset=test, batch_size=test_batch_size, shuffle=False)
-
-    return train_loader, test_loader
 
 
 def data_iterable_random(train_data, test_data, run_train, train_batch_size, test_batch_size, configs):
@@ -498,9 +419,6 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         # Check if gpu support is available
         cuda_avail = torch.cuda.is_available()
 
-        # Instantiating Loss Class (only for MSE)
-        # criterion = nn.MSELoss()
-
         # Instantiate Optimizer Class
         optimizer = torch.optim.Adam(model.parameters(), lr=configs['lr_config']['base'], weight_decay=weight_decay)
 
@@ -571,8 +489,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                 # train_y_at_t = tile(outputs.unsqueeze(2), 1, 5)
                 # train_y_at_t_nump = train_y_at_t.detach().numpy()
 
-                # Calculate Loss: softmax --> cross entropy loss
-                # loss = criterion(outputs.squeeze(), target)
+                # Calculate Loss
                 loss = quantile_loss(outputs, target, configs)
 
                 # resid_stats.append(stats)
@@ -731,20 +648,22 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
         pd.DataFrame(predictions).to_hdf(os.path.join(file_prefix, "predictions_external.h5"), key='df', mode='w')
         cmap = plt.get_cmap('Reds')
-        fig, ax1 = plt.subplots()
+        fig, ax1 = plt.subplots(figsize=(20, 4))
         ax1.plot(index, targets.iloc[:,0], label="Actual Demand", color='black')
-        # ax1.plot(index, predictions.iloc[:, int(len(configs["qs"]) / 2)], label='q = 0.5 forecast', color="red")
-        # for i, q in enumerate(configs["qs"]):
-        #     if q == 0.5:
-        #         break
-        #     ax1.fill_between(index, predictions.iloc[:, i], predictions.iloc[:, -(i+1)], color=cmap(q), alpha=1,
-        #                      label="{}% PI".format(round((configs["qs"][-(i + 1)] - q) * 100)), lw=0)
+        ax1.plot(index, predictions.iloc[:, int(len(configs["qs"]) / 2)], label='q = 0.5 forecast', color="red")
+        for i, q in enumerate(configs["qs"]):
+            if q == 0.5:
+                break
+            ax1.fill_between(index, predictions.iloc[:, i], predictions.iloc[:, -(i+1)], color=cmap(q), alpha=1,
+                             label="{}% PI".format(round((configs["qs"][-(i + 1)] - q) * 100)), lw=0)
         plt.xticks(rotation=0)
         ax1.set_ylabel(configs["target_var"])
+        ax1.set_xlim([pd.to_datetime('2019-01-07 00:00:00'), pd.to_datetime('2019-01-14 00:00:00')])
         #ax1.set_title("Cafe Main Meter LSTM Predictions")
         #ax1.legend()
-        plt.show()
-        print("Hello")
+        #plt.show()
+        fig.savefig(os.path.join(configs["results_dir"], "{}_test.png".format(configs["target_var"])))
+        #print("Hello")
 
 
 
@@ -909,8 +828,9 @@ def plot_resid_dist(study_path, building, alphas, q):
     resid = np.linspace(-1, 1, 1000)
     max_dist = 0
 
-    for alpha in alphas:
-        c = np.random.rand(3, )
+    colors = ["red", "green", "blue"]
+    for i, alpha in enumerate(alphas):
+        c = colors[i]
         # Plot the residual distribution for this alpha value
         sub_study_path = "RNN_M{}_Tsmoothing_alpha_{}".format(building, alpha)
         data = pd.read_hdf(os.path.join(study_path, sub_study_path, "residual_distribution.h5"), key='df')
@@ -996,24 +916,12 @@ def main(train_df, test_df, configs):
     train_batch_size, test_batch_size, num_train_data = size_the_batches(train_data, test_data, tr_desired_batch_size,
                                                                          te_desired_batch_size, configs)
 
-    # Normal: Convert to iterable dataset (DataLoaders)
-    if configs["TrainTestSplit"] == 'Sequential':
-        train_loader, test_loader = data_iterable(train_data, test_data, run_train, train_batch_size,
-                                                  test_batch_size, configs)
-
     # Already did sequential padding: Convert to iterable dataset (DataLoaders)
-    elif configs["TrainTestSplit"] == 'Random':
+    if configs["TrainTestSplit"] == 'Random':
         train_loader, test_loader = data_iterable_random(train_data, test_data, run_train, train_batch_size,
                                                          test_batch_size, configs)
-    prtime("data converted to iterable dataset")
+    prtime("Data converted to iterable dataset")
 
     # Start the training process
     process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method,
             configs, train_batch_size, test_batch_size, configs['window'], num_train_data)
-
-    # Evaluate the trained model with the training set to diagnose training ability and plot residuals
-    # TODO: Currently only supported for random test/train split
-    #if configs["TrainTestSplit"] == 'Random':
-        #eval_trained_model(file_prefix, train_data, train_batch_size, configs)
-        # plot_processed_model(file_prefix)
-        #plot_QQ(file_prefix)
