@@ -36,12 +36,45 @@ For linux users:
 * Description coming soon...
 
 ### What are the parameters in configs.json?
-Descriptions coming soon...
 
-| Variable | Type | Description | v1 |
-| --- | --- | --- | --- |
-| foo | str |  | x |
-| foo | str |   | |
+| Variable | v4 | v5 |
+| --- | --- | --- | 
+| transformation_method | x | x |
+| run_train | x | x |
+| num_epochs | x | x |
+| tr_batch_size | x | x |
+| te_batch_size | x | x |
+| run_resume | x | x |
+| preprocess | ? | ? |
+| arch_type | x | x |
+| arch_type_variant | x | x |
+| arch_version | x | x |
+| test_exp_num | x | x |
+| hidden_nodes | x | x |
+| layer_dim | x | x |
+| output_dim | x |  |
+| weight_decay | x | x |
+| fetch_n_parse | ? | ? |
+| LAN_path | x | x |
+| building | x | x |
+| year | x | x |
+| target_var | x | x |
+| weather_include | x | x |
+| TrainTestSplit | ? | ? |
+| test_start | ? | ? |
+| test_end | ? | ? |
+| resample | x | x |
+| resample_bin_min | x | x |
+| HOD | x | x |
+| DOW | x | x |
+| MOY | x | x |
+| Holidays | x | x |
+| HOD_indicator | x | x |
+| window | x | x |
+...
+
+
+
 
 General notes:
 - Currently only random test-train split is supported (as opposed to sequential). Users may experience unexpected behaviour if Sequential `"TestTrainSplit"` is specified in configs.json. 

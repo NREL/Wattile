@@ -21,6 +21,11 @@ import pathlib
 file_prefix = '/default'
 
 
+class ConfigsError(Exception):
+    """Base class for exceptions in this module."""
+    pass
+
+
 def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_batch_size, configs):
     """
     Compute the batch sizes for training and test set
@@ -83,8 +88,11 @@ def data_transform(train_data, test_data, transformation_method, run_train):
         if transformation_method == "minmaxscale":
             train_data = (train_data - train_data.min()) / (train_data.max() - train_data.min())
 
-        else:
+        elif transformation_method == "standard":
             train_data = (train_data - train_data.mean(axis=0)) / train_data.std(axis=0)
+
+        else:
+            raise ConfigsError("{} is not a supported form of data normalization".format(transformation_method))
 
     # Reading back the train stats for normalizing test data w.r.t to train data
     file_loc = file_prefix + '/train_stats.json'
@@ -100,9 +108,10 @@ def data_transform(train_data, test_data, transformation_method, run_train):
     # Normalize data
     if transformation_method == "minmaxscale":
         test_data = (test_data - train_min) / (train_max - train_min)
-
-    else:
+    elif transformation_method == "standard":
         test_data = ((test_data - train_mean) / train_std)
+    else:
+        raise ConfigsError("{} is not a supported form of data normalization".format(transformation_method))
 
     return train_data, test_data
 
@@ -257,13 +266,17 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     train_std = pd.DataFrame(train_stats['train_std'], index=[1]).iloc[0]
 
     # Do de-normalization process on predictions and targets from test set
+
     if transformation_method == "minmaxscale":
         final_preds = ((train_max[configs['target_var']] - train_min[configs['target_var']]) * semifinal_preds) + \
                       train_min[configs['target_var']]
         final_targs = ((train_max[configs['target_var']] - train_min[configs['target_var']]) * semifinal_targs) + \
                       train_min[configs['target_var']]
-    # else:
-    #     final_preds = ((semifinal_preds * train_std[configs['target_var']]) + train_mean[configs['target_var']])
+    elif transformation_method == "standard":
+        final_preds = ((semifinal_preds * train_std[configs['target_var']]) + train_mean[configs['target_var']])
+        final_targs = ((semifinal_targs * train_std[configs['target_var']]) + train_mean[configs['target_var']])
+    else:
+        raise ConfigsError("{} is not a supported form of data normalization".format(transformation_method))
 
     # (De-Normalized Data) Assign target and output variables
     target = final_targs
@@ -542,13 +555,6 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                     # test_rmse.append(errors['rmse'])
                     writer.add_scalars("Loss", {"Test": errors['pinball_loss']}, n_iter)
 
-                    # Add matplotlib plot to TensorBoard to compare actual test set vs predicted
-                    # fig1, ax1 = plt.subplots(figsize=(20, 5))
-                    # ax1.plot(test_df[configs['target_var']], label='Actual', lw=0.5)
-                    # ax1.plot(predictions, label='Prediction', lw=0.5)
-                    # ax1.legend()
-                    # writer.add_figure('Predictions', fig1, n_iter)
-
                     # Add parody plot to TensorBoard
                     # fig2, ax2 = plt.subplots()
                     # ax2.scatter(predictions, test_df[configs['target_var']], s=5, alpha=0.3)
@@ -561,6 +567,17 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                     # ax2.axvline(x=0, color='k')
                     # ax2.axis('equal')
                     # writer.add_figure('Parody', fig2, n_iter)
+
+                    #Add QQ plot to TensorBoard
+                    fig2, ax2 = plt.subplots()
+                    ax2.scatter(Q_vals["q_requested"], Q_vals["q_actual"], s=20)
+                    ax2.plot([0, 1], [0, 1], c='k', alpha=0.5)
+                    ax2.set_xlabel('Requested')
+                    ax2.set_ylabel('Actual')
+                    ax2.set_xlim(left=0, right=1)
+                    ax2.set_ylim(bottom=0, top=1)
+                    writer.add_figure('QQ', fig2, n_iter)
+
 
                     print('Epoch: {} Iteration: {}. Train_loss: {}. Test_loss: {}, LR: {}'.format(epoch, n_iter,
                                                                                                 loss.data.item(),
@@ -713,7 +730,7 @@ def eval_trained_model(file_prefix, train_data, train_batch_size, configs):
     #     msk = json.load(read_file)
 
     # Get the saved binary mask from file
-    mask_file = os.path.join("data", "mask_{}_{}.h5".format(configs['building'], "-".join(configs['year'])))
+    mask_file = os.path.join(configs["data_dir"], "mask_{}_{}.h5".format(configs['building'], "-".join(configs['year'])))
     mask = pd.read_hdf(mask_file, key='df')
     msk = mask["msk"]
 
@@ -786,8 +803,8 @@ def plot_QQ(file_prefix):
     QQ_data = pd.read_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df')
     fig2, ax2 = plt.subplots()
     ax2.scatter(QQ_data["q_requested"], QQ_data["q_actual"], s=20)
-    strait_line = np.linspace(min(min(QQ_data["q_requested"]), min(QQ_data["q_actual"])),
-                              max(max(QQ_data["q_requested"]), max(QQ_data["q_actual"])), 5)
+    # strait_line = np.linspace(min(min(QQ_data["q_requested"]), min(QQ_data["q_actual"])),
+    #                           max(max(QQ_data["q_requested"]), max(QQ_data["q_actual"])), 5)
     ax2.plot([0, 1], [0, 1], c='k', alpha=0.5)
     ax2.set_xlabel('Requested')
     ax2.set_ylabel('Actual')
@@ -807,6 +824,7 @@ def plot_training_history(x):
     :return:
     """
     data = pd.read_csv("Training_history.csv")
+    data = data.iloc[55:, :]
     data["iterable"] = x
     data.plot(x="iterable", subplots=True)
 

@@ -5,7 +5,7 @@
     "test_end_date": "2018-12-31",
     "transformation_method": "minmaxscale",
     "run_train": true,
-    "num_epochs": 50,
+    "num_epochs": 150,
     "tr_batch_size": 3900,
     "te_batch_size": 6949,
     "run_resume": false,
@@ -16,7 +16,7 @@
     "test_exp_num": "dev",
     "hidden_nodes": 15,
     "layer_dim": 1,
-    "output_dim": 5,
+    "output_dim": 11,
     "weight_decay": 0.001,
     "fetch_n_parse": false,
     "LAN_path": "Z:\\Data",
@@ -39,11 +39,10 @@
     "test_end": "12/31/2019 23:45:00",
     "resample": true,
     "resample_bin_min": 15,
-    "HOD": true,
-    "DOW": true,
-    "MOY": true,
+    "DOW": ["binary_reg"],
+    "MOY": ["sincos"],
     "Holidays": true,
-    "HOD_indicator": "sincos",
+    "HOD": ["sincos"],
     "window": 24,
     "EC_future_gap": 0,
     "lr_schedule": false,
@@ -54,11 +53,17 @@
         "patience": 20
     },
     "qs": [
-        0.025,
-        0.25,
-        0.5,
-        0.75,
-        0.975
+      0.025,
+      0.1,
+      0.2,
+      0.3,
+      0.4,
+      0.5,
+      0.6,
+      0.7,
+      0.8,
+      0.9,
+      0.975
     ],
     "smoothing_alpha": 0.001,
     "S2S_stagger": {
@@ -67,11 +72,12 @@
         "secondary_num": 14
     },
     "results_dir": "EnergyForecasting_Results",
+    "data_dir": "data",
     "holidays_file": "C:\\dev\\intelligentcampus-2020summer\\loads\\Stats_Models_Loads\\holidays.json",
     "shared_dir": "C:\\dev\\intelligentcampus-2020summer\\loads\\Stats_Models_Loads",
     "external_test": {
         "building": "Cafe",
-        "year": "2017",
-        "month": 12
+        "year": "2019",
+        "month": 1
     }
 }
