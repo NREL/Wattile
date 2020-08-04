@@ -17,6 +17,9 @@ import matplotlib.pyplot as plt
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import csv
 import pathlib
+import psutil
+from psutil import virtual_memory
+
 
 file_prefix = '/default'
 
@@ -450,9 +453,6 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
             print("A new {} {} model instantiated, with run_train=True".format(configs["arch_type_variant"],
                                                                                configs["arch_type"]))
 
-        # Check if gpu support is available
-        cuda_avail = torch.cuda.is_available()
-
         # Instantiate Optimizer Class
         optimizer = torch.optim.Adam(model.parameters(), lr=configs['lr_config']['base'], weight_decay=weight_decay)
 
@@ -469,6 +469,20 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
         prtime("Preparing model to train")
         prtime("starting to train the model for {} epochs!".format(num_epochs))
+
+        # Computing platform
+        # Computing platform
+        num_logical_processors = psutil.cpu_count(logical=True)
+        num_cores = psutil.cpu_count(logical=False)
+        mem = virtual_memory()
+        mem = {"total": mem.total / 10 ** 9, "available": mem.available / 10 ** 9, "percent": mem.percent,
+               "used": mem.used / 10 ** 9, "free": mem.free / 10 ** 9}
+        print("Number of cores available: {}".format(num_cores))
+        print("Number of logical processors available: {}".format(num_logical_processors))
+        print("Memory statistics (GB): {}".format(mem))
+
+        # Check for GPU
+        cuda_avail = torch.cuda.is_available()
 
         if (len(epoch_range) == 0):
             epoch = resume_num_epoch + 1
