@@ -591,6 +591,9 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                     ax2.set_ylim(bottom=0, top=1)
                     writer.add_figure('QQ', fig2, n_iter)
 
+                    # Write information about CPU usage to tensorboard
+                    percentages = dict(zip(list(np.arange(1,num_logical_processors+1).astype(str)), psutil.cpu_percent(interval=None, percpu=True)))
+                    writer.add_scalars("CPU Utilization", percentages, n_iter)
 
                     print('Epoch: {} Iteration: {}. Train_loss: {}. Test_loss: {}, LR: {}'.format(epoch, n_iter,
                                                                                                 loss.data.item(),
