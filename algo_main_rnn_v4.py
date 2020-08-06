@@ -567,8 +567,6 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                     mid_train_error_stats = mid_train_error_stats.append(temp_holder, ignore_index=True)
 
                     test_iter.append(n_iter)
-                    # test_loss.append(errors['mse_loss'])
-                    # test_rmse.append(errors['rmse'])
                     writer.add_scalars("Loss", {"Test": errors['pinball_loss']}, n_iter)
 
                     # Add parody plot to TensorBoard
@@ -663,10 +661,6 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
         predictions, targets, errors, Q_vals, hist_data = test_processing(test_df, test_loader, model, seq_dim, input_dim,
                                               test_batch_size, transformation_method, configs, True)
-        # test_loss.append(errors['mse_loss'])
-        # test_rmse.append(errors['rmse'])
-        # writer.add_scalars("Loss", {"Test": errors['pinball_loss']})
-        # prtime('Test_loss: {}'.format(errors['pinball_loss']))
 
         # Save the residual distribution to a file
         # path = file_prefix + '/residual_distribution.h5.json'
@@ -699,11 +693,6 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         #ax1.legend()
         #plt.show()
         fig.savefig(os.path.join(configs["results_dir"], "{}_test.png".format(configs["target_var"])))
-        #print("Hello")
-
-        # Save the QQ information to a file
-        #Q_vals.to_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df', mode='w')
-
 
 
 def eval_trained_model(file_prefix, train_data, train_batch_size, configs):
@@ -743,20 +732,10 @@ def eval_trained_model(file_prefix, train_data, train_batch_size, configs):
     semifinal_preds = np.concatenate(preds)
     semifinal_targs = np.concatenate(targets)
 
-    # # Get the saved binary mask from file
-    # mask_file = os.path.join("data", "mask_{}_{}.json".format(configs['building'], "-".join(configs['year'])))
-    # with open(mask_file, "r") as read_file:
-    #     msk = json.load(read_file)
-
     # Get the saved binary mask from file
-    mask_file = os.path.join(configs["data_dir"], "mask_{}_{}.h5".format(configs['building'], "-".join(configs['year'])))
+    mask_file = os.path.join(configs["data_dir"], "mask_{}_{}.h5".format(configs["target_var"].replace(" ", ""), "-".join(configs['year'])))
     mask = pd.read_hdf(mask_file, key='df')
     msk = mask["msk"]
-
-    # # Adjust the datetime index so it is in line with the EC data
-    # target_index = data_time_index[msk] + pd.DateOffset(
-    #     minutes=(configs["EC_future_gap"] * configs["resample_bin_min"]))
-    # processed_data = pd.DataFrame(index=target_index)
 
     # Adjust the datetime index so it is in line with the EC data
     target_index = mask.index[msk] + pd.DateOffset(
@@ -827,11 +806,8 @@ def plot_QQ(file_prefix):
     ax2.plot([0, 1], [0, 1], c='k', alpha=0.5)
     ax2.set_xlabel('Requested')
     ax2.set_ylabel('Actual')
-    #ax2.axhline(y=0, color='k')
-    #ax2.axvline(x=0, color='k')
     ax2.set_xlim(left=0, right=1)
     ax2.set_ylim(bottom=0, top=1)
-    #ax2.axis('equal')
     plt.show()
 
 

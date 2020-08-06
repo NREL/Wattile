@@ -61,8 +61,6 @@ def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_ba
         print("Actual number of batches per epoch - Train: {}, Test: {}".format(train_num_batches, test_num_batches))
         print("Number of data samples in each batch - Train: {}, Test: {}".format(train_bt_size, test_bt_size))
     else:
-        # test_bth = factors(test_data.shape[0])
-        # test_bt_size = min(test_bth, key=lambda x: abs(x - te_desired_batch_size))
         test_bt_size = test_data.shape[0]
         train_bt_size = 0
         num_train_data = 0
@@ -406,8 +404,6 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     num_epochs = num_epochs
     lr_schedule = configs['lr_schedule']
     hidden_dim = int(configs['hidden_nodes'])
-    # output_dim = configs["output_dim"]
-    #output_dim = configs["EC_future_gap"] * len(configs["qs"])
     output_dim = (configs["S2S_stagger"]["initial_num"] + configs["S2S_stagger"]["secondary_num"]) * len(configs["qs"])
     weight_decay = float(configs['weight_decay'])
     input_dim = configs['input_dim']
@@ -660,12 +656,6 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         train_end_time = timeit.default_timer()
         train_time = train_end_time - train_start_time
 
-        # Plot residual stats
-        # fig3, ax3 = plt.subplots()
-        # ax3.plot(np.array(resid_stats)[:, 0], label="Min")
-        # ax3.plot(np.array(resid_stats)[:, 1], label="Max")
-        # plt.show()
-
         # If a training history csv file does not exist, make one
         if not pathlib.Path("Training_history.csv").exists():
             with open(r'Training_history.csv', 'a') as f:
@@ -693,22 +683,10 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
         predictions, errors, measured, Q_vals = test_processing(test_df, test_loader, model, seq_dim, input_dim,
                                                         test_batch_size, transformation_method, configs, True)
-        # test_loss.append(errors['mse_loss'])
-        # test_rmse.append(errors['rmse'])
-        #writer.add_scalars("Loss", {"Test": errors['pinball_loss']})
-        #prtime('Test_loss: {}'.format(errors['pinball_loss']))
-
-        # Save the residual distribution to a file
-        # hist_data.to_hdf(os.path.join(file_prefix, "residual_distribution.h5"), key='df', mode='w')
 
         # Save the final predictions to a file
         pd.DataFrame(predictions).to_hdf(os.path.join(file_prefix, "predictions.h5"), key='df', mode='w')
         pd.DataFrame(measured).to_hdf(os.path.join(file_prefix, "measured.h5"), key='df', mode='w')
-
-        # Save the QQ information to a file
-        #Q_vals.to_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df', mode='w')
-
-
 
 
 def eval_trained_model(file_prefix, train_data, train_batch_size, configs):
@@ -749,20 +727,10 @@ def eval_trained_model(file_prefix, train_data, train_batch_size, configs):
     semifinal_preds = np.concatenate(preds)
     semifinal_targs = np.concatenate(targets)
 
-    # # Get the saved binary mask from file
-    # mask_file = os.path.join(configs["data_dir"], "mask_{}_{}.json".format(configs['building'], "-".join(configs['year'])))
-    # with open(mask_file, "r") as read_file:
-    #     msk = json.load(read_file)
-
     # Get the saved binary mask from file
-    mask_file = os.path.join(configs["data_dir"], "mask_{}_{}.json".format(configs['building'], "-".join(configs['year'])))
+    mask_file = os.path.join(configs["data_dir"], "mask_{}_{}.json".format(configs["target_var"].replace(" ", ""), "-".join(configs['year'])))
     mask = pd.read_hdf(mask_file, key='df')
     msk = mask["msk"]
-
-    # # Adjust the datetime index so it is in line with the EC data
-    # target_index = data_time_index[msk] + pd.DateOffset(
-    #     minutes=(configs["EC_future_gap"] * configs["resample_bin_min"]))
-    # processed_data = pd.DataFrame(index=target_index)
 
     # Adjust the datetime index so it is in line with the EC data
     target_index = mask.index[msk] + pd.DateOffset(
@@ -829,11 +797,8 @@ def plot_QQ(file_prefix):
     ax2.plot([0, 1], [0, 1], c='k', alpha=0.5)
     ax2.set_xlabel('Requested')
     ax2.set_ylabel('Actual')
-    # ax2.axhline(y=0, color='k')
-    # ax2.axvline(x=0, color='k')
     ax2.set_xlim(left=0, right=1)
     ax2.set_ylim(bottom=0, top=1)
-    # ax2.axis('equal')
     plt.show()
 
 
@@ -918,7 +883,7 @@ def eval_tests(file_prefix, batch_num):
     num_timestamps = configs["S2S_stagger"]["initial_num"] + configs["S2S_stagger"]["secondary_num"]
 
     # Read in mask from file
-    mask_file = os.path.join(configs["data_dir"], "mask_{}_{}.h5".format(configs['building'], "-".join(configs['year'])))
+    mask_file = os.path.join(configs["data_dir"], "mask_{}_{}.h5".format(configs["target_var"].replace(" ", ""), "-".join(configs['year'])))
     mask = pd.read_hdf(mask_file, key='df')
     msk = mask['msk'].values
 
