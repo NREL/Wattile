@@ -42,21 +42,24 @@ def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_ba
 
     if configs["run_train"]:
         # Find factors of the length of train and test df's and pick the closest one to the requested batch sizes
-        test_bth = factors(test_data.shape[0])
-        test_bt_size = min(test_bth, key=lambda x: abs(x - te_desired_batch_size))
-
         train_bth = factors(train_data.shape[0])
-        train_bt_size = min(train_bth, key=lambda x: abs(x - tr_desired_batch_size))
+        train_num_batches = min(train_bth, key=lambda x: abs(x - tr_desired_batch_size))
+        train_bt_size = int(train_data.shape[0] / train_num_batches)
+
+        test_bth = factors(test_data.shape[0])
+        test_num_batches = min(test_bth, key=lambda x: abs(x - te_desired_batch_size))
+        test_bt_size = int(test_data.shape[0]/test_num_batches)
+
         train_ratio = int(train_data.shape[0] * 100 / (train_data.shape[0] + test_data.shape[0]))
         test_ratio = 100 - train_ratio
         num_train_data = train_data.shape[0]
-        print("Train size: {}, Test size: {}, split {}:{}".format(train_data.shape[0], test_data.shape[0], train_ratio,
+
+        print("Train size: {}, Test size: {}, split {}%:{}%".format(train_data.shape[0], test_data.shape[0], train_ratio,
                                                                   test_ratio))
-        print("Available train batch sizes: {}".format(sorted(train_bth)))
-        print("Requested size of batches - Train: {}, Test: {}".format(tr_desired_batch_size, te_desired_batch_size))
-        print("Actual size of batches - Train: {}, Test: {}".format(train_bt_size, test_bt_size))
-        print("Number of batches in 1 epoch - Train: {}, Test: {}".format(train_data.shape[0] / train_bt_size,
-                                                                          test_data.shape[0] / test_bt_size))
+        print("Available train batch factors: {}".format(sorted(train_bth)))
+        print("Requested number of batches per epoch - Train: {}, Test: {}".format(tr_desired_batch_size, te_desired_batch_size))
+        print("Actual number of batches per epoch - Train: {}, Test: {}".format(train_num_batches, test_num_batches))
+        print("Number of data samples in each batch - Train: {}, Test: {}".format(train_bt_size, test_bt_size))
     else:
         # test_bth = factors(test_data.shape[0])
         # test_bt_size = min(test_bth, key=lambda x: abs(x - te_desired_batch_size))
