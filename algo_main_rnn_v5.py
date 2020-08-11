@@ -85,7 +85,7 @@ def data_transform(train_data, test_data, transformation_method, run_train):
         train_stats['train_min'] = train_data.min().to_dict()
         train_stats['train_mean'] = train_data.mean(axis=0).to_dict()
         train_stats['train_std'] = train_data.std(axis=0).to_dict()
-        path = file_prefix + '/train_stats.json'
+        path = os.path.join(file_prefix, "train_stats.json")
         with open(path, 'w') as fp:
             json.dump(train_stats, fp)
 
@@ -97,7 +97,7 @@ def data_transform(train_data, test_data, transformation_method, run_train):
             raise ConfigsError("{} is not a supported form of data normalization".format(transformation_method))
 
     # Reading back the train stats for normalizing test data w.r.t to train data
-    file_loc = file_prefix + '/train_stats.json'
+    file_loc = os.path.join(file_prefix, "train_stats.json")
     with open(file_loc, 'r') as f:
         train_stats = json.load(f)
 
@@ -180,7 +180,7 @@ def save_model(model, epoch, n_iter):
     :return: None
     """
     model_dict = {'epoch_num': epoch, 'n_iter': n_iter, 'torch_model': model}
-    torch.save(model_dict, file_prefix + '/torch_model')
+    torch.save(model_dict, os.path.join(file_prefix, "torch_model"))
 
 
 def pinball_np(output, target, configs):
@@ -261,7 +261,7 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     pinball_loss = np.mean(np.mean(loss, 0))
 
     # Loading the training data stats for de-normalization purpose
-    file_loc = file_prefix + '/train_stats.json'
+    file_loc = os.path.join(file_prefix, "train_stats.json")
     with open(file_loc, 'r') as f:
         train_stats = json.load(f)
 
@@ -410,7 +410,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     layer_dim = configs['layer_dim']
 
     # Write the configurations used for this training process to a json file
-    path = file_prefix + '/configs.json'
+    path = os.path.join(file_prefix, "configs.json")
     with open(path, 'w') as fp:
         json.dump(configs, fp, indent=1)
 
@@ -426,7 +426,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         # If you are resuming from a previous training session
         if run_resume:
             try:
-                torch_model = torch.load(file_prefix + '/torch_model')
+                torch_model = torch.load(os.path.join(file_prefix, 'torch_model'))
                 model = torch_model['torch_model']
                 resume_num_epoch = torch_model['epoch_num']
                 resume_n_iter = torch_model['n_iter']
@@ -448,6 +448,9 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                 model = rnn.RNNModel(input_dim, hidden_dim, layer_dim, output_dim)
             if configs["arch_type_variant"] == "lstm":
                 model = lstm.LSTM_Model(input_dim, hidden_dim, layer_dim, output_dim)
+            else:
+                raise ConfigsError(
+                    "{} is not a supported architecture variant".format(configs["arch_type_variant"]))
             epoch_range = np.arange(num_epochs)
             print("A new {} {} model instantiated, with run_train=True".format(configs["arch_type_variant"],
                                                                                configs["arch_type"]))
@@ -677,7 +680,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
     # If you just want to immediately test the model on the existing (saved) model
     else:
-        torch_model = torch.load(file_prefix + '/torch_model')
+        torch_model = torch.load(os.path.join(file_prefix, 'torch_model'))
         model = torch_model['torch_model']
         prtime("Loaded model from file, given run_train=False\n")
 
@@ -703,7 +706,7 @@ def eval_trained_model(file_prefix, train_data, train_batch_size, configs):
     """
 
     # Evaluate the training model
-    torch_model = torch.load(file_prefix + '/torch_model')
+    torch_model = torch.load(os.path.join(file_prefix, 'torch_model'))
     model = torch_model['torch_model']
     X_train = train_data.drop(configs['target_var'], axis=1).values.astype(dtype='float32')
     y_train = train_data[configs['target_var']]

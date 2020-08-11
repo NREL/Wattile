@@ -33,7 +33,7 @@ def main(configs):
         data_full = bp.get_full_data(configs)
     else:
         data_full = bp.get_test_data(configs["external_test"]["building"], configs["external_test"]["year"],
-                                  configs["external_test"]["month"])
+                                  configs["external_test"]["month"], configs["data_dir"])
     # Remove all data columns we dont care about
     important_vars = configs['weather_include'] + [configs['target_var']]
     data = data_full[important_vars]
