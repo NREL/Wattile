@@ -201,7 +201,7 @@ def time_dummies(data, configs):
         # data['Holiday'] = pd.to_datetime(data.index.date).isin(holidays).astype(int)
 
         # -----Read from JSON file
-        with open(configs["holidays_file"], "r") as read_file:
+        with open("holidays.json", "r") as read_file:
             holidays = json.load(read_file)
         data['Holiday'] = pd.to_datetime(data.index.date).isin(holidays).astype(int)
 

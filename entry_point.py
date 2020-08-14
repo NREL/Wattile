@@ -3,6 +3,7 @@ import pandas as pd
 import importlib
 import data_preprocessing
 import json
+import buildings_processing as bp
 
 
 def main(configs):
@@ -23,10 +24,6 @@ def main(configs):
     else:
         # preprocessing module defines target_feat_name list and sends it back.
         configs['target_feat_name'] = [configs['target_var']]
-
-    # Import buildings module to preprocess data
-    sys.path.append(configs["shared_dir"])
-    bp = importlib.import_module("buildings_processing")
 
     # Get the full data
     if configs["run_train"]:

@@ -74,8 +74,6 @@
     },
     "results_dir": "EnergyForecasting_Results",
     "data_dir": "data",
-    "holidays_file": "C:\\dev\\intelligentcampus-2020summer\\loads\\Stats_Models_Loads\\holidays.json",
-    "shared_dir": "C:\\dev\\intelligentcampus-2020summer\\loads\\Stats_Models_Loads",
     "external_test": {
         "building": "Cafe",
         "year": "2020",
