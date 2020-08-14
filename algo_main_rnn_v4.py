@@ -19,6 +19,7 @@ import csv
 import pathlib
 import psutil
 from psutil import virtual_memory
+import buildings_processing as bp
 
 
 file_prefix = '/default'
@@ -878,6 +879,95 @@ def plot_mid_train_stats(file_prefix):
     data.plot(x="n_iter", subplots=True)
 
 
+def predict(data, file_prefix):
+    # Get rid of this eventually
+    # file_prefix = "EnergyForecasting_Results\RNN_MCafeMainPower(kW)_Tdev"
+
+    # Read configs from results directory
+    with open(os.path.join(file_prefix, "configs.json"), "r") as read_file:
+        configs = json.load(read_file)
+
+    # Get rid of this eventually
+    # data = pd.read_hdf("sample_predict.h5", key='df').drop([configs["target_var"]], axis=1)
+
+    # Check if the supplied data matches the sequence length that the model was trained on
+    if not data.shape[0] == configs["window"]:
+        raise ConfigsError("Input data has sequence length {}. Expected sequence length of {}".format(data.shape[0], configs["window"]))
+
+    # Data should be resampled, cleaned by this point. No nans. Everything above this line will be replaced eventually
+
+    # Add time-based variables
+    data = bp.time_dummies(data, configs)
+
+    # Do sequential padding of the inputs
+    data_orig = data
+    for i in range(1, configs["window"]):
+        shifted = data_orig.shift(i)
+        shifted = shifted.join(data, lsuffix="_lag{}".format(i))
+        data = shifted
+    data = data.iloc[-1, :]
+
+    # Transpose dataframe
+    data = pd.DataFrame(data).transpose()
+
+    # Reset index
+    data.reset_index(drop=True, inplace=True)
+
+    # Do normalization
+    # Reading back the train stats for normalizing test data w.r.t to train data
+    file_loc = os.path.join(file_prefix, "train_stats.json")
+    with open(file_loc, 'r') as f:
+        train_stats = json.load(f)
+
+    # get statistics for training data
+    train_max = pd.DataFrame(train_stats['train_max'], index=[1]).iloc[0].drop(configs["target_var"])
+    train_min = pd.DataFrame(train_stats['train_min'], index=[1]).iloc[0].drop(configs["target_var"])
+    train_mean = pd.DataFrame(train_stats['train_mean'], index=[1]).iloc[0].drop(configs["target_var"])
+    train_std = pd.DataFrame(train_stats['train_std'], index=[1]).iloc[0].drop(configs["target_var"])
+
+    # Normalize data
+    if configs["transformation_method"] == "minmaxscale":
+        data = (data - train_min) / (train_max - train_min)
+    elif configs["transformation_method"] == "standard":
+        data = ((data - train_mean) / train_std)
+    else:
+        raise ConfigsError("{} is not a supported form of data normalization".format(configs["transformation_method"]))
+
+    # Convert to iterable dataset
+    data = data.values.astype(dtype='float32')
+    train_feat_tensor = torch.from_numpy(data).type(torch.FloatTensor)
+
+    # Load model
+    torch_model = torch.load(os.path.join(file_prefix, 'torch_model'))
+    model = torch_model['torch_model']
+
+    # Evaluate model
+    model.eval()
+    features = Variable(train_feat_tensor.view(-1, configs['window'], configs["input_dim"]))
+    outputs = model(features)
+    semifinal_preds = outputs.data.numpy()
+
+    # Denormalize
+    # Get normalization statistics
+    train_max = pd.DataFrame(train_stats['train_max'], index=[1]).iloc[0]
+    train_min = pd.DataFrame(train_stats['train_min'], index=[1]).iloc[0]
+    train_mean = pd.DataFrame(train_stats['train_mean'], index=[1]).iloc[0]
+    train_std = pd.DataFrame(train_stats['train_std'], index=[1]).iloc[0]
+
+    # Do de-normalization process on predictions and targets from test set
+
+    if configs["transformation_method"] == "minmaxscale":
+        final_preds = ((train_max[configs['target_var']] - train_min[configs['target_var']]) * semifinal_preds) + \
+                      train_min[configs['target_var']]
+    elif configs["transformation_method"] == "standard":
+        final_preds = ((semifinal_preds * train_std[configs['target_var']]) + train_mean[configs['target_var']])
+    else:
+        raise ConfigsError("{} is not a supported form of data normalization".format(configs["transformation_method"]))
+
+
+    return final_preds
+
+
 def main(train_df, test_df, configs):
     """
     Main executable for prepping data for input to RNN model.
@@ -939,3 +1029,4 @@ def main(train_df, test_df, configs):
     # Start the training process
     process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method,
             configs, train_batch_size, test_batch_size, configs['window'], num_train_data)
+

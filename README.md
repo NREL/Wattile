@@ -45,8 +45,13 @@ rnn_mod.main(train_df, test_df, configs)
 * Requirements:
     * `data` must have a datetime index that is continuous, i.e. if there are missing data values they should be kept as `nan` instead of removing the timestamp completely.
 
+#### ... test an already-trained model?
 
-#### ... test an already-trained model with my own dataframe? 
+##### Starting from scratch:
+
+...
+##### With my own dataframe:
+
 * This method assumes that the data is in the same format as the data that you already trained the model on.
 * The entire dataframe that is passed will be used for tested.
 * Function calls:
@@ -58,6 +63,12 @@ rnn_mod.main(train_df, test_df, configs)
     * `data` must have a datetime index that is continuous, i.e. if there are missing data values they should be kept as `nan` instead of removing the timestamp completely.
 
 #### ... get a prediction from an already trained model?
+
+* This methods is for predicting a future output given historical data leading up to the present.
+* Function calls:  
+`final_preds = predict(data, file_prefix)`
+
+
 
 #### ... run a hyperparameter study? 
 
