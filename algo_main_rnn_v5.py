@@ -50,7 +50,7 @@ def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_ba
         test_num_batches = min(test_bth, key=lambda x: abs(x - te_desired_batch_size))
         test_bt_size = int(test_data.shape[0]/test_num_batches)
 
-        train_ratio = int(train_data.shape[0] * 100 / (train_data.shape[0] + test_data.shape[0]))
+        train_ratio = round(train_data.shape[0] * 100 / (train_data.shape[0] + test_data.shape[0]),1)
         test_ratio = 100 - train_ratio
         num_train_data = train_data.shape[0]
 
@@ -148,7 +148,6 @@ def data_iterable_random(train_data, test_data, run_train, train_batch_size, tes
         train = data_utils.TensorDataset(train_feat_tensor, train_target_tensor)
         train_loader = data_utils.DataLoader(train, batch_size=train_batch_size,
                                              shuffle=True)  # Contains features and targets
-        print("data train made iterable")
 
     else:
         train_loader = []
@@ -409,10 +408,11 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     input_dim = configs['input_dim']
     layer_dim = configs['layer_dim']
 
-    # Write the configurations used for this training process to a json file
-    path = os.path.join(file_prefix, "configs.json")
-    with open(path, 'w') as fp:
-        json.dump(configs, fp, indent=1)
+    # Write the configurations used for this training process to a json file, only if training is happening
+    if configs["run_train"]:
+        path = os.path.join(file_prefix, "configs.json")
+        with open(path, 'w') as fp:
+            json.dump(configs, fp, indent=1)
 
     # initializing lists to store losses over epochs:
     train_loss = []
@@ -677,6 +677,15 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                              errors["ace"],
                              errors["is"],
                              train_time])
+
+        # Write error statistics to a local json file
+        errors["train_time"] = train_time
+        for k in errors:
+            errors[k] = str(errors[k])
+        path = os.path.join(file_prefix, "error_stats.json")
+        with open(path, 'w') as fp:
+            json.dump(errors, fp, indent=1)
+
 
     # If you just want to immediately test the model on the existing (saved) model
     else:

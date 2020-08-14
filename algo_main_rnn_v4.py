@@ -50,7 +50,7 @@ def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_ba
         test_num_batches = min(test_bth, key=lambda x: abs(x - te_desired_batch_size))
         test_bt_size = int(test_data.shape[0]/test_num_batches)
 
-        train_ratio = int(train_data.shape[0] * 100 / (train_data.shape[0] + test_data.shape[0]))
+        train_ratio = round(train_data.shape[0] * 100 / (train_data.shape[0] + test_data.shape[0]),1)
         test_ratio = 100 - train_ratio
         num_train_data = train_data.shape[0]
 
@@ -152,7 +152,6 @@ def data_iterable_random(train_data, test_data, run_train, train_batch_size, tes
         train = data_utils.TensorDataset(train_feat_tensor, train_target_tensor)
         train_loader = data_utils.DataLoader(train, batch_size=train_batch_size,
                                              shuffle=True)  # Contains features and targets
-        print("data train made iterable")
 
     else:
         train_loader = []
@@ -393,10 +392,11 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     input_dim = configs['input_dim']
     layer_dim = configs['layer_dim']
 
-    # Write the configurations used for this training process to a json file
-    path = os.path.join(file_prefix, "configs.json")
-    with open(path, 'w') as fp:
-        json.dump(configs, fp, indent=1)
+    # Write the configurations used for this training process to a json file, only if training is happening
+    if configs["run_train"]:
+        path = os.path.join(file_prefix, "configs.json")
+        with open(path, 'w') as fp:
+            json.dump(configs, fp, indent=1)
 
     # initializing lists to store losses over epochs:
     train_loss = []
@@ -642,7 +642,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                 writer = csv.writer(f, lineterminator='\n')
                 writer.writerow(["File Path", "RMSE", "CV(RMSE)", "NMBE", "GOF", "QS", "ACE", "IS", "Train time"])
 
-        # Save the errors statistics to a file once everything is done
+        # Save the errors statistics to a central results csv once everything is done
         with open(r'Training_history.csv', 'a') as f:
             writer = csv.writer(f, lineterminator='\n')
             writer.writerow([file_prefix,
@@ -655,6 +655,14 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                              errors["is"],
                              train_time])
 
+        # Write error statistics to a local json file
+        errors["train_time"] = train_time
+        for k in errors:
+            errors[k] = str(errors[k])
+        path = os.path.join(file_prefix, "error_stats.json")
+        with open(path, 'w') as fp:
+            json.dump(errors, fp, indent=1)
+
 
     # If you just want to immediately test the model on the existing (saved) model
     else:
@@ -665,18 +673,10 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         predictions, targets, errors, Q_vals, hist_data = test_processing(test_df, test_loader, model, seq_dim, input_dim,
                                               test_batch_size, transformation_method, configs, True)
 
-        # Save the residual distribution to a file
-        # path = file_prefix + '/residual_distribution.h5.json'
-        # with open(path, 'w') as fp:
-        #     json.dump(hist_data, fp, indent=1)
-
-        # Save the final predictions and error statistics to a file
-        #predictions.to_csv(file_prefix + '/predictions.csv', index=False)
-
         building = configs["external_test"]["building"]
         year = configs["external_test"]["year"]
         month = configs["external_test"]["month"]
-        file = os.path.join("Test_sets", "{}-{}-{}-processed.h5".format(building, month, year))
+        file = os.path.join(configs["data_dir"], "{}-{}-{}-processed.h5".format(building, month, year))
         index = pd.read_hdf(file, key='df').index
 
         pd.DataFrame(predictions).to_hdf(os.path.join(file_prefix, "predictions_external.h5"), key='df', mode='w')
@@ -691,11 +691,11 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                              label="{}% PI".format(round((configs["qs"][-(i + 1)] - q) * 100)), lw=0)
         plt.xticks(rotation=0)
         ax1.set_ylabel(configs["target_var"])
-        ax1.set_xlim([pd.to_datetime('2019-01-07 00:00:00'), pd.to_datetime('2019-01-14 00:00:00')])
+        #ax1.set_xlim([pd.to_datetime('2019-01-07 00:00:00'), pd.to_datetime('2019-01-14 00:00:00')])
         #ax1.set_title("Cafe Main Meter LSTM Predictions")
         #ax1.legend()
-        #plt.show()
-        fig.savefig(os.path.join(configs["results_dir"], "{}_test.png".format(configs["target_var"])))
+        plt.show()
+        #fig.savefig(os.path.join(configs["results_dir"], "{}_test.png".format(configs["target_var"])))
 
 
 def eval_trained_model(file_prefix, train_data, train_batch_size, configs):
