@@ -17,41 +17,19 @@ import matplotlib.pyplot as plt
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import csv
 import pathlib
+import psutil
+from psutil import virtual_memory
+
 
 file_prefix = '/default'
 
 
-def seq_pad(a, window):
-    """
-    Append time-lagged versions of exogenous variables in input array.
-
-    :param a: (np.array)
-    :param window: (int)
-    :return: (np.array)
-    """
-    # Create lagged versions of exogenous variables
-    rows = a.shape[0]
-    cols = a.shape[1]
-    b = np.zeros((rows, window * cols))
-
-    # Make new columns for the time-lagged values. Lagged spaces filled with zeros.
-    for i in range(window):
-        # The first window isnt lagged and is just a copy of "a"
-        if i == 0:
-            b[:, 0:cols] = a
-        # For all remaining windows, just paste a slightly cropped version (so it fits) of "a" into "b"
-        else:
-            b[i:, i * cols:(i + 1) * cols] = a[:-i, :]
-
-    # The zeros are replaced with a copy of the first n rows
-    for i in list(np.arange(window - 1)):
-        j = (i * cols) + cols
-        b[i, j:] = np.tile(b[i, 0:cols], window - i - 1)
-
-    return b
+class ConfigsError(Exception):
+    """Base class for exceptions in this module."""
+    pass
 
 
-def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_batch_size):
+def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_batch_size, configs):
     """
     Compute the batch sizes for training and test set
 
@@ -61,23 +39,33 @@ def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_ba
     :param te_desired_batch_size: (int)
     :return:
     """
-    # Find factors of the length of train and test df's and pick the closest one to the requested batch sizes
-    train_bth = factors(train_data.shape[0])
-    train_bt_size = min(train_bth, key=lambda x: abs(x - tr_desired_batch_size))
 
-    test_bth = factors(test_data.shape[0])
-    test_bt_size = min(test_bth, key=lambda x: abs(x - te_desired_batch_size))
+    if configs["run_train"]:
+        # Find factors of the length of train and test df's and pick the closest one to the requested batch sizes
+        train_bth = factors(train_data.shape[0])
+        train_num_batches = min(train_bth, key=lambda x: abs(x - tr_desired_batch_size))
+        train_bt_size = int(train_data.shape[0] / train_num_batches)
 
-    train_ratio = int(train_data.shape[0] * 100 / (train_data.shape[0] + test_data.shape[0]))
-    test_ratio = 100 - train_ratio
-    num_train_data = train_data.shape[0]
-    print("Train size: {}, Test size: {}, split {}:{}".format(train_data.shape[0], test_data.shape[0], train_ratio,
-                                                              test_ratio))
-    print("Available train batch sizes: {}".format(sorted(train_bth)))
-    print("Requested size of batches - Train: {}, Test: {}".format(tr_desired_batch_size, te_desired_batch_size))
-    print("Actual size of batches - Train: {}, Test: {}".format(train_bt_size, test_bt_size))
-    print("Number of batches in 1 epoch - Train: {}, Test: {}".format(train_data.shape[0] / train_bt_size,
-                                                                      test_data.shape[0] / test_bt_size))
+        test_bth = factors(test_data.shape[0])
+        test_num_batches = min(test_bth, key=lambda x: abs(x - te_desired_batch_size))
+        test_bt_size = int(test_data.shape[0]/test_num_batches)
+
+        train_ratio = round(train_data.shape[0] * 100 / (train_data.shape[0] + test_data.shape[0]),1)
+        test_ratio = 100 - train_ratio
+        num_train_data = train_data.shape[0]
+
+        print("Train size: {}, Test size: {}, split {}%:{}%".format(train_data.shape[0], test_data.shape[0], train_ratio,
+                                                                  test_ratio))
+        print("Available train batch factors: {}".format(sorted(train_bth)))
+        print("Requested number of batches per epoch - Train: {}, Test: {}".format(tr_desired_batch_size, te_desired_batch_size))
+        print("Actual number of batches per epoch - Train: {}, Test: {}".format(train_num_batches, test_num_batches))
+        print("Number of data samples in each batch - Train: {}, Test: {}".format(train_bt_size, test_bt_size))
+    else:
+        # test_bth = factors(test_data.shape[0])
+        # test_bt_size = min(test_bth, key=lambda x: abs(x - te_desired_batch_size))
+        test_bt_size = test_data.shape[0]
+        train_bt_size = 0
+        num_train_data = 0
 
     return train_bt_size, test_bt_size, num_train_data
 
@@ -99,18 +87,21 @@ def data_transform(train_data, test_data, transformation_method, run_train):
         train_stats['train_min'] = train_data.min().to_dict()
         train_stats['train_mean'] = train_data.mean(axis=0).to_dict()
         train_stats['train_std'] = train_data.std(axis=0).to_dict()
-        path = file_prefix + '/train_stats.json'
+        path = os.path.join(file_prefix, "train_stats.json")
         with open(path, 'w') as fp:
             json.dump(train_stats, fp)
 
         if transformation_method == "minmaxscale":
             train_data = (train_data - train_data.min()) / (train_data.max() - train_data.min())
 
-        else:
+        elif transformation_method == "standard":
             train_data = (train_data - train_data.mean(axis=0)) / train_data.std(axis=0)
 
+        else:
+            raise ConfigsError("{} is not a supported form of data normalization".format(transformation_method))
+
     # Reading back the train stats for normalizing test data w.r.t to train data
-    file_loc = file_prefix + '/train_stats.json'
+    file_loc = os.path.join(file_prefix, "train_stats.json")
     with open(file_loc, 'r') as f:
         train_stats = json.load(f)
 
@@ -123,60 +114,12 @@ def data_transform(train_data, test_data, transformation_method, run_train):
     # Normalize data
     if transformation_method == "minmaxscale":
         test_data = (test_data - train_min) / (train_max - train_min)
-
-    else:
+    elif transformation_method == "standard":
         test_data = ((test_data - train_mean) / train_std)
+    else:
+        raise ConfigsError("{} is not a supported form of data normalization".format(transformation_method))
 
     return train_data, test_data
-
-
-def data_iterable(train_data, test_data, run_train, train_batch_size, test_batch_size, configs):
-    """
-    Create lagged variables and convert train and test data to torch data types
-
-    :param train_data: DataFrame
-    :param test_data: DataFrame
-    :param run_train: Boolean
-    :param train_batch_size: int
-    :param test_batch_size: int
-    :param configs: dict
-    :return:
-    """
-    if run_train:
-        # Create lagged INPUT variables, i.e. columns: w1_(t-1), w1_(t-2)...
-        # Does this for all input variables for times up to "window"
-        X_train = train_data.drop(configs['target_var'], axis=1).values.astype(dtype='float32')
-        X_train = seq_pad(X_train, configs['window'])
-
-        # Lag output variable, i.e. input for t=5 maps to EC at t=10, t=6 maps to EC t=11, etc.
-        y_train = train_data[configs['target_var']].shift(-configs['EC_future_gap']).fillna(method='ffill')
-        y_train = y_train.values.astype(dtype='float32')
-
-        # Convert to iterable tensors
-        train_feat_tensor = torch.from_numpy(X_train).type(torch.FloatTensor)
-        train_target_tensor = torch.from_numpy(y_train).type(torch.FloatTensor)
-        train = data_utils.TensorDataset(train_feat_tensor, train_target_tensor)
-        train_loader = data_utils.DataLoader(train, batch_size=train_batch_size,
-                                             shuffle=True)  # Contains features and targets
-        print("data train made iterable")
-
-    else:
-        train_loader = []
-
-    # Do the same as above for the test set
-    X_test = test_data.drop(configs['target_var'], axis=1).values.astype(dtype='float32')
-    X_test = seq_pad(X_test, configs['window'])
-
-    y_test = test_data[configs['target_var']].shift(-configs['EC_future_gap']).fillna(method='ffill')
-    y_test = y_test.values.astype(dtype='float32')
-
-    test_feat_tensor = torch.from_numpy(X_test).type(torch.FloatTensor)
-    test_target_tensor = torch.from_numpy(y_test).type(torch.FloatTensor)
-
-    test = data_utils.TensorDataset(test_feat_tensor, test_target_tensor)
-    test_loader = DataLoader(dataset=test, batch_size=test_batch_size, shuffle=False)
-
-    return train_loader, test_loader
 
 
 def data_iterable_random(train_data, test_data, run_train, train_batch_size, test_batch_size, configs):
@@ -209,7 +152,6 @@ def data_iterable_random(train_data, test_data, run_train, train_batch_size, tes
         train = data_utils.TensorDataset(train_feat_tensor, train_target_tensor)
         train_loader = data_utils.DataLoader(train, batch_size=train_batch_size,
                                              shuffle=True)  # Contains features and targets
-        print("data train made iterable")
 
     else:
         train_loader = []
@@ -241,7 +183,7 @@ def save_model(model, epoch, n_iter):
     :return: None
     """
     model_dict = {'epoch_num': epoch, 'n_iter': n_iter, 'torch_model': model}
-    torch.save(model_dict, file_prefix + '/torch_model')
+    torch.save(model_dict, os.path.join(file_prefix, "torch_model"))
 
 
 def pinball_np(output, target, configs):
@@ -318,7 +260,7 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     pinball_loss = np.mean(np.mean(loss, 0))
 
     # Loading the training data stats for de-normalization purpose
-    file_loc = file_prefix + '/train_stats.json'
+    file_loc = os.path.join(file_prefix, "train_stats.json")
     with open(file_loc, 'r') as f:
         train_stats = json.load(f)
 
@@ -329,13 +271,17 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     train_std = pd.DataFrame(train_stats['train_std'], index=[1]).iloc[0]
 
     # Do de-normalization process on predictions and targets from test set
+
     if transformation_method == "minmaxscale":
         final_preds = ((train_max[configs['target_var']] - train_min[configs['target_var']]) * semifinal_preds) + \
                       train_min[configs['target_var']]
         final_targs = ((train_max[configs['target_var']] - train_min[configs['target_var']]) * semifinal_targs) + \
                       train_min[configs['target_var']]
-    # else:
-    #     final_preds = ((semifinal_preds * train_std[configs['target_var']]) + train_mean[configs['target_var']])
+    elif transformation_method == "standard":
+        final_preds = ((semifinal_preds * train_std[configs['target_var']]) + train_mean[configs['target_var']])
+        final_targs = ((semifinal_targs * train_std[configs['target_var']]) + train_mean[configs['target_var']])
+    else:
+        raise ConfigsError("{} is not a supported form of data normalization".format(transformation_method))
 
     # (De-Normalized Data) Assign target and output variables
     target = final_targs
@@ -390,7 +336,8 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
 
     # If this is the last test run of training, get histogram data of residuals for each quantile
     if last_run:
-        resid = target - output
+        #resid = target - output
+        resid = semifinal_targs - semifinal_preds
         hist_data = pd.DataFrame()
         for i, q in enumerate(configs["qs"]):
             tester = np.histogram(resid[:, i], bins=200)
@@ -411,7 +358,9 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
               "ace": ACE,
               "is": IS}
 
-    return predictions, errors, Q_vals, hist_data
+    predictions = pd.DataFrame(final_preds)
+    targets = pd.DataFrame(final_targs)
+    return predictions, targets, errors, Q_vals, hist_data
 
 
 def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method,
@@ -443,10 +392,11 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     input_dim = configs['input_dim']
     layer_dim = configs['layer_dim']
 
-    # Write the configurations used for this training process to a json file
-    path = file_prefix + '/configs.json'
-    with open(path, 'w') as fp:
-        json.dump(configs, fp, indent=1)
+    # Write the configurations used for this training process to a json file, only if training is happening
+    if configs["run_train"]:
+        path = os.path.join(file_prefix, "configs.json")
+        with open(path, 'w') as fp:
+            json.dump(configs, fp, indent=1)
 
     # initializing lists to store losses over epochs:
     train_loss = []
@@ -460,7 +410,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         # If you are resuming from a previous training session
         if run_resume:
             try:
-                torch_model = torch.load(file_prefix + '/torch_model')
+                torch_model = torch.load(os.path.join(file_prefix, 'torch_model'))
                 model = torch_model['torch_model']
                 resume_num_epoch = torch_model['epoch_num']
                 resume_n_iter = torch_model['n_iter']
@@ -482,14 +432,11 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                 model = rnn.RNNModel(input_dim, hidden_dim, layer_dim, output_dim)
             elif configs["arch_type_variant"] == "lstm":
                 model = lstm.LSTM_Model(input_dim, hidden_dim, layer_dim, output_dim)
+            else:
+                raise ConfigsError(
+                    "{} is not a supported architecture variant".format(configs["arch_type_variant"]))
             epoch_range = np.arange(num_epochs)
             print("A new {} {} model instantiated, with run_train=True".format(configs["arch_type"], configs["arch_type_variant"]))
-
-        # Check if gpu support is available
-        cuda_avail = torch.cuda.is_available()
-
-        # Instantiating Loss Class (only for MSE)
-        # criterion = nn.MSELoss()
 
         # Instantiate Optimizer Class
         optimizer = torch.optim.Adam(model.parameters(), lr=configs['lr_config']['base'], weight_decay=weight_decay)
@@ -507,6 +454,19 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
         prtime("Preparing model to train")
         prtime("starting to train the model for {} epochs!".format(num_epochs))
+
+        # Computing platform
+        num_logical_processors = psutil.cpu_count(logical=True)
+        num_cores = psutil.cpu_count(logical=False)
+        mem = virtual_memory()
+        mem = {"total": mem.total / 10 ** 9, "available": mem.available / 10 ** 9, "percent": mem.percent,
+               "used": mem.used / 10 ** 9, "free": mem.free / 10 ** 9}
+        print("Number of cores available: {}".format(num_cores))
+        print("Number of logical processors available: {}".format(num_logical_processors))
+        print("Memory statistics (GB): {}".format(mem))
+
+        # Check for GPU
+        cuda_avail = torch.cuda.is_available()
 
         if (len(epoch_range) == 0):
             epoch = resume_num_epoch + 1
@@ -561,8 +521,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                 # train_y_at_t = tile(outputs.unsqueeze(2), 1, 5)
                 # train_y_at_t_nump = train_y_at_t.detach().numpy()
 
-                # Calculate Loss: softmax --> cross entropy loss
-                # loss = criterion(outputs.squeeze(), target)
+                # Calculate Loss
                 loss = quantile_loss(outputs, target, configs)
 
                 # resid_stats.append(stats)
@@ -597,43 +556,48 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                                                       "Step": time6 - time5}, n_iter)
 
                 # Save the model every ___ iterations
-                if n_iter % 5 == 0:
+                if n_iter % 20 == 0:
                     save_model(model, epoch, n_iter)
 
                 # Do a test batch every ___ iterations
-                if n_iter % 5 == 0:
+                if n_iter % 20 == 0:
                     # Evaluate test set
-                    predictions, errors, Q_vals, hist_data = test_processing(test_df, test_loader, model, seq_dim, input_dim,
+                    predictions, targets, errors, Q_vals, hist_data = test_processing(test_df, test_loader, model, seq_dim, input_dim,
                                                           test_batch_size, transformation_method, configs, False)
-
+                    predictions = predictions.iloc[:, int(predictions.shape[1] / 2)]
                     temp_holder = errors
                     temp_holder.update({"n_iter": n_iter, "epoch": epoch})
                     mid_train_error_stats = mid_train_error_stats.append(temp_holder, ignore_index=True)
 
                     test_iter.append(n_iter)
-                    # test_loss.append(errors['mse_loss'])
-                    # test_rmse.append(errors['rmse'])
                     writer.add_scalars("Loss", {"Test": errors['pinball_loss']}, n_iter)
 
-                    # Add matplotlib plot to TensorBoard to compare actual test set vs predicted
-                    fig1, ax1 = plt.subplots(figsize=(20, 5))
-                    ax1.plot(test_df[configs['target_var']], label='Actual', lw=0.5)
-                    ax1.plot(predictions, label='Prediction', lw=0.5)
-                    ax1.legend()
-                    writer.add_figure('Predictions', fig1, n_iter)
-
                     # Add parody plot to TensorBoard
+                    # fig2, ax2 = plt.subplots()
+                    # ax2.scatter(predictions, test_df[configs['target_var']], s=5, alpha=0.3)
+                    # strait_line = np.linspace(min(min(predictions), min(test_df[configs['target_var']])),
+                    #                           max(max(predictions), max(test_df[configs['target_var']])), 5)
+                    # ax2.plot(strait_line, strait_line, c='k')
+                    # ax2.set_xlabel('Predicted')
+                    # ax2.set_ylabel('Observed')
+                    # ax2.axhline(y=0, color='k')
+                    # ax2.axvline(x=0, color='k')
+                    # ax2.axis('equal')
+                    # writer.add_figure('Parody', fig2, n_iter)
+
+                    #Add QQ plot to TensorBoard
                     fig2, ax2 = plt.subplots()
-                    ax2.scatter(predictions, test_df[configs['target_var']], s=5, alpha=0.3)
-                    strait_line = np.linspace(min(min(predictions), min(test_df[configs['target_var']])),
-                                              max(max(predictions), max(test_df[configs['target_var']])), 5)
-                    ax2.plot(strait_line, strait_line, c='k')
-                    ax2.set_xlabel('Predicted')
-                    ax2.set_ylabel('Observed')
-                    ax2.axhline(y=0, color='k')
-                    ax2.axvline(x=0, color='k')
-                    ax2.axis('equal')
-                    writer.add_figure('Parody', fig2, n_iter)
+                    ax2.scatter(Q_vals["q_requested"], Q_vals["q_actual"], s=20)
+                    ax2.plot([0, 1], [0, 1], c='k', alpha=0.5)
+                    ax2.set_xlabel('Requested')
+                    ax2.set_ylabel('Actual')
+                    ax2.set_xlim(left=0, right=1)
+                    ax2.set_ylim(bottom=0, top=1)
+                    writer.add_figure('QQ', fig2, n_iter)
+
+                    # Write information about CPU usage to tensorboard
+                    percentages = dict(zip(list(np.arange(1,num_logical_processors+1).astype(str)), psutil.cpu_percent(interval=None, percpu=True)))
+                    writer.add_scalars("CPU Utilization", percentages, n_iter)
 
                     print('Epoch: {} Iteration: {}. Train_loss: {}. Test_loss: {}, LR: {}'.format(epoch, n_iter,
                                                                                                 loss.data.item(),
@@ -646,14 +610,15 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         save_model(model, epoch, n_iter)
 
         # Once model is done training, process a final test set
-        predictions, errors, Q_vals, hist_data = test_processing(test_df, test_loader, model, seq_dim, input_dim,
+        predictions, targets, errors, Q_vals, hist_data = test_processing(test_df, test_loader, model, seq_dim, input_dim,
                                               test_batch_size, transformation_method, configs, True)
 
         # Save the residual distribution to a file
         hist_data.to_hdf(os.path.join(file_prefix, "residual_distribution.h5"), key='df', mode='w')
 
         # Save the final predictions to a file
-        predictions.to_csv(file_prefix + '/predictions.csv', index=False)
+        #predictions.to_csv(file_prefix + '/predictions.csv', index=False)
+        pd.DataFrame(predictions).to_hdf(os.path.join(file_prefix, "predictions.h5"), key='df', mode='w')
 
         # Save the QQ information to a file
         Q_vals.to_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df', mode='w')
@@ -661,59 +626,76 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         # Save the mid-train error statistics to a file
         mid_train_error_stats.to_hdf(os.path.join(file_prefix, "mid_train_error_stats.h5"), key='df', mode='w')
 
+        # End training timer
+        train_end_time = timeit.default_timer()
+        train_time = train_end_time - train_start_time
+
+        # Plot residual stats
+        # fig3, ax3 = plt.subplots()
+        # ax3.plot(np.array(resid_stats)[:, 0], label="Min")
+        # ax3.plot(np.array(resid_stats)[:, 1], label="Max")
+        # plt.show()
+
+        # If a training history csv file does not exist, make one
+        if not pathlib.Path("Training_history.csv").exists():
+            with open(r'Training_history.csv', 'a') as f:
+                writer = csv.writer(f, lineterminator='\n')
+                writer.writerow(["File Path", "RMSE", "CV(RMSE)", "NMBE", "GOF", "QS", "ACE", "IS", "Train time"])
+
+        # Save the errors statistics to a central results csv once everything is done
+        with open(r'Training_history.csv', 'a') as f:
+            writer = csv.writer(f, lineterminator='\n')
+            writer.writerow([file_prefix,
+                             errors["rmse"],
+                             errors["cvrmse"],
+                             errors["nmbe"],
+                             errors["gof"],
+                             errors["qs"],
+                             errors["ace"],
+                             errors["is"],
+                             train_time])
+
+        # Write error statistics to a local json file
+        errors["train_time"] = train_time
+        for k in errors:
+            errors[k] = str(errors[k])
+        path = os.path.join(file_prefix, "error_stats.json")
+        with open(path, 'w') as fp:
+            json.dump(errors, fp, indent=1)
+
 
     # If you just want to immediately test the model on the existing (saved) model
     else:
-        torch_model = torch.load(file_prefix + '/torch_model')
+        torch_model = torch.load(os.path.join(file_prefix, 'torch_model'))
         model = torch_model['torch_model']
         prtime("Loaded model from file, given run_train=False\n")
 
-        predictions, errors, Q_vals, hist_data = test_processing(test_df, test_loader, model, seq_dim, input_dim,
+        predictions, targets, errors, Q_vals, hist_data = test_processing(test_df, test_loader, model, seq_dim, input_dim,
                                               test_batch_size, transformation_method, configs, True)
-        # test_loss.append(errors['mse_loss'])
-        # test_rmse.append(errors['rmse'])
-        writer.add_scalars("Loss", {"Test": errors['pinball_loss']})
-        prtime('Test_loss: {}'.format(errors['pinball_loss']))
 
-        # Save the residual distribution to a file
-        path = file_prefix + '/residual_distribution.h5.json'
-        with open(path, 'w') as fp:
-            json.dump(hist_data, fp, indent=1)
+        building = configs["external_test"]["building"]
+        year = configs["external_test"]["year"]
+        month = configs["external_test"]["month"]
+        file = os.path.join(configs["data_dir"], "{}-{}-{}-processed.h5".format(building, month, year))
+        index = pd.read_hdf(file, key='df').index
 
-        # Save the final predictions and error statistics to a file
-        predictions.to_csv(file_prefix + '/predictions.csv', index=False)
-
-        # Save the QQ information to a file
-        Q_vals.to_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df', mode='w')
-
-    # End training timer
-    train_end_time = timeit.default_timer()
-    train_time = train_end_time - train_start_time
-
-    # Plot residual stats
-    # fig3, ax3 = plt.subplots()
-    # ax3.plot(np.array(resid_stats)[:, 0], label="Min")
-    # ax3.plot(np.array(resid_stats)[:, 1], label="Max")
-    # plt.show()
-
-    # If a training history csv file does not exist, make one
-    if not pathlib.Path("Training_history.csv").exists():
-        with open(r'Training_history.csv', 'a') as f:
-            writer = csv.writer(f, lineterminator='\n')
-            writer.writerow(["File Path", "RMSE", "CV(RMSE)", "NMBE", "GOF", "QS", "ACE", "IS", "Train time"])
-
-    # Save the errors statistics to a file once everything is done
-    with open(r'Training_history.csv', 'a') as f:
-        writer = csv.writer(f, lineterminator='\n')
-        writer.writerow([file_prefix,
-                         errors["rmse"],
-                         errors["cvrmse"],
-                         errors["nmbe"],
-                         errors["gof"],
-                         errors["qs"],
-                         errors["ace"],
-                         errors["is"],
-                         train_time])
+        pd.DataFrame(predictions).to_hdf(os.path.join(file_prefix, "predictions_external.h5"), key='df', mode='w')
+        cmap = plt.get_cmap('Reds')
+        fig, ax1 = plt.subplots(figsize=(20, 4))
+        ax1.plot(index, targets.iloc[:,0], label="Actual Demand", color='black')
+        ax1.plot(index, predictions.iloc[:, int(len(configs["qs"]) / 2)], label='q = 0.5 forecast', color="red")
+        for i, q in enumerate(configs["qs"]):
+            if q == 0.5:
+                break
+            ax1.fill_between(index, predictions.iloc[:, i], predictions.iloc[:, -(i+1)], color=cmap(q), alpha=1,
+                             label="{}% PI".format(round((configs["qs"][-(i + 1)] - q) * 100)), lw=0)
+        plt.xticks(rotation=0)
+        ax1.set_ylabel(configs["target_var"])
+        #ax1.set_xlim([pd.to_datetime('2019-01-07 00:00:00'), pd.to_datetime('2019-01-14 00:00:00')])
+        #ax1.set_title("Cafe Main Meter LSTM Predictions")
+        #ax1.legend()
+        plt.show()
+        #fig.savefig(os.path.join(configs["results_dir"], "{}_test.png".format(configs["target_var"])))
 
 
 def eval_trained_model(file_prefix, train_data, train_batch_size, configs):
@@ -729,7 +711,7 @@ def eval_trained_model(file_prefix, train_data, train_batch_size, configs):
     """
 
     # Evaluate the training model
-    torch_model = torch.load(file_prefix + '/torch_model')
+    torch_model = torch.load(os.path.join(file_prefix, 'torch_model'))
     model = torch_model['torch_model']
     X_train = train_data.drop(configs['target_var'], axis=1).values.astype(dtype='float32')
     y_train = train_data[configs['target_var']]
@@ -753,20 +735,10 @@ def eval_trained_model(file_prefix, train_data, train_batch_size, configs):
     semifinal_preds = np.concatenate(preds)
     semifinal_targs = np.concatenate(targets)
 
-    # # Get the saved binary mask from file
-    # mask_file = os.path.join("data", "mask_{}_{}.json".format(configs['building'], "-".join(configs['year'])))
-    # with open(mask_file, "r") as read_file:
-    #     msk = json.load(read_file)
-
     # Get the saved binary mask from file
-    mask_file = os.path.join("data", "mask_{}_{}.json".format(configs['building'], "-".join(configs['year'])))
+    mask_file = os.path.join(configs["data_dir"], "mask_{}_{}.h5".format(configs["target_var"].replace(" ", ""), "-".join(configs['year'])))
     mask = pd.read_hdf(mask_file, key='df')
     msk = mask["msk"]
-
-    # # Adjust the datetime index so it is in line with the EC data
-    # target_index = data_time_index[msk] + pd.DateOffset(
-    #     minutes=(configs["EC_future_gap"] * configs["resample_bin_min"]))
-    # processed_data = pd.DataFrame(index=target_index)
 
     # Adjust the datetime index so it is in line with the EC data
     target_index = mask.index[msk] + pd.DateOffset(
@@ -800,16 +772,20 @@ def plot_processed_model(file_prefix):
         configs = json.load(read_file)
 
     # Plot data
+    cmap = plt.get_cmap('Reds')
     f, axarr = plt.subplots(2, sharex=True)
     for i, q in enumerate(configs["qs"]):
         if q == 0.5:
             break
         axarr[0].fill_between(processed_data.index, processed_data["{}_fit".format(q)],
                               processed_data["{}_fit".format(configs["qs"][-(i + 1)])],
-                              alpha=0.2,
-                              label="{}%".format(round((configs["qs"][-(i + 1)] - q) * 100)))
-    axarr[0].plot(processed_data["Target"], label='Target')
-    axarr[0].plot(processed_data["0.5_fit"], label='q = 0.5')
+                              alpha=1,
+                              color=cmap(q),
+                              lw=0,
+                              label="{}% PI".format(round((configs["qs"][-(i + 1)] - q) * 100)))
+
+    axarr[0].plot(processed_data["Target"], label='Target', color='black')
+    axarr[0].plot(processed_data["0.5_fit"], label='q = 0.5', color="red")
     axarr[0].set_ylabel("target variable")
     axarr[0].legend()
     axarr[1].plot(processed_data['Residual'], label='Targets')
@@ -828,16 +804,13 @@ def plot_QQ(file_prefix):
     QQ_data = pd.read_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df')
     fig2, ax2 = plt.subplots()
     ax2.scatter(QQ_data["q_requested"], QQ_data["q_actual"], s=20)
-    strait_line = np.linspace(min(min(QQ_data["q_requested"]), min(QQ_data["q_actual"])),
-                              max(max(QQ_data["q_requested"]), max(QQ_data["q_actual"])), 5)
+    # strait_line = np.linspace(min(min(QQ_data["q_requested"]), min(QQ_data["q_actual"])),
+    #                           max(max(QQ_data["q_requested"]), max(QQ_data["q_actual"])), 5)
     ax2.plot([0, 1], [0, 1], c='k', alpha=0.5)
     ax2.set_xlabel('Requested')
     ax2.set_ylabel('Actual')
-    #ax2.axhline(y=0, color='k')
-    #ax2.axvline(x=0, color='k')
     ax2.set_xlim(left=0, right=1)
     ax2.set_ylim(bottom=0, top=1)
-    #ax2.axis('equal')
     plt.show()
 
 
@@ -849,6 +822,7 @@ def plot_training_history(x):
     :return:
     """
     data = pd.read_csv("Training_history.csv")
+    data = data.iloc[55:, :]
     data["iterable"] = x
     data.plot(x="iterable", subplots=True)
 
@@ -868,8 +842,9 @@ def plot_resid_dist(study_path, building, alphas, q):
     resid = np.linspace(-1, 1, 1000)
     max_dist = 0
 
-    for alpha in alphas:
-        c = np.random.rand(3, )
+    colors = ["red", "green", "blue"]
+    for i, alpha in enumerate(alphas):
+        c = colors[i]
         # Plot the residual distribution for this alpha value
         sub_study_path = "RNN_M{}_Tsmoothing_alpha_{}".format(building, alpha)
         data = pd.read_hdf(os.path.join(study_path, sub_study_path, "residual_distribution.h5"), key='df')
@@ -953,26 +928,14 @@ def main(train_df, test_df, configs):
 
     # Size the batches
     train_batch_size, test_batch_size, num_train_data = size_the_batches(train_data, test_data, tr_desired_batch_size,
-                                                                         te_desired_batch_size)
-
-    # Normal: Convert to iterable dataset (DataLoaders)
-    if configs["TrainTestSplit"] == 'Sequential':
-        train_loader, test_loader = data_iterable(train_data, test_data, run_train, train_batch_size,
-                                                  test_batch_size, configs)
+                                                                         te_desired_batch_size, configs)
 
     # Already did sequential padding: Convert to iterable dataset (DataLoaders)
-    elif configs["TrainTestSplit"] == 'Random':
+    if configs["TrainTestSplit"] == 'Random':
         train_loader, test_loader = data_iterable_random(train_data, test_data, run_train, train_batch_size,
                                                          test_batch_size, configs)
-    prtime("data converted to iterable dataset")
+    prtime("Data converted to iterable dataset")
 
     # Start the training process
     process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method,
             configs, train_batch_size, test_batch_size, configs['window'], num_train_data)
-
-    # Evaluate the trained model with the training set to diagnose training ability and plot residuals
-    # TODO: Currently only supported for random test/train split
-    if configs["TrainTestSplit"] == 'Random':
-        eval_trained_model(file_prefix, train_data, train_batch_size, configs)
-        # plot_processed_model(file_prefix)
-        #plot_QQ(file_prefix)

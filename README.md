@@ -11,7 +11,8 @@ This repository contains the source code for forecasting energy consumption usin
 * Version: this is the initial version (0.1) of this project
 
 
-### How do I get set up?
+### How do I...
+#### ... get set up?
 
 * Conda environment for running the code:
  A conda environment file is provided for convenience. Assuming you have Anaconda python distribution available on your computer, you can create a new conda environment with the necessary packages using the following command:
@@ -24,97 +25,43 @@ For linux users:
 
 
 * Change the configuration variables in configs.json.
-* Change the `shared_dir` variable at the top of entry_point.py to map to the location of external files (described below)
 * Run entry_point.py
 
-### How do I train a single model?
+#### ... train a single model?
 
-* Description coming soon...
+##### Starting from scratch:
 
-### How do I run a hyperparamter study? 
+...
+##### With my own dataframe:
 
-* Description coming soon...
+* Follow these instructions if you wish to bypass the preprocessing steps, and just want to train a model on your own dataframe.
+* This method assumes your data is already resampled, cleaned, and already has all of the features that you want to train on. 
+* The dataframe that is passed will be split between training and testing data. 
+* Function calls:  
+```
+train_df_master, test_df_master = bp.prep_for_rnn(configs, data)  
+rnn_mod.main(train_df, test_df, configs)
+```
+* Requirements:
+    * `data` must have a datetime index that is continuous, i.e. if there are missing data values they should be kept as `nan` instead of removing the timestamp completely.
+
+
+#### ... test an already-trained model with my own dataframe? 
+* This method assumes that the data is in the same format as the data that you already trained the model on.
+* The entire dataframe that is passed will be used for tested.
+* Function calls:
+```
+train_df_master, test_df_master = bp.prep_for_rnn(configs, data)  
+rnn_mod.main(train_df, test_df, configs)
+```
+* Requirements:
+    * `data` must have a datetime index that is continuous, i.e. if there are missing data values they should be kept as `nan` instead of removing the timestamp completely.
+
+#### ... get a prediction from an already trained model?
+
+#### ... run a hyperparameter study? 
 
 ### What are the parameters in configs.json?
-Descriptions coming soon...
-
-| Variable | Type | Description | v1 |
-| --- | --- | --- | --- |
-| foo | str |  | x |
-| foo | str |   | |
-
-General notes:
-- Currently only random test-train split is supported (as opposed to sequential). Users may experience unexpected behaviour if Sequential `"TestTrainSplit"` is specified in configs.json. 
-
-```
-{
-    "train_start_date": "2018-01-01",
-    "train_end_date": "2018-10-31",
-    "test_start_date": "2018-11-01",
-    "test_end_date": "2018-12-31",
-    "transformation_method": "minmaxscale",
-    "run_train": true,
-    "num_epochs": 200,
-    "tr_batch_size": 3900,
-    "te_batch_size": 6949,
-    "run_resume": true,
-    "preprocess": false,
-    "arch_type": "RNN",
-    "arch_type_variant": "lstm",
-    "arch_version": 6,
-    "train_exp_num": "Cafe",
-    "test_exp_num": "dev",
-    "hidden_nodes": 100,
-    "layer_dim": 1,
-    "output_dim": 5,
-    "weight_decay": 0.001,
-    "fetch_n_parse": false,
-    "LAN_path": "Z:\\Data",
-    "building": "Cafe",
-    "year": [
-        "2018",
-        "2019"
-    ],
-    "target_var": "Cafe Main Power (kW)",
-    "weather_include": [
-        "SRRL BMS Global Horizontal Irradiance (W/m\u00b2_irr)",
-        "SRRL BMS Wind Speed at 19' (mph)",
-        "SRRL BMS Dry Bulb Temperature (\u00b0F)",
-        "SRRL BMS Opaque Cloud Cover (%)",
-        "SRRL BMS Relative Humidity (%RH)",
-        "SRRL BMS Barometric Pressure (mbar)"
-    ],
-    "TrainTestSplit": "Random",
-    "test_start": "12/28/2019 23:45:00",
-    "test_end": "12/31/2019 23:45:00",
-    "resample": true,
-    "resample_bin_min": 15,
-    "HOD": true,
-    "DOW": true,
-    "MOY": true,
-    "Holidays": true,
-    "HOD_indicator": "sincos",
-    "window": 20,
-    "EC_future_gap": 16,
-    "lr_schedule": true,
-    "lr_config": {
-        "base": 0.001,
-        "factor": 0.1,
-        "min": 1e-03,
-        "patience": 20
-    },
-    "qs": [0.025, 0.2, 0.5, 0.8, 0.975],
-    "smoothing_alpha": 0.001,
-    "S2S_stagger": {
-        "initial_num": 4,
-        "decay": 4,
-        "secondary_num": 17
-    },
-    "results_dir": "EnergyForecasting_Results",
-    "holidays_file": "C:\\dev\\intelligentcampus-2020summer\\loads\\Stats_Models_Loads\\holidays.json",
-    "shared_dir": "C:\\dev\\intelligentcampus-2020summer\\loads\\Stats_Models_Loads"
-}
-```
 
 ---
 ### Local Files
@@ -190,5 +137,6 @@ The code in this repo references some files that are held in external repos. The
 
 * JSON file containing holidays specific to the region being tested. 
 * File path specified in configs.json
+* Update this file to contain the dates of holidays that will affect building occupancy. This will be used for both training and testing.
 
 
