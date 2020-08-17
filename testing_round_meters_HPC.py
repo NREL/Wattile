@@ -42,6 +42,7 @@ for meter_ID in meters:
         json.dump(configs, fp, indent=1)
 
     # Execute
+    target = configs["target_var"].replace(" ", "").replace("(", "-").replace(")", "")
     python_file = "/projects/intelcamp20/repos/intelligentcampus-pred-analytics/entry_point.py"
     stdout_file = "/projects/intelcamp20/repos/intelcamp20-hpc/results/Outputs/stdout_{}.txt".format(configs["target_var"].replace(" ", ""))
     os.system("python -u " + python_file + " > " + stdout_file + " &")
