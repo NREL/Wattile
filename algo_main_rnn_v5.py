@@ -19,7 +19,7 @@ import csv
 import pathlib
 import psutil
 from psutil import virtual_memory
-
+import buildings_processing as bp
 
 file_prefix = '/default'
 
@@ -48,16 +48,17 @@ def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_ba
 
         test_bth = factors(test_data.shape[0])
         test_num_batches = min(test_bth, key=lambda x: abs(x - te_desired_batch_size))
-        test_bt_size = int(test_data.shape[0]/test_num_batches)
+        test_bt_size = int(test_data.shape[0] / test_num_batches)
 
-        train_ratio = round(train_data.shape[0] * 100 / (train_data.shape[0] + test_data.shape[0]),1)
+        train_ratio = round(train_data.shape[0] * 100 / (train_data.shape[0] + test_data.shape[0]), 1)
         test_ratio = 100 - train_ratio
         num_train_data = train_data.shape[0]
 
-        print("Train size: {}, Test size: {}, split {}%:{}%".format(train_data.shape[0], test_data.shape[0], train_ratio,
-                                                                  test_ratio))
+        print("Train size: {}, Test size: {}, split {}%:{}%".format(train_data.shape[0], test_data.shape[0],
+                                                                    train_ratio, test_ratio))
         print("Available train batch factors: {}".format(sorted(train_bth)))
-        print("Requested number of batches per epoch - Train: {}, Test: {}".format(tr_desired_batch_size, te_desired_batch_size))
+        print("Requested number of batches per epoch - Train: {}, Test: {}".format(tr_desired_batch_size,
+                                                                                   te_desired_batch_size))
         print("Actual number of batches per epoch - Train: {}, Test: {}".format(train_num_batches, test_num_batches))
         print("Number of data samples in each batch - Train: {}, Test: {}".format(train_bt_size, test_bt_size))
     else:
@@ -278,7 +279,8 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
         final_targs = ((maxs - mins) * semifinal_targs) + mins  # (batch x (num time predictions * num q's)))
     elif transformation_method == "standard":
         stds = np.tile(train_std[train_std.filter(like=configs["target_var"], axis=0).index].values, len(configs["qs"]))
-        means = np.tile(train_mean[train_mean.filter(like=configs["target_var"], axis=0).index].values, len(configs["qs"]))
+        means = np.tile(train_mean[train_mean.filter(like=configs["target_var"], axis=0).index].values,
+                        len(configs["qs"]))
         final_preds = (semifinal_preds * stds) + means
         final_targs = (semifinal_targs * stds) + means
     else:
@@ -301,7 +303,7 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
         if q == 0.5:
             break
         filtered_low = split_arrays[i]
-        filtered_high = split_arrays[-(i+1)]
+        filtered_high = split_arrays[-(i + 1)]
         low_check = filtered_low < target_1D
         high_check = filtered_high > target_1D
         check_across_time = np.logical_and(low_check, high_check)
@@ -319,14 +321,15 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     for i, q in enumerate(configs["qs"]):
         if q == 0.5:
             break
-        low = split_arrays[i]   # (batches * time) for a single quantile
-        high = split_arrays[-(i+1)]     # (batches * time) for a single quantile
-        x = target_1D   # (batches * time) for nominal results
-        alph = 1 - (configs["qs"][-(i + 1)] - configs["qs"][i])     # Single float
-        IS = (high - low) + (2 / alph) * (low - x) * (x < low) + (2 / alph) * (x - high) * (x > high)   # (batches * time) for a single quantile
-        IS = IS.mean(axis=1)    # (batches * 1)
+        low = split_arrays[i]  # (batches * time) for a single quantile
+        high = split_arrays[-(i + 1)]  # (batches * time) for a single quantile
+        x = target_1D  # (batches * time) for nominal results
+        alph = 1 - (configs["qs"][-(i + 1)] - configs["qs"][i])  # Single float
+        IS = (high - low) + (2 / alph) * (low - x) * (x < low) + (2 / alph) * (x - high) * (
+                    x > high)  # (batches * time) for a single quantile
+        IS = IS.mean(axis=1)  # (batches * 1)
         ISs.append(IS)
-    IS = np.concatenate(ISs).mean() # Mean of all values in ISs
+    IS = np.concatenate(ISs).mean()  # Mean of all values in ISs
 
     # Compare theoretical and actual Q's
     temp_actual = []
@@ -359,7 +362,7 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
         for i, q in enumerate(configs["qs"]):
             tester = np.histogram(split_arrays[i], bins=200)
             y_vals = tester[0]
-            x_vals = 0.5*(tester[1][1:]+tester[1][:-1])
+            x_vals = 0.5 * (tester[1][1:] + tester[1][:-1])
             hist_data["{}_x".format(q)] = x_vals
             hist_data["{}_y".format(q)] = y_vals
     else:
@@ -580,9 +583,11 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                 # Do a test batch every ___ iterations
                 if n_iter % 10 == 0:
                     # Evaluate test set
-                    predictions, errors, measured, Q_vals = test_processing(test_df, test_loader, model, seq_dim, input_dim,
-                                                                    test_batch_size, transformation_method, configs,
-                                                                    False)
+                    predictions, errors, measured, Q_vals = test_processing(test_df, test_loader, model, seq_dim,
+                                                                            input_dim,
+                                                                            test_batch_size, transformation_method,
+                                                                            configs,
+                                                                            False)
 
                     temp_holder = errors
                     temp_holder.update({"n_iter": n_iter, "epoch": epoch})
@@ -613,7 +618,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                     # ax2.axis('equal')
                     # writer.add_figure('Parody', fig2, n_iter)
 
-                    #Add QQ plot to TensorBoard
+                    # Add QQ plot to TensorBoard
                     fig2, ax2 = plt.subplots()
                     ax2.scatter(Q_vals["q_requested"], Q_vals["q_actual"], s=20)
                     ax2.plot([0, 1], [0, 1], c='k', alpha=0.5)
@@ -624,23 +629,24 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                     writer.add_figure('QQ', fig2, n_iter)
 
                     # Write information about CPU usage to tensorboard
-                    percentages = dict(zip(list(np.arange(1,num_logical_processors+1).astype(str)), psutil.cpu_percent(interval=None, percpu=True)))
+                    percentages = dict(zip(list(np.arange(1, num_logical_processors + 1).astype(str)),
+                                           psutil.cpu_percent(interval=None, percpu=True)))
                     writer.add_scalars("CPU Utilization", percentages, n_iter)
 
                     print('Epoch: {} Iteration: {}. Train_loss: {}. Test_loss: {}, LR: {}'.format(epoch, n_iter,
-                                                                                                loss.data.item(),
-                                                                                                errors['pinball_loss'],
-                                                                                                optimizer.param_groups[
-                                                                                                    0]['lr']))
+                                                                                                  loss.data.item(),
+                                                                                                  errors[
+                                                                                                      'pinball_loss'],
+                                                                                                  optimizer.param_groups[
+                                                                                                      0]['lr']))
                     epoch_num += 1
-
 
         # Once model training is done, save the current model state
         save_model(model, epoch, n_iter)
 
         # Once model is done training, process a final test set
         predictions, errors, measured, Q_vals = test_processing(test_df, test_loader, model, seq_dim, input_dim,
-                                                        test_batch_size, transformation_method, configs, True)
+                                                                test_batch_size, transformation_method, configs, True)
 
         # Save the residual distribution to a file
         # hist_data.to_hdf(os.path.join(file_prefix, "residual_distribution.h5"), key='df', mode='w')
@@ -694,7 +700,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         prtime("Loaded model from file, given run_train=False\n")
 
         predictions, errors, measured, Q_vals = test_processing(test_df, test_loader, model, seq_dim, input_dim,
-                                                        test_batch_size, transformation_method, configs, True)
+                                                                test_batch_size, transformation_method, configs, True)
 
         # Save the final predictions to a file
         pd.DataFrame(predictions).to_hdf(os.path.join(file_prefix, "predictions.h5"), key='df', mode='w')
@@ -740,7 +746,8 @@ def eval_trained_model(file_prefix, train_data, train_batch_size, configs):
     semifinal_targs = np.concatenate(targets)
 
     # Get the saved binary mask from file
-    mask_file = os.path.join(configs["data_dir"], "mask_{}_{}.json".format(configs["target_var"].replace(" ", ""), "-".join(configs['year'])))
+    mask_file = os.path.join(configs["data_dir"], "mask_{}_{}.json".format(configs["target_var"].replace(" ", ""),
+                                                                           "-".join(configs['year'])))
     mask = pd.read_hdf(mask_file, key='df')
     msk = mask["msk"]
 
@@ -895,7 +902,8 @@ def eval_tests(file_prefix, batch_num):
     num_timestamps = configs["S2S_stagger"]["initial_num"] + configs["S2S_stagger"]["secondary_num"]
 
     # Read in mask from file
-    mask_file = os.path.join(configs["data_dir"], "mask_{}_{}.h5".format(configs["target_var"].replace(" ", ""), "-".join(configs['year'])))
+    mask_file = os.path.join(configs["data_dir"],
+                             "mask_{}_{}.h5".format(configs["target_var"].replace(" ", ""), "-".join(configs['year'])))
     mask = pd.read_hdf(mask_file, key='df')
     msk = mask['msk'].values
 
@@ -904,7 +912,9 @@ def eval_tests(file_prefix, batch_num):
     init_indices = np.arange(start_index_init, end_index_init)
 
     if configs["S2S_stagger"]["secondary_num"] > 0:
-        second_indices = np.arange(end_index_init + (configs["S2S_stagger"]["decay"] - 1), end_index_init + (configs["S2S_stagger"]["secondary_num"] * configs["S2S_stagger"]["decay"]), configs["S2S_stagger"]["decay"])
+        second_indices = np.arange(end_index_init + (configs["S2S_stagger"]["decay"] - 1), end_index_init + (
+                    configs["S2S_stagger"]["secondary_num"] * configs["S2S_stagger"]["decay"]),
+                                   configs["S2S_stagger"]["decay"])
         indices = np.append(init_indices, second_indices)
         time_index = mask.index[indices]
     else:
@@ -930,6 +940,111 @@ def eval_tests(file_prefix, batch_num):
                          label="{}%".format(round((configs["qs"][-(i + 1)] - q) * 100)), lw=0)
     ax1.legend()
     plt.show()
+
+
+def predict(data, file_prefix):
+    # Get rid of this eventually
+    file_prefix = "EnergyForecasting_Results\RNN_MCafeMainPower(kW)_Tlaptop_baseline"
+
+    # Read configs from results directory
+    with open(os.path.join(file_prefix, "configs.json"), "r") as read_file:
+        configs = json.load(read_file)
+
+    # Get rid of this eventually
+    data = pd.read_hdf("sample_predict.h5", key='df').drop([configs["target_var"]], axis=1)
+    data = data.drop('SRRL BMS Snow Depth (in)', axis=1)
+
+    # Check if the supplied data matches the sequence length that the model was trained on
+    if not data.shape[0] == configs["window"]:
+        raise ConfigsError("Input data has sequence length {}. Expected sequence length of {}".format(data.shape[0],
+                                                                                                      configs[
+                                                                                                          "window"]))
+
+    # Data should be resampled, cleaned by this point. No nans. Everything above this line will be replaced eventually
+
+    # Add time-based variables
+    data = bp.time_dummies(data, configs)
+
+    # Get rid of this eventually
+    configs["input_dim"] = data.shape[1]
+
+    # Do sequential padding of the inputs
+    data_orig = data
+    for i in range(1, configs["window"]):
+        shifted = data_orig.shift(i)
+        shifted = shifted.join(data, lsuffix="_lag{}".format(i))
+        data = shifted
+    data = data.iloc[-1, :]
+
+    # Transpose dataframe
+    data = pd.DataFrame(data).transpose()
+
+    # Reset index
+    data.reset_index(drop=True, inplace=True)
+
+    # Do normalization
+    # Reading back the train stats for normalizing test data w.r.t to train data
+    file_loc = os.path.join(file_prefix, "train_stats.json")
+    with open(file_loc, 'r') as f:
+        train_stats = json.load(f)
+
+    # get statistics for training data
+    train_max = pd.DataFrame(train_stats['train_max'], index=[1]).iloc[0]
+    train_min = pd.DataFrame(train_stats['train_min'], index=[1]).iloc[0]
+    train_mean = pd.DataFrame(train_stats['train_mean'], index=[1]).iloc[0]
+    train_std = pd.DataFrame(train_stats['train_std'], index=[1]).iloc[0]
+    train_max = train_max.drop(train_max.filter(like=configs["target_var"], axis=0).index)
+    train_min = train_min.drop(train_min.filter(like=configs["target_var"], axis=0).index)
+    train_mean = train_mean.drop(train_mean.filter(like=configs["target_var"], axis=0).index)
+    train_std = train_std.drop(train_std.filter(like=configs["target_var"], axis=0).index)
+
+    # Normalize data
+    if configs["transformation_method"] == "minmaxscale":
+        data = (data - train_min.values) / (train_max.values - train_min.values)
+    elif configs["transformation_method"] == "standard":
+        data = ((data - train_mean.values) / train_std.values)
+    else:
+        raise ConfigsError("{} is not a supported form of data normalization".format(configs["transformation_method"]))
+
+    # Convert to iterable dataset
+    data = data.values.astype(dtype='float32')
+    train_feat_tensor = torch.from_numpy(data).type(torch.FloatTensor)
+
+    # Load model
+    torch_model = torch.load(os.path.join(file_prefix, 'torch_model'))
+    model = torch_model['torch_model']
+
+    # Evaluate model
+    model.eval()
+    features = Variable(train_feat_tensor.view(-1, configs['window'], configs["input_dim"]))
+    outputs = model(features)
+    semifinal_preds = outputs.data.numpy()
+
+    # Denormalize
+    # Get normalization statistics
+    train_max = pd.DataFrame(train_stats['train_max'], index=[1]).iloc[0]
+    train_min = pd.DataFrame(train_stats['train_min'], index=[1]).iloc[0]
+    train_mean = pd.DataFrame(train_stats['train_mean'], index=[1]).iloc[0]
+    train_std = pd.DataFrame(train_stats['train_std'], index=[1]).iloc[0]
+
+    # Do de-normalization process on predictions and targets from test set
+
+    # Do de-normalization process on predictions and targets from test set
+    if configs["transformation_method"] == "minmaxscale":
+        maxs = np.tile(train_max[train_max.filter(like=configs["target_var"], axis=0).index].values, len(configs["qs"]))
+        mins = np.tile(train_min[train_min.filter(like=configs["target_var"], axis=0).index].values, len(configs["qs"]))
+        final_preds = ((maxs - mins) * semifinal_preds) + mins  # (batch x (num time predictions * num q's)))
+    elif configs["transformation_method"] == "standard":
+        stds = np.tile(train_std[train_std.filter(like=configs["target_var"], axis=0).index].values, len(configs["qs"]))
+        means = np.tile(train_mean[train_mean.filter(like=configs["target_var"], axis=0).index].values,
+                        len(configs["qs"]))
+        final_preds = (semifinal_preds * stds) + means
+    else:
+        raise ConfigsError("{} is not a supported form of data normalization".format(configs["transformation_method"]))
+
+    final_preds = final_preds.reshape(
+        (configs["S2S_stagger"]["initial_num"] + configs["S2S_stagger"]["secondary_num"], len(configs["qs"])))
+    return final_preds
 
 
 def main(train_df, test_df, configs):

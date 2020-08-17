@@ -102,9 +102,10 @@ def get_full_data(configs):
         if pathlib.Path(file_extension).exists():
             data_full = pd.read_hdf(file_extension, key='df')
         else:
-            print('Fetching {} data from LAN and writing to local file. This only needs to be done once'.format(year))
-            file_path = import_from_lan(configs, year)
-            data_full = pd.read_hdf(file_path, key='df')
+            raise ConfigsError("{} was not found.".format(file_extension))
+            # print('Fetching {} data from LAN and writing to local file. This only needs to be done once'.format(year))
+            # file_path = import_from_lan(configs, year)
+            # data_full = pd.read_hdf(file_path, key='df')
         dataset[year] = data_full
 
     data_full = pd.DataFrame()
