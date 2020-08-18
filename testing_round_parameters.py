@@ -22,8 +22,8 @@ runs = {}
 # runs["Test_ec_gap"] = {'iterable': "EC_future_gap", 'iterables': [5, 10, 15, 20], 'iterable_type': int}
 # runs["Test_HOD_indicator_RSF"] = {'iterable': "HOD_indicator", 'iterables': ["sincos", "regDummy"], 'iterable_type': str}
 # runs["Test_layer_dim"] = {'iterable': "layer_dim", 'iterables': [1, 2], 'iterable_type': int}
-# runs["Test_hidden_dim"] = {'iterable': "hidden_nodes", 'iterables': [5, 10, 15, 20, 25, 30], 'iterable_type': int}
-runs["Test_bp_grad"] = {'iterable': "BP_grad", 'iterables': [True, False], 'iterable_type': bool}
+runs["Test_hidden_dim"] = {'iterable': "hidden_nodes", 'iterables': [5, 10, 15, 20, 25, 30, 35], 'iterable_type': int}
+# runs["Test_alpha"] = {'iterable': "smoothing_alpha", 'iterables': [0.1, 0.01, 0.001], 'iterable_type': float}
 
 # Run tests
 for test in runs:
