@@ -214,6 +214,7 @@ def time_dummies(data, configs):
         with open("holidays.json", "r") as read_file:
             holidays = json.load(read_file)
         data['Holiday'] = pd.to_datetime(data.index.date).isin(holidays).astype(int)
+        data['Holiday_forward'] = pd.to_datetime(data.index.date + dt.timedelta(days=1)).isin(holidays).astype(int)
 
     return data
 
@@ -506,7 +507,7 @@ def prep_for_seq2seq(configs, data):
         building = configs["external_test"]["building"]
         year = configs["external_test"]["year"]
         month = configs["external_test"]["month"]
-        file = os.path.join("Test_sets", "{}-{}-{}-processed.h5".format(building, month, year))
+        file = os.path.join(configs["data_dir"], "{}-{}-{}-processed.h5".format(building, month, year))
         test_df.to_hdf(file, key='df', mode='w')
 
     return train_df, test_df

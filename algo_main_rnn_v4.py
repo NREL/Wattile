@@ -671,6 +671,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         model = torch_model['torch_model']
         prtime("Loaded model from file, given run_train=False\n")
 
+        # Run test
         predictions, targets, errors, Q_vals, hist_data = test_processing(test_df, test_loader, model, seq_dim, input_dim,
                                               test_batch_size, transformation_method, configs, True)
 
@@ -680,10 +681,10 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         file = os.path.join(configs["data_dir"], "{}-{}-{}-processed.h5".format(building, month, year))
         index = pd.read_hdf(file, key='df').index
 
-        pd.DataFrame(predictions).to_hdf(os.path.join(file_prefix, "predictions_external.h5"), key='df', mode='w')
+        # Plot the results of the test set
         cmap = plt.get_cmap('Reds')
         fig, ax1 = plt.subplots(figsize=(20, 4))
-        ax1.plot(index, targets.iloc[:,0], label="Actual Demand", color='black')
+        ax1.plot(index, targets.iloc[l:,0], label="Actual Demand", color='black')
         ax1.plot(index, predictions.iloc[:, int(len(configs["qs"]) / 2)], label='q = 0.5 forecast', color="red")
         for i, q in enumerate(configs["qs"]):
             if q == 0.5:
@@ -694,7 +695,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         ax1.set_ylabel(configs["target_var"])
         #ax1.set_xlim([pd.to_datetime('2019-01-07 00:00:00'), pd.to_datetime('2019-01-14 00:00:00')])
         #ax1.set_title("Cafe Main Meter LSTM Predictions")
-        #ax1.legend()
+        ax1.legend()
         plt.show()
         #fig.savefig(os.path.join(configs["results_dir"], "{}_test.png".format(configs["target_var"])))
 

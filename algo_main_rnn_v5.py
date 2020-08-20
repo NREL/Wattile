@@ -700,11 +700,52 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         prtime("Loaded model from file, given run_train=False\n")
 
         predictions, errors, measured, Q_vals = test_processing(test_df, test_loader, model, seq_dim, input_dim,
-                                                                test_batch_size, transformation_method, configs, True)
+                                                                test_batch_size, transformation_method, configs, False)
 
         # Save the final predictions to a file
-        pd.DataFrame(predictions).to_hdf(os.path.join(file_prefix, "predictions.h5"), key='df', mode='w')
-        pd.DataFrame(measured).to_hdf(os.path.join(file_prefix, "measured.h5"), key='df', mode='w')
+        # pd.DataFrame(predictions).to_hdf(os.path.join(file_prefix, "predictions.h5"), key='df', mode='w')
+        # pd.DataFrame(measured).to_hdf(os.path.join(file_prefix, "measured.h5"), key='df', mode='w')
+
+        building = configs["external_test"]["building"]
+        year = configs["external_test"]["year"]
+        month = configs["external_test"]["month"]
+        file = os.path.join(configs["data_dir"], "{}-{}-{}-processed.h5".format(building, month, year))
+        processed = pd.read_hdf(file, key='df')
+
+        num_timestamps = configs["S2S_stagger"]["initial_num"] + configs["S2S_stagger"]["secondary_num"]
+        data = np.array(predictions)
+        data = data.reshape((data.shape[0], len(configs["qs"]), num_timestamps))
+
+        # Plotting the test set with ALL of the sequence forecasts
+        fig, ax1 = plt.subplots()
+        cmap = plt.get_cmap('Reds')
+        for j in range(0, 600, 1):
+            time_index = processed.index[j:j+72]
+            ax1.plot(time_index, measured[j, :], label="Actual", color='black')
+            ax1.plot(time_index, data[j, int(len(configs["qs"]) / 2), :], label='q = 0.5', color="red")
+            for i, q in enumerate(configs["qs"]):
+                if q == 0.5:
+                    break
+                ax1.fill_between(time_index, data[j, i, :], data[j, -(i + 1), :], color=cmap(q), alpha=0.5,
+                                 lw=0)
+        plt.show()
+
+        # Plotting residuals vs time-step-ahead forecast
+        residuals = data[:,3,:] - measured
+        fig, ax2 = plt.subplots()
+        for i in range(0,residuals.shape[1]):
+            ax2.scatter(np.ones_like(residuals[:,i])*i, residuals[:,i], s=0.5, color="black")
+        ax2.set_xlabel('Forecast steps ahead')
+        ax2.set_ylabel('Residual')
+        plt.show()
+
+        # Plot residuals for all times in test set
+        fig, ax3 = plt.subplots()
+        ax3.scatter(processed.index, residuals[:,-1], s=0.5, alpha=0.5, color="blue")
+        ax3.set_ylabel('Residual of 18hr ahead forecast')
+        # ax3.scatter(processed.index[np.logical_and(processed.index.weekday == 5, processed.index.hour == 12)],
+        #             residuals[:, -1][np.logical_and(processed.index.weekday == 5, processed.index.hour == 12)],
+        #             s=20, alpha=0.5, color="black")
 
 
 def eval_trained_model(file_prefix, train_data, train_batch_size, configs):
@@ -885,12 +926,12 @@ def plot_mid_train_stats(file_prefix):
     data.plot(x="n_iter", subplots=True)
 
 
-def eval_tests(file_prefix, batch_num):
+def eval_tests(file_prefix, batch_tot):
     """
     Plot test results from file.
     Can be used with V5 algorithm.
 
-    :param file_prefix:
+    :param file_prefix:p
     :param configs:
     :return:
     """
@@ -907,38 +948,43 @@ def eval_tests(file_prefix, batch_num):
     mask = pd.read_hdf(mask_file, key='df')
     msk = mask['msk'].values
 
-    start_index_init = np.searchsorted(np.cumsum(~msk), batch_num)
-    end_index_init = start_index_init + configs["S2S_stagger"]["initial_num"]
-    init_indices = np.arange(start_index_init, end_index_init)
-
-    if configs["S2S_stagger"]["secondary_num"] > 0:
-        second_indices = np.arange(end_index_init + (configs["S2S_stagger"]["decay"] - 1), end_index_init + (
-                    configs["S2S_stagger"]["secondary_num"] * configs["S2S_stagger"]["decay"]),
-                                   configs["S2S_stagger"]["decay"])
-        indices = np.append(init_indices, second_indices)
-        time_index = mask.index[indices]
-    else:
-        time_index = mask.index[init_indices]
-
     # Read in predictions from file
     data = pd.read_hdf(os.path.join(file_prefix, "predictions.h5"), key='df')
     data = np.array(data)
     data = data.reshape((data.shape[0], len(configs["qs"]), num_timestamps))
 
-    # Read in predictions from file
+    # Read in measured values from file
     measured = pd.read_hdf(os.path.join(file_prefix, "measured.h5"), key='df')
+    measured = np.array(measured)
 
-    # Plot results
-    cmap = plt.get_cmap('Reds')
     fig, ax1 = plt.subplots()
-    ax1.plot(time_index, measured.iloc[batch_num, :], label="Actual", color='black')
-    ax1.plot(time_index, data[batch_num, int(len(configs["qs"]) / 2), :], label='q = 0.5', color="red")
-    for i, q in enumerate(configs["qs"]):
-        if q == 0.5:
-            break
-        ax1.fill_between(time_index, data[batch_num, i, :], data[batch_num, -(i + 1), :], color=cmap(q), alpha=1,
-                         label="{}%".format(round((configs["qs"][-(i + 1)] - q) * 100)), lw=0)
-    ax1.legend()
+    cmap = plt.get_cmap('Reds')
+
+    # Batch_num is the data sample number
+    for batch_num in range(0, batch_tot):
+        start_index_init = np.searchsorted(np.cumsum(~msk), batch_num+1)
+        time_index = pd.DatetimeIndex(start=str(mask.index[start_index_init]), freq='15T', periods=72)
+        # end_index_init = start_index_init + configs["S2S_stagger"]["initial_num"]
+        # init_indices = np.arange(start_index_init, end_index_init)
+
+        # if configs["S2S_stagger"]["secondary_num"] > 0:
+        #     second_indices = np.arange(end_index_init + (configs["S2S_stagger"]["decay"] - 1), end_index_init + (
+        #                 configs["S2S_stagger"]["secondary_num"] * configs["S2S_stagger"]["decay"]),
+        #                                configs["S2S_stagger"]["decay"])
+        #     indices = np.append(init_indices, second_indices)
+        #     time_index = mask.index[indices]
+        # else:
+        #     time_index = mask.index[init_indices]
+
+        # Plot results
+        ax1.plot(time_index, measured[batch_num, :], label="Actual", color='black')
+        ax1.plot(time_index, data[batch_num, int(len(configs["qs"]) / 2), :], label='q = 0.5', color="red")
+        for i, q in enumerate(configs["qs"]):
+            if q == 0.5:
+                break
+            ax1.fill_between(time_index, data[batch_num, i, :], data[batch_num, -(i + 1), :], color=cmap(q), alpha=0.5, lw=0)
+
+    # ax1.legend()
     plt.show()
 
 
