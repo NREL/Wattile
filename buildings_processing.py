@@ -40,7 +40,7 @@ def import_from_lan(configs, year):
         sub_dir = "Building Load Data"
         suffix = " Meter Trends"
 
-    # Read in energy consumption data from LAN file (one month at a time)
+    # Read in ENERGY DATA from LAN file (one month at a time)
     for month in range(1, 13):
         energy_data_dir = os.path.join(configs['LAN_path'], sub_dir)
         energy_file = "{} {}-{}{}.csv".format(configs['building'], year, "{:02d}".format(month), suffix)
@@ -54,7 +54,7 @@ def import_from_lan(configs, year):
         print('Read energy month {}/12 in {} for {}'.format(month, year, configs['building']))
     print('Done reading in energy data')
 
-    # Read in weather data (one month at a time)
+    # Read in WEATHER DATA (one month at a time)
     file_extension = os.path.join(configs["data_dir"], "Weather_{}.h5".format(year))
     if pathlib.Path(file_extension).exists():
         data_w = pd.read_hdf(file_extension, key='df')

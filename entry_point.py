@@ -39,11 +39,13 @@ def main(configs):
     data = data.resample(resample_bin_size).mean()
     # Clean
     data = bp.clean_data(data, configs)
+    # Add calculated features
+
     # Add time-based dummy variables
     data = bp.time_dummies(data, configs)
 
     # As of this point, "data" dataframe is assumed to have:
-    # only the weather features we want to train on, already resampled, cleaned, and have time-based features added.
+    # only the weather features we want to train on, already resampled, cleaned, have time-based features added, and have all calculated features, if any.
     # The data has not been padded yet, or been split into a test/train split.
     # For feature selection, "data" can be passed into prep_for function. It needs to have gone through the equivilent steps as above.
 

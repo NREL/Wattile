@@ -684,7 +684,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         # Plot the results of the test set
         cmap = plt.get_cmap('Reds')
         fig, ax1 = plt.subplots(figsize=(20, 4))
-        ax1.plot(index, targets.iloc[l:,0], label="Actual Demand", color='black')
+        ax1.plot(index, targets.iloc[:,0], label="Actual Demand", color='black')
         ax1.plot(index, predictions.iloc[:, int(len(configs["qs"]) / 2)], label='q = 0.5 forecast', color="red")
         for i, q in enumerate(configs["qs"]):
             if q == 0.5:

@@ -719,7 +719,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         # Plotting the test set with ALL of the sequence forecasts
         fig, ax1 = plt.subplots()
         cmap = plt.get_cmap('Reds')
-        for j in range(0, 600, 1):
+        for j in range(0, 2000, 4):
             time_index = processed.index[j:j+72]
             ax1.plot(time_index, measured[j, :], label="Actual", color='black')
             ax1.plot(time_index, data[j, int(len(configs["qs"]) / 2), :], label='q = 0.5', color="red")
