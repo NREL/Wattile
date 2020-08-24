@@ -6,6 +6,7 @@ import json
 import buildings_processing as bp
 import logging
 import os
+import pathlib
 
 
 def main(configs):
@@ -17,8 +18,10 @@ def main(configs):
     """
 
     # Initialize logging
-    logging_path = os.path.join(configs["results_dir"], configs["arch_type"] + '_M' + str(configs["target_var"].replace(" ", "")) + '_T' + str(configs["test_exp_num"]), "output.out")
-    logging.basicConfig(filename=logging_path, format='%(asctime)s: %(levelname)s: %(message)s',
+    local_results_dir = os.path.join(configs["results_dir"], configs["arch_type"] + '_M' + str(configs["target_var"].replace(" ", "")) + '_T' + str(configs["test_exp_num"]))
+    pathlib.Path(local_results_dir).mkdir(parents=True, exist_ok=True)
+    logging_path = os.path.join(local_results_dir, "output.out")
+    logging.basicConfig(filename=logging_path, format='%(asctime)s - %(levelname)-8s - %(message)s',
                         datefmt='%m/%d/%Y %I:%M:%S', level=logging.INFO)
 
     # Preprocess if needed
