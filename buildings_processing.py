@@ -364,20 +364,29 @@ def pad_full_data_s2s(data, configs):
     data = data.drop(configs['target_var'], axis=1)
     data_orig = data
     # Pad the exogenous variables
+    temp_holder = list()
+    temp_holder.append(data_orig)
     for i in range(1, configs['window']):
-        shifted = data_orig.shift(i)
-        shifted = shifted.join(data, lsuffix="_lag{}".format(i))
-        data = shifted
+        shifted = data_orig.shift(i * configs["shift_multiplier"]).astype("float32").add_suffix("_lag{}".format(i))
+        temp_holder.append(shifted)
+        print(i)
+        # shifted = shifted.join(data, lsuffix="_lag{}".format(i))
+        # data = shifted
+    temp_holder.reverse()
+    data = pd.concat(temp_holder, axis=1)
 
-    # Do fine padding for future predictions.
+    # Do fine padding for future predictions. Create a new df to preserve memory usage.
+    local = pd.DataFrame()
     for i in range(0, configs["S2S_stagger"]["initial_num"]):
-        data["{}_lag_{}".format(configs["target_var"], i)] = target.shift(-i)
+        local["{}_lag_{}".format(configs["target_var"], i)] = target.shift(-i * configs["shift_multiplier"])
 
     # Do additional coarse padding for future predictions
     for i in range(1, configs["S2S_stagger"]["secondary_num"] + 1):
         base = configs["S2S_stagger"]["initial_num"]
         new = base + configs["S2S_stagger"]["decay"] * i
-        data["{}_lag_{}".format(configs["target_var"], base+i)] = target.shift(-new)
+        local["{}_lag_{}".format(configs["target_var"], base+i)] = target.shift(-new * configs["shift_multiplier"])
+
+    data = pd.concat([data, local], axis=1)
 
     # Drop all nans
     data = data.dropna(how='any')
@@ -492,6 +501,13 @@ def prep_for_seq2seq(configs, data):
 
     # Do seaborn correlation matrix if you want...
     #corr_heatmap(data)
+
+    # Change data types to save memory, if needed
+    for column in data:
+        if data[column].dtype == int:
+            data[column] = data[column].astype("int8")
+        elif data[column].dtype == float:
+            data[column] = data[column].astype("float32")
 
     # Do sequential padding now if we are doing random train/test splitting
     if configs["TrainTestSplit"] == 'Random':

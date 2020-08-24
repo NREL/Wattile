@@ -15,6 +15,7 @@ from tensorboardX import SummaryWriter
 import timeit
 import matplotlib.pyplot as plt
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.optim.lr_scheduler import StepLR
 import csv
 import pathlib
 import psutil
@@ -442,8 +443,10 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         # Instantiate Optimizer Class
         optimizer = torch.optim.Adam(model.parameters(), lr=configs['lr_config']['base'], weight_decay=weight_decay)
 
-        if lr_schedule:
-            # Set up learning rate scheduler.
+        # Set up learning rate scheduler
+        if not configs["lr_config"]["schedule"]:
+            pass
+        elif configs["lr_config"]["schedule"] and configs["lr_config"]["type"] == "performance":
             # Patience (for our case) is # of iterations, not epochs, but configs specification is num epochs
             scheduler = ReduceLROnPlateau(optimizer,
                                           mode='min',
@@ -452,6 +455,12 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                                           patience=int(
                                               configs['lr_config']['patience'] * (num_train_data / train_batch_size)),
                                           verbose=True)
+        elif configs["lr_config"]["schedule"] and configs["lr_config"]["type"] == "absolute":
+            scheduler = StepLR(optimizer,
+                               step_size=int(configs['lr_config']["step_size"]*(num_train_data/train_batch_size)),
+                               gamma=configs['lr_config']['factor'])
+        else:
+            raise ConfigsError("{} is not a supported method of LR scheduling".format(configs["lr_config"]["type"]))
 
         prtime("Preparing model to train")
         prtime("starting to train the model for {} epochs!".format(num_epochs))
@@ -539,7 +548,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
                 time5 = timeit.default_timer()
 
-                if lr_schedule:
+                if configs["lr_config"]["schedule"]:
                     scheduler.step(loss)
 
                 # Updating the weights/parameters. Clear computational graph.

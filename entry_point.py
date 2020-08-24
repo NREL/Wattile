@@ -39,7 +39,18 @@ def main(configs):
     data = data.resample(resample_bin_size).mean()
     # Clean
     data = bp.clean_data(data, configs)
-    # Add calculated features
+    # Add calculated features (if applicable)
+
+    # DEV
+    # Convert data to rolling average (except output) and create min, mean, and max columns
+    target = data[configs["target_var"]]
+    X_data = data.drop(configs["target_var"], axis=1)
+    mins = X_data.rolling(window=configs["rolling_window_min"]).min().add_suffix("_min")
+    means = X_data.rolling(window=configs["rolling_window_min"]).mean().add_suffix("_mean")
+    maxs = X_data.rolling(window=configs["rolling_window_min"]).max().add_suffix("_max")
+    data = pd.concat([mins, means, maxs], axis=1)
+    data[configs["target_var"]] = target
+    # END DEV
 
     # Add time-based dummy variables
     data = bp.time_dummies(data, configs)
@@ -51,8 +62,7 @@ def main(configs):
 
     # Choose what ML architecture to use and execute the corresponding script
     if configs['arch_type'] == 'RNN':
-        # What RNN version you are implementing?
-        # Specified in configs
+        # What RNN version you are implementing? Specified in configs.
         rnn_mod = importlib.import_module("algo_main_rnn_v{}".format(configs["arch_version"]))
 
         if configs["arch_version"] == 1:
