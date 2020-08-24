@@ -4,6 +4,8 @@ import importlib
 import data_preprocessing
 import json
 import buildings_processing as bp
+import logging
+import os
 
 
 def main(configs):
@@ -13,6 +15,11 @@ def main(configs):
     :param configs: Dictionary
     :return: None
     """
+
+    # Initialize logging
+    logging_path = os.path.join(configs["results_dir"], configs["arch_type"] + '_M' + str(configs["target_var"].replace(" ", "")) + '_T' + str(configs["test_exp_num"]), "output.out")
+    logging.basicConfig(filename=logging_path, format='%(asctime)s: %(levelname)s: %(message)s',
+                        datefmt='%m/%d/%Y %I:%M:%S', level=logging.INFO)
 
     # Preprocess if needed
     if configs['preprocess']:

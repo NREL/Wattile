@@ -8,6 +8,7 @@ import json
 import os
 import seaborn as sns
 import matplotlib.pyplot as plt
+import logging
 
 
 class ConfigsError(Exception):
@@ -242,11 +243,13 @@ def train_test_split(data, configs):
                 msk = np.array(msk)
                 train_df = data[msk]
                 test_df = data[~msk]
-                print("Using an existing training mask: {}".format(mask_file))
+                # print("Using an existing training mask: {}".format(mask_file))
+                logging.info("Using an existing training mask: {}".format(mask_file))
 
             # If not, a recent architectural change must have changed the length of data. Make a new one.
             else:
-                print("There was a length mismatch between the existing mask and the data. Making a new mask and writing to file.")
+                # print("There was a length mismatch between the existing mask and the data. Making a new mask and writing to file.")
+                logging.info("There was a length mismatch between the existing mask and the data. Making a new mask and writing to file")
                 data_size = data.shape[0]
                 num_ones = (configs["target_split_ratio"] * data_size) - ((configs["target_split_ratio"] * data_size) % 32)
                 msk = np.zeros(data_size)
@@ -264,7 +267,8 @@ def train_test_split(data, configs):
 
         # If no previously-saved mask exists, make one
         else:
-            print("Creating random training mask and writing to file")
+            # print("Creating random training mask and writing to file")
+            logging.info("Creating random training mask and writing to file")
             data_size = data.shape[0]
             num_ones = (configs["target_split_ratio"] * data_size) - ((configs["target_split_ratio"] * data_size) % 32)
             msk = np.zeros(data_size)
@@ -369,9 +373,6 @@ def pad_full_data_s2s(data, configs):
     for i in range(1, configs['window']):
         shifted = data_orig.shift(i * configs["shift_multiplier"]).astype("float32").add_suffix("_lag{}".format(i))
         temp_holder.append(shifted)
-        print(i)
-        # shifted = shifted.join(data, lsuffix="_lag{}".format(i))
-        # data = shifted
     temp_holder.reverse()
     data = pd.concat(temp_holder, axis=1)
 
@@ -417,7 +418,8 @@ def prep_for_rnn(configs, data):
     # Determine input dimension. All unique features are added by this point.
     # Subtract 1 bc target variable is still present
     configs['input_dim'] = data.shape[1] - 1
-    print("Number of features: {}".format(configs['input_dim']))
+    # print("Number of features: {}".format(configs['input_dim']))
+    logging.info("Number of features: {}".format(configs['input_dim']))
 
     # Do seaborn correlation matrix if you want...
     #corr_heatmap(data)
@@ -497,7 +499,8 @@ def prep_for_seq2seq(configs, data):
     # Determine input dimension. All unique features are added by this point.
     # Subtract 1 bc target variable is still present
     configs['input_dim'] = data.shape[1] - 1
-    print("Number of features: {}".format(configs['input_dim']))
+    #print("Number of features: {}".format(configs['input_dim']))
+    logging.info("Number of features: {}".format(configs['input_dim']))
 
     # Do seaborn correlation matrix if you want...
     #corr_heatmap(data)

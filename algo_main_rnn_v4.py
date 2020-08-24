@@ -21,6 +21,7 @@ import pathlib
 import psutil
 from psutil import virtual_memory
 import buildings_processing as bp
+import logging
 
 
 file_prefix = '/default'
