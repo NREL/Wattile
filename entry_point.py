@@ -94,7 +94,7 @@ def main(configs):
             train_df, test_df = bp.prep_for_rnn(configs, data)
             rnn_mod.main(train_df, test_df, configs)
 
-    print('Run with arch: {}, train_num= {}, test_num= {} and target= {} is done!'.format(configs['arch_type'],
+    logging.info('Run with arch: {}, train_num= {}, test_num= {} and target= {} is done!'.format(configs['arch_type'],
                                                                                           configs['building'],
                                                                                           configs['test_exp_num'],
                                                                                           configs['target_var']))

@@ -57,13 +57,13 @@ def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_ba
         test_ratio = 100 - train_ratio
         num_train_data = train_data.shape[0]
 
-        print("Train size: {}, Test size: {}, split {}%:{}%".format(train_data.shape[0], test_data.shape[0],
+        logging.info("Train size: {}, Test size: {}, split {}%:{}%".format(train_data.shape[0], test_data.shape[0],
                                                                     train_ratio, test_ratio))
-        print("Available train batch factors: {}".format(sorted(train_bth)))
-        print("Requested number of batches per epoch - Train: {}, Test: {}".format(tr_desired_batch_size,
+        logging.info("Available train batch factors: {}".format(sorted(train_bth)))
+        logging.info("Requested number of batches per epoch - Train: {}, Test: {}".format(tr_desired_batch_size,
                                                                                    te_desired_batch_size))
-        print("Actual number of batches per epoch - Train: {}, Test: {}".format(train_num_batches, test_num_batches))
-        print("Number of data samples in each batch - Train: {}, Test: {}".format(train_bt_size, test_bt_size))
+        logging.info("Actual number of batches per epoch - Train: {}, Test: {}".format(train_num_batches, test_num_batches))
+        logging.info("Number of data samples in each batch - Train: {}, Test: {}".format(train_bt_size, test_bt_size))
     else:
         test_bt_size = test_data.shape[0]
         train_bt_size = 0
@@ -437,9 +437,8 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
                 epoch_range = np.arange(resume_num_epoch + 1, num_epochs + 1)
             except FileNotFoundError:
-                print("model does not exist in the given folder for resuming the training. Exiting...")
+                logging.info("model does not exist in the given folder for resuming the training. Exiting...")
                 exit()
-            #prtime("rune_resume=True, model loaded from: {}".format(file_prefix))
             logging.info("rune_resume=True, model loaded from: {}".format(file_prefix))
 
         # If you want to start training a model from scratch
@@ -457,8 +456,6 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                 raise ConfigsError(
                     "{} is not a supported architecture variant".format(configs["arch_type_variant"]))
             epoch_range = np.arange(num_epochs)
-            # print("A new {} {} model instantiated, with run_train=True".format(configs["arch_type_variant"],
-            #                                                                    configs["arch_type"]))
             logging.info("A new {} {} model instantiated, with run_train=True".format(configs["arch_type_variant"],
                                                                                configs["arch_type"]))
 
@@ -484,20 +481,12 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         else:
             raise ConfigsError("{} is not a supported method of LR scheduling".format(configs["lr_config"]["type"]))
 
-        # prtime("Preparing model to train")
-        # prtime("Starting to train the model for {} epochs!".format(num_epochs))
-        logging.info("Starting to train the model for {} epochs!".format(num_epochs))
-
-        # Computing platform
         # Computing platform
         num_logical_processors = psutil.cpu_count(logical=True)
         num_cores = psutil.cpu_count(logical=False)
         mem = virtual_memory()
         mem = {"total": mem.total / 10 ** 9, "available": mem.available / 10 ** 9, "percent": mem.percent,
                "used": mem.used / 10 ** 9, "free": mem.free / 10 ** 9}
-        # print("Number of cores available: {}".format(num_cores))
-        # print("Number of logical processors available: {}".format(num_logical_processors))
-        # print("Memory statistics (GB): {}".format(mem))
         logging.info("Number of cores available: {}".format(num_cores))
         logging.info("Number of logical processors available: {}".format(num_logical_processors))
         logging.info("Memory statistics (GB): {}".format(mem))
@@ -507,7 +496,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
         if (len(epoch_range) == 0):
             epoch = resume_num_epoch + 1
-            prtime("the previously saved model was at epoch= {}, which is same as num_epochs. So, not training"
+            logging.info("the previously saved model was at epoch= {}, which is same as num_epochs. So, not training"
                    .format(resume_num_epoch))
 
         if run_resume:
@@ -525,6 +514,8 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         # train_y_at_t = torch.zeros(train_batch_size, seq_dim, 1)  # 960 x 5 x 1
 
         mid_train_error_stats = pd.DataFrame()
+
+        logging.info("Starting to train the model for {} epochs!".format(num_epochs))
 
         # Loop through epochs
         epoch_num = 1
@@ -586,7 +577,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
                 # Compute time per iteration
                 time6 = timeit.default_timer()
-                writer.add_scalars("Iteration time", {"Package_variables": time2 - time1,
+                writer.add_scalars("Iteration_time", {"Package_variables": time2 - time1,
                                                       "Evaluate_model": time3 - time2,
                                                       "Calc_loss": time4 - time3,
                                                       "Backprop": time5 - time4,
@@ -647,14 +638,8 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                     # Write information about CPU usage to tensorboard
                     percentages = dict(zip(list(np.arange(1, num_logical_processors + 1).astype(str)),
                                            psutil.cpu_percent(interval=None, percpu=True)))
-                    writer.add_scalars("CPU Utilization", percentages, n_iter)
+                    writer.add_scalars("CPU_utilization", percentages, n_iter)
 
-                    # print('Epoch: {} Iteration: {}. Train_loss: {}. Test_loss: {}, LR: {}'.format(epoch, n_iter,
-                    #                                                                               loss.data.item(),
-                    #                                                                               errors[
-                    #                                                                                   'pinball_loss'],
-                    #                                                                               optimizer.param_groups[
-                    #                                                                                   0]['lr']))
                     logging.info('Epoch: {} Iteration: {}. Train_loss: {}. Test_loss: {}, LR: {}'.format(epoch, n_iter,
                                                                                                   loss.data.item(),
                                                                                                   errors[
@@ -719,7 +704,6 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     else:
         torch_model = torch.load(os.path.join(file_prefix, 'torch_model'))
         model = torch_model['torch_model']
-        # prtime("Loaded model from file, given run_train=False\n")
         logging.info("Loaded model from file, given run_train=False\n")
 
         predictions, errors, measured, Q_vals = test_processing(test_df, test_loader, model, seq_dim, input_dim,
@@ -1147,7 +1131,6 @@ def main(train_df, test_df, configs):
     # Create writer object for TensorBoard
     writer_path = file_prefix
     writer = SummaryWriter(writer_path)
-    #print("Writer path: {}".format(writer_path))
     logging.info("Writer path: {}".format(writer_path))
 
     # Reset DataFrame index
@@ -1163,7 +1146,6 @@ def main(train_df, test_df, configs):
 
     # Normalization transformation
     train_data, test_data = data_transform(train_data, test_data, transformation_method, run_train)
-    #print("Data transformed using {} as transformation method".format(transformation_method))
     logging.info("Data transformed using {} as transformation method".format(transformation_method))
 
     # Size the batches
@@ -1174,7 +1156,7 @@ def main(train_df, test_df, configs):
     if configs["TrainTestSplit"] == 'Random':
         train_loader, test_loader = data_iterable_random(train_data, test_data, run_train, train_batch_size,
                                                          test_batch_size, configs)
-    #prtime("Data converted to iterable dataset")
+
     logging.info("Data converted to iterable dataset")
 
     # Start the training process
