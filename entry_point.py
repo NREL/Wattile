@@ -45,30 +45,24 @@ def main(configs):
     important_vars = configs['weather_include'] + [configs['target_var']]
     data = data_full[important_vars]
     # Resample
-    resample_bin_size = "{}T".format(configs['resample_bin_min'])
+    resample_bin_size = "{}T".format(configs['resample_freq'])
     data = data.resample(resample_bin_size).mean()
     # Clean
     data = bp.clean_data(data, configs)
     # Add calculated features (if applicable)
 
-    # DEV
     # Convert data to rolling average (except output) and create min, mean, and max columns
-    target = data[configs["target_var"]]
-    X_data = data.drop(configs["target_var"], axis=1)
-    mins = X_data.rolling(window=configs["rolling_window_min"]).min().add_suffix("_min")
-    means = X_data.rolling(window=configs["rolling_window_min"]).mean().add_suffix("_mean")
-    maxs = X_data.rolling(window=configs["rolling_window_min"]).max().add_suffix("_max")
-    data = pd.concat([mins, means, maxs], axis=1)
-    data[configs["target_var"]] = target
-    # END DEV
+    if configs["rolling_window"]["active"]:
+        target = data[configs["target_var"]]
+        X_data = data.drop(configs["target_var"], axis=1)
+        mins = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).min().add_suffix("_min")
+        means = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).mean().add_suffix("_mean")
+        maxs = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).max().add_suffix("_max")
+        data = pd.concat([mins, means, maxs], axis=1)
+        data[configs["target_var"]] = target
 
     # Add time-based dummy variables
     data = bp.time_dummies(data, configs)
-
-    # As of this point, "data" dataframe is assumed to have:
-    # only the weather features we want to train on, already resampled, cleaned, have time-based features added, and have all calculated features, if any.
-    # The data has not been padded yet, or been split into a test/train split.
-    # For feature selection, "data" can be passed into prep_for function. It needs to have gone through the equivilent steps as above.
 
     # Choose what ML architecture to use and execute the corresponding script
     if configs['arch_type'] == 'RNN':
@@ -94,10 +88,10 @@ def main(configs):
             train_df, test_df = bp.prep_for_rnn(configs, data)
             rnn_mod.main(train_df, test_df, configs)
 
-    logging.info('Run with arch: {}, train_num= {}, test_num= {} and target= {} is done!'.format(configs['arch_type'],
-                                                                                          configs['building'],
-                                                                                          configs['test_exp_num'],
-                                                                                          configs['target_var']))
+    logging.info('Run with arch {}({}), on {}, with session ID {}, is done!'.format(configs['arch_type'],
+                                                                                                     configs["arch_type_variant"],
+                                                                                          configs["target_var"],
+                                                                                          configs["test_exp_num"]))
 
 # If the model is being run locally (i.e. a single model is being trained), read in configs.json and pass to main()
 if __name__ == "__main__":

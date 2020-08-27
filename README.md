@@ -10,23 +10,29 @@ This repository contains the source code for forecasting energy consumption usin
   
 * Version: this is the initial version (0.1) of this project
 
+---
+### Getting set up
 
+1. Configuring conda environment 
+
+    A conda environment file is provided for convenience. Assuming you have Anaconda python distribution available on your computer, you can create a new conda environment with the necessary packages using the following command:
+    
+    For windows users:
+    `conda env create -f rnn-env-win.yml -n "ic-lf-deploy"`
+    
+    For linux users:
+    `conda env create -f rnn-env-lnx.yml -n "ic-lf-deploy"`
+
+2. Make sure all of your training and testing data is in a dedicated data directory, in the correct format.
+   
+* Description to follow
+   
+3. Change the configuration parameters in configs.json
+    
+* Description to follow
+
+---
 ### How do I...
-#### ... get set up?
-
-* Conda environment for running the code:
- A conda environment file is provided for convenience. Assuming you have Anaconda python distribution available on your computer, you can create a new conda environment with the necessary packages using the following command:
-
-For windows users:
-`conda env create -f rnn-env-win.yml -n "ic-lf-deploy"`
-
-For linux users:
-`conda env create -f rnn-env-lnx.yml -n "ic-lf-deploy"`
-
-
-* Change the configuration variables in configs.json.
-* Run entry_point.py
-
 #### ... train a single model?
 
 ##### Starting from scratch:
@@ -72,14 +78,23 @@ rnn_mod.main(train_df, test_df, configs)
 
 #### ... run a hyperparameter study? 
 
+#### ... open Tensorboard to visualize the training statistics?
+
+1. In terminal: `tensorboard --logdir=<study directory>` 
+    * `<study directory>` can be a directory for a single training session, or it can be a directory containing a collection of study subdirectories, which would result from running a hyperparameter study. 
+2. Open `http://localhost:6006/` in your browser of choice.
+
+---
 ### What are the parameters in configs.json?
+
+Description to follow
 
 ---
 ### Local Files
 
 #### entry_point.py
 
-* Currently being iterated upon. (Current) data source is LAN directory. 
+* Currently being iterated upon. (Current) data source is network directory. 
 * Model configurations defined in external configs.json file.
 * For whole campus modeling, specify `"building": "Campus Energy"` and change `target_var` in `configs.json`. As of 7/1/2020 it is recommended to only use 2019 data due to inconsistent data formatting in previous years. 
  
@@ -121,8 +136,7 @@ rnn_mod.main(train_df, test_df, configs)
 * Vanilla and LSTM variants available
 * Supports future time predictions with constant spacing or variable spacing 
 
-
-#### testing_round.py
+#### testing_round_parameters.py
 
 * Lets a user run a series of model trainings by varying a single configuration parameter at once. 
 * Any parameter in configs.json can be studied.
@@ -134,14 +148,15 @@ rnn_mod.main(train_df, test_df, configs)
 * `iterables`: What values of that parameter do you want to test? (list)
 * `iterable_type`: What class is the iterable in the configs.json file? (class)
 
----
-### Externally referenced files
+#### testing_round_meters.py
 
-The code in this repo references some files that are held in external repos. The descriptions below describe how to reference these files. 
+#### testing_round_meters_HPC.py
+
+#### training_history.csv
 
 #### buildings_processing.py
 
-* Contains functions for data manipulation and cleaning. (Same file is used for both Quantile Regression and ML methods)
+* Contains functions for data manipulation and cleaning.
 * Directory path specified in configs.json
 
 #### holidays.json
@@ -149,5 +164,38 @@ The code in this repo references some files that are held in external repos. The
 * JSON file containing holidays specific to the region being tested. 
 * File path specified in configs.json
 * Update this file to contain the dates of holidays that will affect building occupancy. This will be used for both training and testing.
+
+--- 
+### Relevant directories
+
+#### Data directory
+
+* Location described by `configs["data_dir"]` as an absolute or relative path.
+* Contains all data and mask files needed for training and testing.
+
+#### Results directory
+
+* Location described by `configs["results_dir"]` as an absolute or relative path.
+* This directory (example: `Results/`) contains subdirectories, one for each single-target training session (example: `Results/target/`).
+* Each `Results/target/` contains: 
+    * Tensorboard directories:
+        * `Loss/`, `CPU_Utilization/`, `Memory_GB/`, `Iteration_time/`
+    * Configs file, specific to the training session:
+        * `configs.json`
+    * Output file:
+        * `output.out`
+    * PyTorch model file saved to disk:
+        * `torch_model`
+    * Training statistics needed to denormalize data set
+        * `train_stats.json`
+
+#### Network directory
+
+* This can be specified by `configs["network_path"]` if the user wishes to retrieve files from another remote directory, like a mounted network drive.
+* Not required for normal operation.
+
+
+
+
 
 

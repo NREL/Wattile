@@ -1,25 +1,20 @@
 {
- "train_start_date": "2018-01-01",
- "train_end_date": "2018-10-31",
- "test_start_date": "2018-11-01",
- "test_end_date": "2018-12-31",
  "transformation_method": "minmaxscale",
  "run_train": true,
  "num_epochs": 120,
- "tr_batch_size": 8,
+ "tr_batch_size": 32,
  "te_batch_size": 1,
  "run_resume": false,
  "preprocess": false,
  "arch_type": "RNN",
  "arch_type_variant": "lstm",
- "arch_version": 5,
+ "arch_version": 4,
  "test_exp_num": "dev",
- "hidden_nodes": 550,
+ "hidden_nodes": 15,
  "layer_dim": 1,
- "output_dim": 11,
  "weight_decay": 0.001,
  "fetch_n_parse": false,
- "LAN_path": "Z:\\Data",
+ "network_path": "Z:\\Data",
  "building": "Cafe",
  "year": [
   "2018",
@@ -36,27 +31,26 @@
   "SRRL BMS Snow Depth (in)"
  ],
  "TrainTestSplit": "Random",
- "test_start": "12/28/2019 23:45:00",
- "test_end": "12/31/2019 23:45:00",
- "resample": true,
- "resample_bin_min": 1,
- "shift_multiplier": 15,
- "rolling_window_min": 15,
+ "resample_freq": 15,
+ "sequence_freq": 15,
+ "rolling_window": {
+  "active": false,
+  "minutes": 15
+ },
+ "window": 48,
+ "EC_future_gap": 0,
  "DOW": ["binary_reg"],
  "MOY": ["sincos"],
- "Holidays": true,
  "HOD": ["sincos", "binary_reg"],
- "window": 4,
- "EC_future_gap": 0,
- "lr_schedule": true,
+ "Holidays": true,
  "lr_config": {
   "base": 0.001,
-  "schedule": false,
-  "type": "performance",
+  "schedule": true,
+  "type": "absolute",
   "factor": 0.1,
   "min": 1e-05,
   "patience": 10,
-  "step_size": 100
+  "step_size": 5
  },
  "qs": [
   0.025,
@@ -78,5 +72,7 @@
   "year": "2020",
   "month": [1, 2, 3, 4, 5, 6]
  },
- "target_split_ratio": 0.9
+ "target_split_ratio": 0.9,
+ "train_factor": 64,
+ "eval_frequency": 10
 }

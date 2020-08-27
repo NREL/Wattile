@@ -653,12 +653,12 @@ def eval_trained_model(file_prefix, train_data, train_batch_size, configs):
 
     # # Adjust the datetime index so it is in line with the EC data
     # target_index = data_time_index[msk] + pd.DateOffset(
-    #     minutes=(configs["EC_future_gap"] * configs["resample_bin_min"]))
+    #     minutes=(configs["EC_future_gap"] * configs["resample_freq"]))
     # processed_data = pd.DataFrame(index=target_index)
 
     # Adjust the datetime index so it is in line with the EC data
     target_index = mask.index[msk] + pd.DateOffset(
-        minutes=(configs["EC_future_gap"] * configs["resample_bin_min"]))
+        minutes=(configs["EC_future_gap"] * configs["resample_freq"]))
     processed_data = pd.DataFrame(index=target_index)
 
     processed_data['Training fit'] = semifinal_preds

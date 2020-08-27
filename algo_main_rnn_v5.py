@@ -136,8 +136,7 @@ def data_iterable_random(train_data, test_data, run_train, train_batch_size, tes
     """
 
     if run_train:
-        # Create lagged INPUT variables, i.e. columns: w1_(t-1), w1_(t-2)...
-        # Does this for all input variables for times up to "window"
+        # Define input feature matrix
         X_train = train_data.drop(train_data.filter(like=configs["target_var"], axis=1).columns, axis=1).values.astype(
             dtype='float32')
 
@@ -475,9 +474,10 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                                               configs['lr_config']['patience'] * (num_train_data / train_batch_size)),
                                           verbose=True)
         elif configs["lr_config"]["schedule"] and configs["lr_config"]["type"] == "absolute":
-            scheduler = StepLR(optimizer,
-                               step_size=int(configs['lr_config']["step_size"]*(num_train_data/train_batch_size)),
-                               gamma=configs['lr_config']['factor'])
+            # scheduler = StepLR(optimizer,
+            #                    step_size=int(configs['lr_config']["step_size"]*(num_train_data/train_batch_size)),
+            #                    gamma=configs['lr_config']['factor'])
+            pass
         else:
             raise ConfigsError("{} is not a supported method of LR scheduling".format(configs["lr_config"]["type"]))
 
@@ -489,10 +489,14 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                "used": mem.used / 10 ** 9, "free": mem.free / 10 ** 9}
         logging.info("Number of cores available: {}".format(num_cores))
         logging.info("Number of logical processors available: {}".format(num_logical_processors))
-        logging.info("Memory statistics (GB): {}".format(mem))
+        logging.info("Initial memory statistics (GB): {}".format(mem))
 
         # Check for GPU
         cuda_avail = torch.cuda.is_available()
+        if cuda_avail:
+            logging.info("GPU is available for training")
+        else:
+            logging.info("GPU is not available for training")
 
         if (len(epoch_range) == 0):
             epoch = resume_num_epoch + 1
@@ -520,6 +524,15 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         # Loop through epochs
         epoch_num = 1
         for epoch in epoch_range:
+
+            # Do manual learning rate scheduling, if requested
+            if configs["lr_config"]["schedule"] and configs["lr_config"]["type"] == "absolute" and epoch_num % configs['lr_config']["step_size"] == 0:
+                for param_group in optimizer.param_groups:
+                    old_lr = param_group['lr']
+                    param_group['lr'] = param_group['lr'] * configs['lr_config']['factor']
+                    new_lr = param_group['lr']
+                logging.info("Changing learning rate from {} to {}".format(old_lr, new_lr))
+
             # This loop returns elements from the dataset batch by batch. Contains features AND targets
             for i, (feats, values) in enumerate(train_loader):
                 model.train()
@@ -535,6 +548,13 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
                 # Clear gradients w.r.t. parameters (from previous epoch). Same as model.zero_grad()
                 optimizer.zero_grad()
+
+                # Get memory statistics
+                if n_iter % configs["eval_frequency"] == 0:
+                    mem = virtual_memory()
+                    mem = {"total": mem.total / 10 ** 9, "available": mem.available / 10 ** 9,
+                           "used": mem.used / 10 ** 9, "free": mem.free / 10 ** 9}
+                    writer.add_scalars("Memory_GB", mem, n_iter)
 
                 # FORWARD PASS to get output/logits.
                 # train_y_at_t is (#batches x timesteps x 1)
@@ -566,7 +586,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
                 time5 = timeit.default_timer()
 
-                if configs["lr_config"]["schedule"]:
+                if configs["lr_config"]["schedule"] and configs["lr_config"]["type"] == "performance":
                     scheduler.step(loss)
 
                 # Updating the weights/parameters. Clear computational graph.
@@ -584,11 +604,11 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                                                       "Step": time6 - time5}, n_iter)
 
                 # Save the model every ___ iterations
-                if n_iter % 10 == 0:
+                if n_iter % configs["eval_frequency"] == 0:
                     save_model(model, epoch, n_iter)
 
                 # Do a test batch every ___ iterations
-                if n_iter % 10 == 0:
+                if n_iter % configs["eval_frequency"] == 0:
                     # Evaluate test set
                     predictions, errors, measured, Q_vals = test_processing(test_df, test_loader, model, seq_dim,
                                                                             input_dim,
@@ -640,13 +660,13 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                                            psutil.cpu_percent(interval=None, percpu=True)))
                     writer.add_scalars("CPU_utilization", percentages, n_iter)
 
-                    logging.info('Epoch: {} Iteration: {}. Train_loss: {}. Test_loss: {}, LR: {}'.format(epoch, n_iter,
+                    logging.info('Epoch: {} Iteration: {}. Train_loss: {}. Test_loss: {}, LR: {}'.format(epoch_num, n_iter,
                                                                                                   loss.data.item(),
                                                                                                   errors[
                                                                                                       'pinball_loss'],
                                                                                                   optimizer.param_groups[
                                                                                                       0]['lr']))
-                    epoch_num += 1
+            epoch_num += 1
 
         # Once model training is done, save the current model state
         save_model(model, epoch, n_iter)
@@ -786,7 +806,7 @@ def eval_trained_model(file_prefix, train_data, train_batch_size, configs):
     preds = []
     targets = []
     for i, (feats, values) in enumerate(train_loader):
-        features = Variable(feats.view(-1, configs['window'], configs['input_dim']))
+        features = Variable(feats.view(-1, configs['window']+1, configs['input_dim']))
         outputs = model(features)
         preds.append(outputs.data.numpy().squeeze())
         targets.append(values.data.numpy())
@@ -801,7 +821,7 @@ def eval_trained_model(file_prefix, train_data, train_batch_size, configs):
 
     # Adjust the datetime index so it is in line with the EC data
     target_index = mask.index[msk] + pd.DateOffset(
-        minutes=(configs["EC_future_gap"] * configs["resample_bin_min"]))
+        minutes=(configs["EC_future_gap"] * configs["resample_freq"]))
     processed_data = pd.DataFrame(index=target_index)
 
     # Stick data into a DataFrame to be accessed later
@@ -997,23 +1017,33 @@ def eval_tests(file_prefix, batch_tot):
 
 def predict(data, file_prefix):
     # Get rid of this eventually
-    file_prefix = "EnergyForecasting_Results\RNN_MCafeMainPower(kW)_Tlaptop_baseline"
+    # file_prefix = "EnergyForecasting_Results\RNN_MCafeMainPower(kW)_Tlaptop_baseline"
 
     # Read configs from results directory
     with open(os.path.join(file_prefix, "configs.json"), "r") as read_file:
         configs = json.load(read_file)
 
     # Get rid of this eventually
-    data = pd.read_hdf("sample_predict.h5", key='df').drop([configs["target_var"]], axis=1)
-    data = data.drop('SRRL BMS Snow Depth (in)', axis=1)
+    # data = pd.read_hdf("sample_predict.h5", key='df').drop([configs["target_var"]], axis=1)
+    # data = data.drop('SRRL BMS Snow Depth (in)', axis=1)
 
     # Check if the supplied data matches the sequence length that the model was trained on
-    if not data.shape[0] == configs["window"]:
+    if not data.shape[0] == configs["window"]+1:
         raise ConfigsError("Input data has sequence length {}. Expected sequence length of {}".format(data.shape[0],
                                                                                                       configs[
-                                                                                                          "window"]))
+                                                                                                          "window"]+1))
 
-    # Data should be resampled, cleaned by this point. No nans. Everything above this line will be replaced eventually
+    # Data should be resampled, cleaned by this point. No nans.
+
+    # Convert data to rolling average (except output) and create min, mean, and max columns
+    if configs["rolling_window"]["active"]:
+        target = data[configs["target_var"]]
+        X_data = data.drop(configs["target_var"], axis=1)
+        mins = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).min().add_suffix("_min")
+        means = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).mean().add_suffix("_mean")
+        maxs = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).max().add_suffix("_max")
+        data = pd.concat([mins, means, maxs], axis=1)
+        data[configs["target_var"]] = target
 
     # Add time-based variables
     data = bp.time_dummies(data, configs)
@@ -1023,7 +1053,7 @@ def predict(data, file_prefix):
 
     # Do sequential padding of the inputs
     data_orig = data
-    for i in range(1, configs["window"]):
+    for i in range(1, configs["window"]+1):
         shifted = data_orig.shift(i)
         shifted = shifted.join(data, lsuffix="_lag{}".format(i))
         data = shifted
@@ -1069,7 +1099,7 @@ def predict(data, file_prefix):
 
     # Evaluate model
     model.eval()
-    features = Variable(train_feat_tensor.view(-1, configs['window'], configs["input_dim"]))
+    features = Variable(train_feat_tensor.view(-1, configs['window']+1, configs["input_dim"]))
     outputs = model(features)
     semifinal_preds = outputs.data.numpy()
 
@@ -1161,4 +1191,4 @@ def main(train_df, test_df, configs):
 
     # Start the training process
     process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method,
-            configs, train_batch_size, test_batch_size, configs['window'], num_train_data)
+            configs, train_batch_size, test_batch_size, configs['window']+1, num_train_data)
