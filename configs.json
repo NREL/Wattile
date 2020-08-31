@@ -1,7 +1,7 @@
 {
  "transformation_method": "minmaxscale",
  "run_train": true,
- "num_epochs": 120,
+ "num_epochs": 100,
  "tr_batch_size": 32,
  "te_batch_size": 1,
  "run_resume": false,
@@ -10,31 +10,27 @@
  "arch_type_variant": "lstm",
  "arch_version": 4,
  "test_exp_num": "dev",
- "hidden_nodes": 15,
+ "hidden_nodes": 20,
  "layer_dim": 1,
  "weight_decay": 0.001,
  "fetch_n_parse": false,
  "network_path": "Z:\\Data",
  "building": "Cafe",
  "year": [
-  "2018",
   "2019"
  ],
  "target_var": "Cafe Main Power (kW)",
  "weather_include": [
   "SRRL BMS Global Horizontal Irradiance (W/m\u00b2_irr)",
-  "SRRL BMS Wind Speed at 19' (mph)",
   "SRRL BMS Dry Bulb Temperature (\u00b0F)",
-  "SRRL BMS Opaque Cloud Cover (%)",
   "SRRL BMS Relative Humidity (%RH)",
-  "SRRL BMS Barometric Pressure (mbar)",
   "SRRL BMS Snow Depth (in)"
  ],
  "TrainTestSplit": "Random",
- "resample_freq": 15,
+ "resample_freq": 1,
  "sequence_freq": 15,
  "rolling_window": {
-  "active": false,
+  "active": true,
   "minutes": 15
  },
  "window": 48,
@@ -50,7 +46,7 @@
   "factor": 0.1,
   "min": 1e-05,
   "patience": 10,
-  "step_size": 5
+  "step_size": 75
  },
  "qs": [
   0.025,
