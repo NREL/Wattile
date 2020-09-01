@@ -103,7 +103,11 @@ def get_full_data(configs):
         if pathlib.Path(file_extension).exists():
             data_full = pd.read_hdf(file_extension, key='df')
         else:
-            raise ConfigsError("{} was not found.".format(file_extension))
+            if configs["network_path"] == "":
+                raise ConfigsError("{} was not found, and no network location specified for retrieval.".format(file_extension))
+            else:
+                output_path = import_from_network(configs, year)
+                data_full = pd.read_hdf(file_extension, key='df')
         dataset[year] = data_full
 
     data_full = pd.DataFrame()
