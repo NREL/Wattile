@@ -18,7 +18,7 @@ meters = [
     ["S&TF", "S&TF Main Power (kW)"],
     ["EC", "EC Main Power (kW)"]
 ]
-test_ID = "hourFourMoreQuantiles"
+test_ID = "test_set"
 
 # Run tests
 for meter_ID in meters:
@@ -32,6 +32,7 @@ for meter_ID in meters:
     # Test the model
     configs["building"] = meter_ID[0]
     configs["target_var"] = meter_ID[1]
+    #configs["external_test"]["building"] = meter_ID[0]
     epb.main(configs)
 
     print("Just finished training for target variable {}".format(meter_ID[1]))

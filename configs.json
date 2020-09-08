@@ -1,83 +1,74 @@
 {
-    "train_start_date": "2018-01-01",
-    "train_end_date": "2018-10-31",
-    "test_start_date": "2018-11-01",
-    "test_end_date": "2018-12-31",
-    "transformation_method": "minmaxscale",
-    "run_train": true,
-    "num_epochs": 100,
-    "tr_batch_size": 8,
-    "te_batch_size": 1,
-    "run_resume": true,
-    "preprocess": false,
-    "arch_type": "RNN",
-    "arch_type_variant": "lstm",
-    "arch_version": 4,
-    "test_exp_num": "dev",
-    "hidden_nodes": 30,
-    "layer_dim": 1,
-    "output_dim": 11,
-    "weight_decay": 0.001,
-    "fetch_n_parse": false,
-    "LAN_path": "Z:\\Data",
-    "building": "Cafe",
-    "year": [
-        "2018",
-        "2019"
-    ],
-    "target_var": "Cafe Main Power (kW)",
-    "weather_include": [
-        "SRRL BMS Global Horizontal Irradiance (W/m\u00b2_irr)",
-        "SRRL BMS Wind Speed at 19' (mph)",
-        "SRRL BMS Dry Bulb Temperature (\u00b0F)",
-        "SRRL BMS Opaque Cloud Cover (%)",
-        "SRRL BMS Relative Humidity (%RH)",
-        "SRRL BMS Barometric Pressure (mbar)",
-        "SRRL BMS Snow Depth (in)"
-    ],
-    "TrainTestSplit": "Random",
-    "test_start": "12/28/2019 23:45:00",
-    "test_end": "12/31/2019 23:45:00",
-    "resample": true,
-    "resample_bin_min": 15,
-    "DOW": ["binary_reg"],
-    "MOY": ["sincos"],
-    "Holidays": true,
-    "HOD": ["sincos", "binary_reg"],
-    "window": 24,
-    "EC_future_gap": 0,
-    "lr_schedule": true,
-    "lr_config": {
-        "base": 0.001,
-        "factor": 0.1,
-        "min": 1e-05,
-        "patience": 8
-    },
-    "qs": [
-      0.025,
-      0.1,
-      0.2,
-      0.3,
-      0.4,
-      0.5,
-      0.6,
-      0.7,
-      0.8,
-      0.9,
-      0.975
-    ],
-    "smoothing_alpha": 0.001,
-    "S2S_stagger": {
-        "initial_num": 4,
-        "decay": 0,
-        "secondary_num": 0
-    },
-    "results_dir": "EnergyForecasting_Results",
-    "data_dir": "data",
-    "external_test": {
-        "building": "Cafe",
-        "year": "2020",
-        "month": [1,2,3,4,5,6]
-    },
-    "target_split_ratio": 0.9
+ "transformation_method": "minmaxscale",
+ "run_train": true,
+ "num_epochs": 100,
+ "tr_batch_size": 32,
+ "te_batch_size": 1,
+ "run_resume": false,
+ "preprocess": false,
+ "arch_type": "RNN",
+ "arch_type_variant": "lstm",
+ "arch_version": 4,
+ "test_exp_num": "dev",
+ "hidden_nodes": 20,
+ "layer_dim": 1,
+ "weight_decay": 0.001,
+ "fetch_n_parse": false,
+ "network_path": "Z:\\Data",
+ "building": "Cafe",
+ "year": [
+  "2019"
+ ],
+ "target_var": "Cafe Main Power (kW)",
+ "weather_include": [
+  "SRRL BMS Global Horizontal Irradiance (W/m\u00b2_irr)",
+  "SRRL BMS Dry Bulb Temperature (\u00b0F)",
+  "SRRL BMS Relative Humidity (%RH)",
+  "SRRL BMS Snow Depth (in)"
+ ],
+ "TrainTestSplit": "Random",
+ "resample_freq": 1,
+ "sequence_freq": 15,
+ "rolling_window": {
+  "active": true,
+  "minutes": 15
+ },
+ "window": 48,
+ "EC_future_gap": 0,
+ "DOW": ["binary_reg"],
+ "MOY": ["sincos"],
+ "HOD": ["sincos", "binary_reg"],
+ "Holidays": true,
+ "lr_config": {
+  "base": 0.001,
+  "schedule": true,
+  "type": "absolute",
+  "factor": 0.1,
+  "min": 1e-05,
+  "patience": 10,
+  "step_size": 75
+ },
+ "qs": [
+  0.025,
+  0.2,
+  0.5,
+  0.8,
+  0.975
+ ],
+ "smoothing_alpha": 0.001,
+ "S2S_stagger": {
+  "initial_num": 72,
+  "decay": 0,
+  "secondary_num": 0
+ },
+ "results_dir": "EnergyForecasting_Results",
+ "data_dir": "data",
+ "external_test": {
+  "building": "Cafe",
+  "year": "2020",
+  "month": [1, 2, 3, 4, 5, 6]
+ },
+ "target_split_ratio": 0.9,
+ "train_factor": 64,
+ "eval_frequency": 10
 }

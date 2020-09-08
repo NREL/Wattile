@@ -8,6 +8,7 @@ import json
 import os
 import seaborn as sns
 import matplotlib.pyplot as plt
+import logging
 
 
 class ConfigsError(Exception):
@@ -15,9 +16,9 @@ class ConfigsError(Exception):
     pass
 
 
-def import_from_lan(configs, year):
+def import_from_network(configs, year):
     """
-    For combination of config['year'] and config['building'], reads monthly weather and building csvs from LAN and
+    For combination of config['year'] and config['building'], reads monthly weather and building csvs from network and
     concatenates data into master DataFrame.
     Combines data is saved to local data/ directory as hdf file and path to file is returned on success.
 
@@ -32,7 +33,7 @@ def import_from_lan(configs, year):
     # Make data directory if it does not exist
     pathlib.Path(configs["data_dir"]).mkdir(parents=True, exist_ok=True)
 
-    # Find the right subdirectory in the LAN
+    # Find the right subdirectory in the network
     if configs['building'] == "Campus Energy":
         sub_dir = "Campus Data"
         suffix = ""
@@ -40,9 +41,9 @@ def import_from_lan(configs, year):
         sub_dir = "Building Load Data"
         suffix = " Meter Trends"
 
-    # Read in energy consumption data from LAN file (one month at a time)
+    # Read in ENERGY DATA from network file (one month at a time)
     for month in range(1, 13):
-        energy_data_dir = os.path.join(configs['LAN_path'], sub_dir)
+        energy_data_dir = os.path.join(configs['network_path'], sub_dir)
         energy_file = "{} {}-{}{}.csv".format(configs['building'], year, "{:02d}".format(month), suffix)
         dateparse = lambda date: dt.datetime.strptime(date[:-13], '%Y-%m-%dT%H:%M:%S')
         csv_path = os.path.join(energy_data_dir, energy_file)
@@ -51,16 +52,16 @@ def import_from_lan(configs, year):
                            date_parser=dateparse,
                            index_col='Timestamp')
         data_e = pd.concat([data_e, df_e])
-        print('Read energy month {}/12 in {} for {}'.format(month, year, configs['building']))
-    print('Done reading in energy data')
+        logging.info('Read energy month {}/12 in {} for {}'.format(month, year, configs['building']))
+    logging.info('Done reading in energy data')
 
-    # Read in weather data (one month at a time)
+    # Read in WEATHER DATA (one month at a time)
     file_extension = os.path.join(configs["data_dir"], "Weather_{}.h5".format(year))
     if pathlib.Path(file_extension).exists():
         data_w = pd.read_hdf(file_extension, key='df')
     else:
         site = 'STM'
-        weather_data_dir = os.path.join(configs['LAN_path'], "Weather")
+        weather_data_dir = os.path.join(configs['network_path'], "Weather")
         for month in range(1, 13):
             weather_file = '{} Site Weather {}-{}.csv'.format(site, year, "{:02d}".format(month))
             csv_path = os.path.join(weather_data_dir, weather_file)
@@ -69,9 +70,9 @@ def import_from_lan(configs, year):
                                date_parser=dateparse,
                                index_col='Timestamp')
             data_w = pd.concat([data_w, df_w])
-            print('Read weather month {}/12 in {}'.format(month, year))
+            logging.info('Read weather month {}/12 in {}'.format(month, year))
         data_w.to_hdf(file_extension, key='df', mode='w')
-    print('Done reading in weather data')
+    logging.info('Done reading in weather data')
 
     dataset = pd.concat([data_e, data_w], axis=1)
     output_string = os.path.join(configs["data_dir"], "Data_{}_{}.h5".format(configs['building'], year))
@@ -102,9 +103,11 @@ def get_full_data(configs):
         if pathlib.Path(file_extension).exists():
             data_full = pd.read_hdf(file_extension, key='df')
         else:
-            print('Fetching {} data from LAN and writing to local file. This only needs to be done once'.format(year))
-            file_path = import_from_lan(configs, year)
-            data_full = pd.read_hdf(file_path, key='df')
+            if configs["network_path"] == "":
+                raise ConfigsError("{} was not found, and no network location specified for retrieval.".format(file_extension))
+            else:
+                output_path = import_from_network(configs, year)
+                data_full = pd.read_hdf(file_extension, key='df')
         dataset[year] = data_full
 
     data_full = pd.DataFrame()
@@ -175,17 +178,26 @@ def time_dummies(data, configs):
             2 * np.pi * (data.index.hour * 3600 + data.index.minute * 60 + data.index.minute).values / (
                     24 * 60 * 60))
     if "binary_reg" in configs["HOD"]:
-        data = data.join(pd.get_dummies(data.index.hour, prefix='HOD_binary_reg', drop_first=True).set_index(data.index))
+        for i in range(1,24):
+            data["HOD_binary_reg_{}".format(i)] = (data.index.hour == i).astype(int)
+        #data = data.join(pd.get_dummies(data.index.hour, prefix='HOD_binary_reg', drop_first=True).set_index(data.index))
+
     if "binary_fuzzy" in configs["HOD"]:
-        data = data.join(pd.get_dummies(data.index.hour, prefix='HOD_binary_fuzzy', drop_first=True).set_index(data.index))
+        for i in range(1,24):
+            data["HOD_binary_fuzzy_{}".format(i)] = (data.index.hour == i).astype(int)
+        #data = data.join(pd.get_dummies(data.index.hour, prefix='HOD_binary_fuzzy', drop_first=True).set_index(data.index))
         for HOD in range(1, 24):
             data["HOD_binary_fuzzy_{}".format(HOD)] = np.maximum(1 - abs((data.index.hour + data.index.minute / 60) - HOD) / 1, 0)
 
     # DOW
     if "binary_reg" in configs["DOW"]:
-        data = data.join(pd.get_dummies(data.index.weekday, prefix='DOW_binary_reg', drop_first=True).set_index(data.index))
+        for i in range(1,7):
+            data["DOW_binary_reg_{}".format(i)] = (data.index.weekday == i).astype(int)
+        #data = data.join(pd.get_dummies(data.index.weekday, prefix='DOW_binary_reg', drop_first=True).set_index(data.index))
     if "binary_fuzzy" in configs["DOW"]:
-        data = data.join(pd.get_dummies(data.index.weekday, prefix='DOW_binary_fuzzy', drop_first=True).set_index(data.index))
+        for i in range(1,7):
+            data["DOW_binary_fuzzy_{}".format(i)] = (data.index.weekday == i).astype(int)
+        #data = data.join(pd.get_dummies(data.index.weekday, prefix='DOW_binary_fuzzy', drop_first=True).set_index(data.index))
         for DOW in range(1, 7):
             data["DOW_binary_fuzzy_{}".format(DOW)] = np.maximum(1 - abs((data.index.weekday + data.index.hour / 24) - DOW) / 1, 0)
 
@@ -204,6 +216,7 @@ def time_dummies(data, configs):
         with open("holidays.json", "r") as read_file:
             holidays = json.load(read_file)
         data['Holiday'] = pd.to_datetime(data.index.date).isin(holidays).astype(int)
+        data['Holiday_forward'] = pd.to_datetime(data.index.date + dt.timedelta(days=1)).isin(holidays).astype(int)
 
     return data
 
@@ -231,13 +244,13 @@ def train_test_split(data, configs):
                 msk = np.array(msk)
                 train_df = data[msk]
                 test_df = data[~msk]
-                print("Using an existing training mask: {}".format(mask_file))
+                logging.info("Using an existing training mask: {}".format(mask_file))
 
             # If not, a recent architectural change must have changed the length of data. Make a new one.
             else:
-                print("There was a length mismatch between the existing mask and the data. Making a new mask and writing to file.")
+                logging.info("There was a length mismatch between the existing mask and the data. Making a new mask and writing to file")
                 data_size = data.shape[0]
-                num_ones = (configs["target_split_ratio"] * data_size) - ((configs["target_split_ratio"] * data_size) % 32)
+                num_ones = (configs["target_split_ratio"] * data_size) - ((configs["target_split_ratio"] * data_size) % configs["train_factor"])
                 msk = np.zeros(data_size)
                 indices = np.random.choice(np.arange(data_size), replace=False, size=int(num_ones))
                 msk[indices] = 1
@@ -253,9 +266,9 @@ def train_test_split(data, configs):
 
         # If no previously-saved mask exists, make one
         else:
-            print("Creating random training mask and writing to file")
+            logging.info("Creating random training mask and writing to file")
             data_size = data.shape[0]
-            num_ones = (configs["target_split_ratio"] * data_size) - ((configs["target_split_ratio"] * data_size) % 32)
+            num_ones = (configs["target_split_ratio"] * data_size) - ((configs["target_split_ratio"] * data_size) % configs["train_factor"])
             msk = np.zeros(data_size)
             indices = np.random.choice(np.arange(data_size), replace=False, size=int(num_ones))
             msk[indices] = 1
@@ -297,11 +310,15 @@ def pad_full_data(data, configs):
     target = data[configs["target_var"]]
     data = data.drop(configs['target_var'], axis=1)
     data_orig = data
-    # window is number of pads
-    for i in range(1, configs['window']):
-        shifted = data_orig.shift(i)
-        shifted = shifted.join(data, lsuffix="_lag{}".format(i))
-        data = shifted
+
+    # Pad the exogenous variables
+    temp_holder = list()
+    temp_holder.append(data_orig)
+    for i in range(1, configs['window']+1):
+        shifted = data_orig.shift(i * int(configs["sequence_freq"] / configs["resample_freq"])).astype("float32").add_suffix("_lag{}".format(i))
+        temp_holder.append(shifted)
+    temp_holder.reverse()
+    data = pd.concat(temp_holder, axis=1)
 
     # If this is a linear quantile regression model (iterative)
     if configs["arch_type"] == "quantile" and configs["iterative"] == True:
@@ -323,7 +340,7 @@ def pad_full_data(data, configs):
         data = data.dropna(how='any')
 
         # Adjust time index to match the EC values
-        data.index = data.index + pd.DateOffset(minutes=(configs["EC_future_gap"] * configs["resample_bin_min"]))
+        data.index = data.index + pd.DateOffset(minutes=(configs["EC_future_gap"] * configs["resample_freq"]))
 
     # If this is an RNN model
     elif configs["arch_type"] == "RNN":
@@ -334,7 +351,7 @@ def pad_full_data(data, configs):
         data = data.dropna(how='any')
 
         # Adjust time index to match the EC values
-        data.index = data.index + pd.DateOffset(minutes=(configs["EC_future_gap"] * configs["resample_bin_min"]))
+        data.index = data.index + pd.DateOffset(minutes=(configs["EC_future_gap"] * configs["resample_freq"]))
 
     return data
 
@@ -353,20 +370,27 @@ def pad_full_data_s2s(data, configs):
     data = data.drop(configs['target_var'], axis=1)
     data_orig = data
     # Pad the exogenous variables
-    for i in range(1, configs['window']):
-        shifted = data_orig.shift(i)
-        shifted = shifted.join(data, lsuffix="_lag{}".format(i))
-        data = shifted
+    temp_holder = list()
+    temp_holder.append(data_orig)
+    for i in range(1, configs['window']+1):
+        shifted = data_orig.shift(i * int(configs["sequence_freq"] / configs["resample_freq"])).astype(
+            "float32").add_suffix("_lag{}".format(i))
+        temp_holder.append(shifted)
+    temp_holder.reverse()
+    data = pd.concat(temp_holder, axis=1)
 
-    # Do fine padding for future predictions.
+    # Do fine padding for future predictions. Create a new df to preserve memory usage.
+    local = pd.DataFrame()
     for i in range(0, configs["S2S_stagger"]["initial_num"]):
-        data["{}_lag_{}".format(configs["target_var"], i)] = target.shift(-i)
+        local["{}_lag_{}".format(configs["target_var"], i)] = target.shift(-i * int(configs["sequence_freq"] / configs["resample_freq"]))
 
     # Do additional coarse padding for future predictions
     for i in range(1, configs["S2S_stagger"]["secondary_num"] + 1):
         base = configs["S2S_stagger"]["initial_num"]
         new = base + configs["S2S_stagger"]["decay"] * i
-        data["{}_lag_{}".format(configs["target_var"], base+i)] = target.shift(-new)
+        local["{}_lag_{}".format(configs["target_var"], base+i)] = target.shift(-new * int(configs["sequence_freq"] / configs["resample_freq"]))
+
+    data = pd.concat([data, local], axis=1)
 
     # Drop all nans
     data = data.dropna(how='any')
@@ -397,16 +421,14 @@ def prep_for_rnn(configs, data):
     # Determine input dimension. All unique features are added by this point.
     # Subtract 1 bc target variable is still present
     configs['input_dim'] = data.shape[1] - 1
-    print("Number of features: {}".format(configs['input_dim']))
-
-    # Do seaborn correlation matrix if you want...
-    #corr_heatmap(data)
+    logging.info("Number of features: {}".format(configs['input_dim']))
+    logging.debug("Features: {}".format(data.columns.values))
 
     # Do sequential padding
     data = pad_full_data(data, configs)
 
+    # Split into training and test dataframes
     if configs["run_train"]:
-        # Split into training and test dataframes
         train_df, test_df = train_test_split(data, configs)
     else:
         test_df = data
@@ -443,10 +465,8 @@ def prep_for_quantile(configs, feature_df=pd.DataFrame()):
         # data["SRRL BMS Barometric Pressure (mbar)"] = np.gradient(np.convolve(data["SRRL BMS Barometric Pressure (mbar)"], box, mode="same"))
 
         # Resample if requested
-        resample_bin_size = "{}T".format(configs['resample_bin_min'])
-        if configs['resample']:
-            data = data.resample(resample_bin_size).mean()
-            # print("Number of timesteps with NANs: {}".format(len(data[data.isna().any(axis=1)])))
+        resample_bin_size = "{}T".format(configs['resample_freq'])
+        data = data.resample(resample_bin_size).mean()
 
         # Clean data
         data = clean_data(data, configs)
@@ -477,18 +497,23 @@ def prep_for_seq2seq(configs, data):
     # Determine input dimension. All unique features are added by this point.
     # Subtract 1 bc target variable is still present
     configs['input_dim'] = data.shape[1] - 1
-    print("Number of features: {}".format(configs['input_dim']))
+    logging.info("Number of features: {}".format(configs['input_dim']))
 
-    # Do seaborn correlation matrix if you want...
-    #corr_heatmap(data)
+
+    # Change data types to save memory, if needed
+    for column in data:
+        if data[column].dtype == int:
+            data[column] = data[column].astype("int8")
+        elif data[column].dtype == float:
+            data[column] = data[column].astype("float32")
 
     # Do sequential padding now if we are doing random train/test splitting
     if configs["TrainTestSplit"] == 'Random':
         # Do padding
         data, target = pad_full_data_s2s(data, configs)
 
+    # Split into training and test dataframes
     if configs["run_train"]:
-        # Split into training and test dataframes
         train_df, test_df = train_test_split(data, configs)
     else:
         test_df = data
@@ -496,7 +521,7 @@ def prep_for_seq2seq(configs, data):
         building = configs["external_test"]["building"]
         year = configs["external_test"]["year"]
         month = configs["external_test"]["month"]
-        file = os.path.join("Test_sets", "{}-{}-{}-processed.h5".format(building, month, year))
+        file = os.path.join(configs["data_dir"], "{}-{}-{}-processed.h5".format(building, month, year))
         test_df.to_hdf(file, key='df', mode='w')
 
     return train_df, test_df
@@ -517,10 +542,10 @@ def get_test_data(building, year, months, dir):
 
         else:
             # Get energy data
-            LAN_path = "Z:\\Data"
+            network_path = "Z:\\Data"
             sub_dir = "Building Load Data"
             suffix = " Meter Trends"
-            energy_data_dir = os.path.join(LAN_path, sub_dir)
+            energy_data_dir = os.path.join(network_path, sub_dir)
             energy_file = "{} {}-{}{}.csv".format(building, year, "{:02d}".format(month), suffix)
             dateparse = lambda date: dt.datetime.strptime(date[:-13], '%Y-%m-%dT%H:%M:%S')
             csv_path = os.path.join(energy_data_dir, energy_file)
@@ -531,7 +556,7 @@ def get_test_data(building, year, months, dir):
             data_e = pd.concat([data_e, df_e])
 
             site = 'STM'
-            weather_data_dir = os.path.join(LAN_path, "Weather")
+            weather_data_dir = os.path.join(network_path, "Weather")
             weather_file = '{} Site Weather {}-{}.csv'.format(site, year, "{:02d}".format(month))
             csv_path = os.path.join(weather_data_dir, weather_file)
             df_w = pd.read_csv(csv_path,
