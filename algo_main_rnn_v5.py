@@ -505,8 +505,10 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
 
         if run_resume:
             n_iter = resume_n_iter
+            epoch_num = resume_num_epoch
         else:
             n_iter = 0
+            epoch_num = 1
 
         # Start training timer
         train_start_time = timeit.default_timer()
@@ -522,7 +524,6 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         logging.info("Starting to train the model for {} epochs!".format(num_epochs))
 
         # Loop through epochs
-        epoch_num = 1
         for epoch in epoch_range:
 
             # Do manual learning rate scheduling, if requested

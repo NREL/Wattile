@@ -221,7 +221,7 @@ def time_dummies(data, configs):
     return data
 
 
-def train_test_split(data, configs):
+def input_data_split(data, configs):
     """
     Split a data set into a training set and a validation (test) set.
     Methods: "Random" or "Sequential", specified in configs
@@ -285,10 +285,6 @@ def train_test_split(data, configs):
         # Get rid of datetime index
         train_df.reset_index(drop=True, inplace=True)
         test_df.reset_index(drop=True, inplace=True)
-
-    # if configs['TrainTestSplit'] == 'Sequential':
-    #     train_df = data[~data.index.isin(data[configs['test_start']:configs['test_end']].index)]
-    #     test_df = data[data.index.isin(data[configs['test_start']:configs['test_end']].index)]
 
     else:
         raise ConfigsError("{} is not a supported form of train/test splitting".format(configs['TrainTestSplit']))
@@ -429,7 +425,7 @@ def prep_for_rnn(configs, data):
 
     # Split into training and test dataframes
     if configs["run_train"]:
-        train_df, test_df = train_test_split(data, configs)
+        train_df, test_df = input_data_split(data, configs)
     else:
         test_df = data
         train_df = pd.DataFrame()
@@ -481,7 +477,7 @@ def prep_for_quantile(configs, feature_df=pd.DataFrame()):
         data = feature_df
 
     # Split into training and test
-    train_df, test_df = train_test_split(data, configs)
+    train_df, test_df = input_data_split(data, configs)
 
     return train_df, test_df, data
 
@@ -514,7 +510,7 @@ def prep_for_seq2seq(configs, data):
 
     # Split into training and test dataframes
     if configs["run_train"]:
-        train_df, test_df = train_test_split(data, configs)
+        train_df, test_df = input_data_split(data, configs)
     else:
         test_df = data
         train_df = pd.DataFrame()
@@ -570,3 +566,15 @@ def get_test_data(building, year, months, dir):
         dataset = pd.concat([dataset, sub_dataset])
 
     return dataset
+
+
+def rolling_stats(data, configs):
+    # Convert data to rolling average (except output) and create min, mean, and max columns
+    target = data[configs["target_var"]]
+    X_data = data.drop(configs["target_var"], axis=1)
+    mins = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).min().add_suffix("_min")
+    means = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).mean().add_suffix("_mean")
+    maxs = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).max().add_suffix("_max")
+    data = pd.concat([mins, means, maxs], axis=1)
+    data[configs["target_var"]] = target
+    return data
