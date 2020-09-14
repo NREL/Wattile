@@ -9,7 +9,7 @@
  "arch_type": "RNN",
  "arch_type_variant": "lstm",
  "arch_version": 4,
- "test_exp_num": "ESIF_demo",
+ "exp_id": "ESIF_demo",
  "hidden_nodes": 20,
  "layer_dim": 1,
  "weight_decay": 0.001,
@@ -27,7 +27,6 @@
   "SRRL BMS Relative Humidity (%RH)",
   "SRRL BMS Snow Depth (in)"
  ],
- "TrainTestSplit": "Random",
  "resample_freq": 15,
  "sequence_freq": 15,
  "rolling_window": {
@@ -73,5 +72,6 @@
  "train_factor": 64,
  "eval_frequency": 10,
  "target_split_ratio": 0.9,
- "data_split": "70:20:10"
+ "data_split": "70:20:10",
+ "train_val_split": "Random"
 }

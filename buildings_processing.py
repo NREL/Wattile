@@ -223,7 +223,7 @@ def time_dummies(data, configs):
 
 def input_data_split(data, configs):
     """
-    Split a data set into a training set and a validation (test) set.
+    Split a data set into a training set and a validation (val) set.
     Methods: "Random" or "Sequential", specified in configs
 
     :param data: (DataFrame)
@@ -231,7 +231,7 @@ def input_data_split(data, configs):
     :return:
     """
 
-    if configs['TrainTestSplit'] == 'Random':
+    if configs['train_val_split'] == 'Random':
         pathlib.Path(configs["data_dir"]).mkdir(parents=True, exist_ok=True)
         mask_file = os.path.join(configs["data_dir"], "mask_{}_{}.h5".format(configs["target_var"].replace(" ", ""), "-".join(configs['year'])))
         # Check if a mask for the building/year combination already exists
@@ -243,7 +243,7 @@ def input_data_split(data, configs):
             if len(msk) == data.shape[0]:
                 msk = np.array(msk)
                 train_df = data[msk]
-                test_df = data[~msk]
+                val_df = data[~msk]
                 logging.info("Using an existing training mask: {}".format(mask_file))
 
             # If not, a recent architectural change must have changed the length of data. Make a new one.
@@ -256,7 +256,7 @@ def input_data_split(data, configs):
                 msk[indices] = 1
                 msk = msk.astype(bool)
                 train_df = data[msk]
-                test_df = data[~msk]
+                val_df = data[~msk]
 
                 # Put mask in dataframe along with time index, and save to file
                 mask = pd.DataFrame()
@@ -274,7 +274,7 @@ def input_data_split(data, configs):
             msk[indices] = 1
             msk = msk.astype(bool)
             train_df = data[msk]
-            test_df = data[~msk]
+            val_df = data[~msk]
 
             # Put mask in dataframe along with time index, and save to file
             mask = pd.DataFrame()
@@ -284,12 +284,12 @@ def input_data_split(data, configs):
 
         # Get rid of datetime index
         train_df.reset_index(drop=True, inplace=True)
-        test_df.reset_index(drop=True, inplace=True)
+        val_df.reset_index(drop=True, inplace=True)
 
     else:
-        raise ConfigsError("{} is not a supported form of train/test splitting".format(configs['TrainTestSplit']))
+        raise ConfigsError("{} is not a supported form of train/val splitting".format(configs['train_val_split']))
 
-    return train_df, test_df
+    return train_df, val_df
 
 
 def pad_full_data(data, configs):
@@ -411,7 +411,7 @@ def prep_for_rnn(configs, data):
     Prepare data for input to a RNN model.
 
     :param configs: (Dict)
-    :return: train and test DataFrames
+    :return: train and val DataFrames
     """
 
     # Determine input dimension. All unique features are added by this point.
@@ -423,20 +423,20 @@ def prep_for_rnn(configs, data):
     # Do sequential padding
     data = pad_full_data(data, configs)
 
-    # Split into training and test dataframes
+    # Split into training and val dataframes
     if configs["run_train"]:
-        train_df, test_df = input_data_split(data, configs)
+        train_df, val_df = input_data_split(data, configs)
     else:
-        test_df = data
+        val_df = data
         train_df = pd.DataFrame()
         building = configs["building"]
         year = configs["external_test"]["year"]
         month = configs["external_test"]["month"]
         file = os.path.join(configs["data_dir"], "{}-{}-{}-processed.h5".format(building, month, year))
-        test_df.to_hdf(file, key='df', mode='w')
+        val_df.to_hdf(file, key='df', mode='w')
 
 
-    return train_df, test_df
+    return train_df, val_df
 
 
 def prep_for_quantile(configs, feature_df=pd.DataFrame()):
@@ -444,7 +444,7 @@ def prep_for_quantile(configs, feature_df=pd.DataFrame()):
     Prepare data for input to a quantile regression model.
 
     :param configs: (Dict)
-    :return: train and test DataFrames, and fully processed (pre-split) dataset
+    :return: train and val DataFrames, and fully processed (pre-split) dataset
     """
 
     if not configs["run_feature_selection"]:
@@ -476,10 +476,10 @@ def prep_for_quantile(configs, feature_df=pd.DataFrame()):
     if configs["run_feature_selection"]:
         data = feature_df
 
-    # Split into training and test
-    train_df, test_df = input_data_split(data, configs)
+    # Split into training and val
+    train_df, val_df = input_data_split(data, configs)
 
-    return train_df, test_df, data
+    return train_df, val_df, data
 
 
 def prep_for_seq2seq(configs, data):
@@ -487,7 +487,7 @@ def prep_for_seq2seq(configs, data):
     Prepare data for input to a RNN model.
 
     :param configs: (Dict)
-    :return: train and test DataFrames
+    :return: train and val DataFrames
     """
 
     # Determine input dimension. All unique features are added by this point.
@@ -503,24 +503,24 @@ def prep_for_seq2seq(configs, data):
         elif data[column].dtype == float:
             data[column] = data[column].astype("float32")
 
-    # Do sequential padding now if we are doing random train/test splitting
-    if configs["TrainTestSplit"] == 'Random':
+    # Do sequential padding now if we are doing random train/val splitting
+    if configs["train_val_split"] == 'Random':
         # Do padding
         data, target = pad_full_data_s2s(data, configs)
 
-    # Split into training and test dataframes
+    # Split into training and val dataframes
     if configs["run_train"]:
-        train_df, test_df = input_data_split(data, configs)
+        train_df, val_df = input_data_split(data, configs)
     else:
-        test_df = data
+        val_df = data
         train_df = pd.DataFrame()
         building = configs["building"]
         year = configs["external_test"]["year"]
         month = configs["external_test"]["month"]
         file = os.path.join(configs["data_dir"], "{}-{}-{}-processed.h5".format(building, month, year))
-        test_df.to_hdf(file, key='df', mode='w')
+        val_df.to_hdf(file, key='df', mode='w')
 
-    return train_df, test_df
+    return train_df, val_df
 
 
 def get_test_data(building, year, months, dir):

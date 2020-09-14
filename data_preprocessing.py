@@ -631,14 +631,14 @@ def main(configs):
     run_train = configs['run_train']
     fetch_n_parse = configs['fetch_n_parse']
 
-    train_exp_num = configs['train_exp_num']
-    test_exp_num = configs['test_exp_num']
+    train_exp_id = configs['train_exp_id']
+    exp_id = configs['exp_id']
     arch_type = configs['arch_type']
 
     # Define the Directories to save the trained model and results.
     # Create the dir if it does not exist using pathlib
-    RESULTS_DIR = 'EnergyForecasting_Results/' + arch_type + '_M' + str(train_exp_num) + '_T' + str(
-        test_exp_num)
+    RESULTS_DIR = 'EnergyForecasting_Results/' + arch_type + '_M' + str(train_exp_id) + '_T' + str(
+        exp_id)
 
     pathlib.Path(RESULTS_DIR).mkdir(parents=True, exist_ok=True)
     log_file = RESULTS_DIR + '/' + 'console.log'

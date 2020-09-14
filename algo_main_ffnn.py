@@ -294,8 +294,8 @@ def main(train_df, test_df, configs):
     tr_desired_batch_size = configs['tr_batch_size']
     te_desired_batch_size = configs['te_batch_size']
 
-    train_exp_num = configs['train_exp_num']
-    test_exp_num = configs['test_exp_num']
+    train_exp_id = configs['train_exp_id']
+    exp_id = configs['exp_id']
     arch_type = configs['arch_type']
     target_feat_name = configs['target_feat_name']
 
@@ -303,8 +303,8 @@ def main(train_df, test_df, configs):
     if not os.path.exists(results_dir):
         os.mkdir(results_dir)
     global file_prefix
-    file_prefix = os.path.join(results_dir, arch_type + '_M' + str(train_exp_num) + '_T' + str(
-        test_exp_num))
+    file_prefix = os.path.join(results_dir, arch_type + '_M' + str(train_exp_id) + '_T' + str(
+        exp_id))
 
     writer_path = file_prefix
     writer = SummaryWriter(writer_path)

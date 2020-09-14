@@ -32,51 +32,51 @@ class ConfigsError(Exception):
     pass
 
 
-def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_batch_size, configs):
+def size_the_batches(train_data, val_data, tr_desired_batch_size, te_desired_batch_size, configs):
     """
-    Compute the batch sizes for training and test set
+    Compute the batch sizes for training and val set
 
     :param train_data: (DataFrame)
-    :param test_data: (DataFrame)
+    :param val_data: (DataFrame)
     :param tr_desired_batch_size: (int)
     :param te_desired_batch_size: (int)
     :return:
     """
 
     if configs["run_train"]:
-        # Find factors of the length of train and test df's and pick the closest one to the requested batch sizes
+        # Find factors of the length of train and val df's and pick the closest one to the requested batch sizes
         train_bth = factors(train_data.shape[0])
         train_num_batches = min(train_bth, key=lambda x: abs(x - tr_desired_batch_size))
         train_bt_size = int(train_data.shape[0] / train_num_batches)
 
-        test_bth = factors(test_data.shape[0])
-        test_num_batches = min(test_bth, key=lambda x: abs(x - te_desired_batch_size))
-        test_bt_size = int(test_data.shape[0]/test_num_batches)
+        val_bth = factors(val_data.shape[0])
+        val_num_batches = min(val_bth, key=lambda x: abs(x - te_desired_batch_size))
+        val_bt_size = int(val_data.shape[0]/val_num_batches)
 
-        train_ratio = round(train_data.shape[0] * 100 / (train_data.shape[0] + test_data.shape[0]),1)
-        test_ratio = 100 - train_ratio
+        train_ratio = round(train_data.shape[0] * 100 / (train_data.shape[0] + val_data.shape[0]),1)
+        val_ratio = 100 - train_ratio
         num_train_data = train_data.shape[0]
 
-        logging.info("Train size: {}, Test size: {}, split {}%:{}%".format(train_data.shape[0], test_data.shape[0], train_ratio,
-                                                                  test_ratio))
+        logging.info("Train size: {}, val size: {}, split {}%:{}%".format(train_data.shape[0], val_data.shape[0], train_ratio,
+                                                                  val_ratio))
         logging.info("Available train batch factors: {}".format(sorted(train_bth)))
-        logging.info("Requested number of batches per epoch - Train: {}, Test: {}".format(tr_desired_batch_size, te_desired_batch_size))
-        logging.info("Actual number of batches per epoch - Train: {}, Test: {}".format(train_num_batches, test_num_batches))
-        logging.info("Number of data samples in each batch - Train: {}, Test: {}".format(train_bt_size, test_bt_size))
+        logging.info("Requested number of batches per epoch - Train: {}, val: {}".format(tr_desired_batch_size, te_desired_batch_size))
+        logging.info("Actual number of batches per epoch - Train: {}, val: {}".format(train_num_batches, val_num_batches))
+        logging.info("Number of data samples in each batch - Train: {}, val: {}".format(train_bt_size, val_bt_size))
     else:
-        test_bt_size = test_data.shape[0]
+        val_bt_size = val_data.shape[0]
         train_bt_size = 0
         num_train_data = 0
 
-    return train_bt_size, test_bt_size, num_train_data
+    return train_bt_size, val_bt_size, num_train_data
 
 
-def data_transform(train_data, test_data, transformation_method, run_train):
+def data_transform(train_data, val_data, transformation_method, run_train):
     """
-    Normalize the training and test data according to a user-defined criteria
+    Normalize the training and val data according to a user-defined criteria
 
     :param train_data: DataFrame
-    :param test_data: DataFrame
+    :param val_data: DataFrame
     :param transformation_method: str
     :param run_train: Boolean
     :return:
@@ -101,7 +101,7 @@ def data_transform(train_data, test_data, transformation_method, run_train):
         else:
             raise ConfigsError("{} is not a supported form of data normalization".format(transformation_method))
 
-    # Reading back the train stats for normalizing test data w.r.t to train data
+    # Reading back the train stats for normalizing val data w.r.t to train data
     file_loc = os.path.join(file_prefix, "train_stats.json")
     with open(file_loc, 'r') as f:
         train_stats = json.load(f)
@@ -114,24 +114,24 @@ def data_transform(train_data, test_data, transformation_method, run_train):
 
     # Normalize data
     if transformation_method == "minmaxscale":
-        test_data = (test_data - train_min) / (train_max - train_min)
+        val_data = (val_data - train_min) / (train_max - train_min)
     elif transformation_method == "standard":
-        test_data = ((test_data - train_mean) / train_std)
+        val_data = ((val_data - train_mean) / train_std)
     else:
         raise ConfigsError("{} is not a supported form of data normalization".format(transformation_method))
 
-    return train_data, test_data
+    return train_data, val_data
 
 
-def data_iterable_random(train_data, test_data, run_train, train_batch_size, test_batch_size, configs):
+def data_iterable_random(train_data, val_data, run_train, train_batch_size, val_batch_size, configs):
     """
-    Converts train and test data to torch data types (used only if splitting training and test set randomly)
+    Converts train and val data to torch data types (used only if splitting training and val set randomly)
 
     :param train_data: (DataFrame)
-    :param test_data: (DataFrame)
+    :param val_data: (DataFrame)
     :param run_train: (Boolean)
     :param train_batch_size: (int)
-    :param test_batch_size: (int)
+    :param val_batch_size: (int)
     :param configs: (Dictionary)
     :return:
     """
@@ -156,21 +156,21 @@ def data_iterable_random(train_data, test_data, run_train, train_batch_size, tes
     else:
         train_loader = []
 
-    # Do the same as above, but for the test set
-    X_test = test_data.drop(configs['target_var'], axis=1).values.astype(dtype='float32')
+    # Do the same as above, but for the val set
+    X_val = val_data.drop(configs['target_var'], axis=1).values.astype(dtype='float32')
 
-    y_test = test_data[configs['target_var']]
-    y_test = y_test.values.astype(dtype='float32')
-    y_test = np.tile(y_test, (len(configs['qs']), 1))
-    y_test = np.transpose(y_test)
+    y_val = val_data[configs['target_var']]
+    y_val = y_val.values.astype(dtype='float32')
+    y_val = np.tile(y_val, (len(configs['qs']), 1))
+    y_val = np.transpose(y_val)
 
-    test_feat_tensor = torch.from_numpy(X_test).type(torch.FloatTensor)
-    test_target_tensor = torch.from_numpy(y_test).type(torch.FloatTensor)
+    val_feat_tensor = torch.from_numpy(X_val).type(torch.FloatTensor)
+    val_target_tensor = torch.from_numpy(y_val).type(torch.FloatTensor)
 
-    test = data_utils.TensorDataset(test_feat_tensor, test_target_tensor)
-    test_loader = DataLoader(dataset=test, batch_size=test_batch_size, shuffle=False)
+    val = data_utils.TensorDataset(val_feat_tensor, val_target_tensor)
+    val_loader = DataLoader(dataset=val, batch_size=val_batch_size, shuffle=False)
 
-    return train_loader, test_loader
+    return train_loader, val_loader
 
 
 def save_model(model, epoch, n_iter):
@@ -226,32 +226,32 @@ def quantile_loss(output, target, configs):
     return loss
 
 
-def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method, configs, last_run):
+def test_processing(val_df, val_loader, model, seq_dim, input_dim, val_batch_size, transformation_method, configs, last_run):
     """
-    Process the test set and report error statistics.
+    Process the val set and report error statistics.
 
-    :param test_df: (DataFrame)
-    :param test_loader: (DataLoader)
+    :param val_df: (DataFrame)
+    :param val_loader: (DataLoader)
     :param model: (Pytorch model)
     :param seq_dim: ()
     :param input_dim:
-    :param test_batch_size:
+    :param val_batch_size:
     :param transformation_method:
     :param configs: (Dictionary)
     :return:
     """
 
-    # Plug the test set into the model
+    # Plug the val set into the model
     model.eval()
     preds = []
     targets = []
-    for i, (feats, values) in enumerate(test_loader):
+    for i, (feats, values) in enumerate(val_loader):
         features = Variable(feats.view(-1, seq_dim, input_dim))
         outputs = model(features)
         preds.append(outputs.data.numpy().squeeze())
         targets.append(values.data.numpy())
 
-    # (Normalized Data) Concatenate the predictions and targets for the whole test set
+    # (Normalized Data) Concatenate the predictions and targets for the whole val set
     semifinal_preds = np.concatenate(preds)
     semifinal_targs = np.concatenate(targets)
 
@@ -270,7 +270,7 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     train_mean = pd.DataFrame(train_stats['train_mean'], index=[1]).iloc[0]
     train_std = pd.DataFrame(train_stats['train_std'], index=[1]).iloc[0]
 
-    # Do de-normalization process on predictions and targets from test set
+    # Do de-normalization process on predictions and targets from val set
 
     if transformation_method == "minmaxscale":
         final_preds = ((train_max[configs['target_var']] - train_min[configs['target_var']]) * semifinal_preds) + \
@@ -334,7 +334,7 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     cvrmse = (1 / (np.mean(target))) * np.sqrt(np.sum((target - output) ** 2) / (len(target) - p_cvrmse))
     gof = (np.sqrt(2) / 2) * np.sqrt(cvrmse ** 2 + nmbe ** 2)
 
-    # If this is the last test run of training, get histogram data of residuals for each quantile
+    # If this is the last val run of training, get histogram data of residuals for each quantile
     if last_run:
         #resid = target - output
         resid = semifinal_targs - semifinal_preds
@@ -363,14 +363,14 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     return predictions, targets, errors, Q_vals, hist_data
 
 
-def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method,
-            configs, train_batch_size, test_batch_size, seq_dim, num_train_data):
+def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume, writer, transformation_method,
+            configs, train_batch_size, val_batch_size, seq_dim, num_train_data):
     """
     Contains main training process for RNN
 
     :param train_loader: (Pytorch DataLoader)
-    :param test_loader: (Pytorch DataLoader)
-    :param test_df: (DataFrame)
+    :param val_loader: (Pytorch DataLoader)
+    :param val_df: (DataFrame)
     :param num_epochs: (int)
     :param run_train: (Boolean)
     :param run_resume: (Boolean)
@@ -378,7 +378,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     :param transformation_method: (str)
     :param configs: (Dictionary)
     :param train_batch_size: (Float)
-    :param test_batch_size: (Float)
+    :param val_batch_size: (Float)
     :param seq_dim: (Int)
     :param num_train_data: (Float)
     :return: None
@@ -400,9 +400,9 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     # initializing lists to store losses over epochs:
     train_loss = []
     train_iter = []
-    # test_loss = []
-    test_iter = []
-    # test_rmse = []
+    # val_loss = []
+    val_iter = []
+    # val_rmse = []
 
     # If you want to continue training the model:
     if run_train:
@@ -586,24 +586,24 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                 if n_iter % configs["eval_frequency"] == 0:
                     save_model(model, epoch, n_iter)
 
-                # Do a test batch every ___ iterations
+                # Do a val batch every ___ iterations
                 if n_iter % configs["eval_frequency"] == 0:
-                    # Evaluate test set
-                    predictions, targets, errors, Q_vals, hist_data = test_processing(test_df, test_loader, model, seq_dim, input_dim,
-                                                          test_batch_size, transformation_method, configs, False)
+                    # Evaluate val set
+                    predictions, targets, errors, Q_vals, hist_data = test_processing(val_df, val_loader, model, seq_dim, input_dim,
+                                                          val_batch_size, transformation_method, configs, False)
                     predictions = predictions.iloc[:, int(predictions.shape[1] / 2)]
                     temp_holder = errors
                     temp_holder.update({"n_iter": n_iter, "epoch": epoch})
                     mid_train_error_stats = mid_train_error_stats.append(temp_holder, ignore_index=True)
 
-                    test_iter.append(n_iter)
-                    writer.add_scalars("Loss", {"Test": errors['pinball_loss']}, n_iter)
+                    val_iter.append(n_iter)
+                    writer.add_scalars("Loss", {"val": errors['pinball_loss']}, n_iter)
 
                     # Add parody plot to TensorBoard
                     # fig2, ax2 = plt.subplots()
-                    # ax2.scatter(predictions, test_df[configs['target_var']], s=5, alpha=0.3)
-                    # strait_line = np.linspace(min(min(predictions), min(test_df[configs['target_var']])),
-                    #                           max(max(predictions), max(test_df[configs['target_var']])), 5)
+                    # ax2.scatter(predictions, val_df[configs['target_var']], s=5, alpha=0.3)
+                    # strait_line = np.linspace(min(min(predictions), min(val_df[configs['target_var']])),
+                    #                           max(max(predictions), max(val_df[configs['target_var']])), 5)
                     # ax2.plot(strait_line, strait_line, c='k')
                     # ax2.set_xlabel('Predicted')
                     # ax2.set_ylabel('Observed')
@@ -626,7 +626,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                     percentages = dict(zip(list(np.arange(1,num_logical_processors+1).astype(str)), psutil.cpu_percent(interval=None, percpu=True)))
                     writer.add_scalars("CPU_Utilization", percentages, n_iter)
 
-                    logging.info('Epoch: {} Iteration: {}. Train_loss: {}. Test_loss: {}, LR: {}'.format(epoch_num, n_iter,
+                    logging.info('Epoch: {} Iteration: {}. Train_loss: {}. val_loss: {}, LR: {}'.format(epoch_num, n_iter,
                                                                                                 loss.data.item(),
                                                                                                 errors['pinball_loss'],
                                                                                                 optimizer.param_groups[
@@ -636,9 +636,9 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         # Once model training is done, save the current model state
         save_model(model, epoch, n_iter)
 
-        # Once model is done training, process a final test set
-        predictions, targets, errors, Q_vals, hist_data = test_processing(test_df, test_loader, model, seq_dim, input_dim,
-                                              test_batch_size, transformation_method, configs, True)
+        # Once model is done training, process a final val set
+        predictions, targets, errors, Q_vals, hist_data = test_processing(val_df, val_loader, model, seq_dim, input_dim,
+                                              val_batch_size, transformation_method, configs, True)
 
         # Save the residual distribution to a file
         hist_data.to_hdf(os.path.join(file_prefix, "residual_distribution.h5"), key='df', mode='w')
@@ -691,15 +691,15 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
             json.dump(errors, fp, indent=1)
 
 
-    # If you just want to immediately test the model on the existing (saved) model
+    # If you just want to immediately val the model on the existing (saved) model
     else:
         torch_model = torch.load(os.path.join(file_prefix, 'torch_model'))
         model = torch_model['torch_model']
         logging.info("Loaded model from file, given run_train=False\n")
 
-        # Run test
-        predictions, targets, errors, Q_vals, hist_data = test_processing(test_df, test_loader, model, seq_dim, input_dim,
-                                              test_batch_size, transformation_method, configs, True)
+        # Run val
+        predictions, targets, errors, Q_vals, hist_data = test_processing(val_df, val_loader, model, seq_dim, input_dim,
+                                              val_batch_size, transformation_method, configs, True)
 
         building = configs["building"]
         year = configs["external_test"]["year"]
@@ -1020,12 +1020,12 @@ def predict(data, file_prefix):
     return final_preds
 
 
-def main(train_df, test_df, configs):
+def main(train_df, val_df, configs):
     """
     Main executable for prepping data for input to RNN model.
 
     :param train_df: (DataFrame)
-    :param test_df: (DataFrame)
+    :param val_df: (DataFrame)
     :param configs: (Dictionary)
     :return: None
     """
@@ -1037,7 +1037,7 @@ def main(train_df, test_df, configs):
     tr_desired_batch_size = configs['tr_batch_size']
     te_desired_batch_size = configs['te_batch_size']
     building_ID = configs["building"]
-    test_exp_num = configs['test_exp_num']
+    exp_id = configs['exp_id']
     arch_type = configs['arch_type']
     results_dir = configs["results_dir"]
 
@@ -1046,7 +1046,7 @@ def main(train_df, test_df, configs):
         os.mkdir(results_dir)
     global file_prefix
     file_prefix = os.path.join(results_dir, arch_type + '_M' + str(configs["target_var"].replace(" ", "")) + '_T' + str(
-        test_exp_num))
+        exp_id))
 
     # Create writer object for TensorBoard
     writer_path = file_prefix
@@ -1060,25 +1060,25 @@ def main(train_df, test_df, configs):
         train_df.reset_index(drop=True, inplace=True)
     else:
         train_data = train_df
-    test_data = test_df.copy(deep=True)
-    test_data.reset_index(drop=True, inplace=True)
-    test_df.reset_index(drop=True, inplace=True)
+    val_data = val_df.copy(deep=True)
+    val_data.reset_index(drop=True, inplace=True)
+    val_df.reset_index(drop=True, inplace=True)
 
     # Normalization transformation
-    train_data, test_data = data_transform(train_data, test_data, transformation_method, run_train)
+    train_data, val_data = data_transform(train_data, val_data, transformation_method, run_train)
     logging.info("Data transformed using {} as transformation method".format(transformation_method))
 
     # Size the batches
-    train_batch_size, test_batch_size, num_train_data = size_the_batches(train_data, test_data, tr_desired_batch_size,
+    train_batch_size, val_batch_size, num_train_data = size_the_batches(train_data, val_data, tr_desired_batch_size,
                                                                          te_desired_batch_size, configs)
 
     # Already did sequential padding: Convert to iterable dataset (DataLoaders)
-    if configs["TrainTestSplit"] == 'Random':
-        train_loader, test_loader = data_iterable_random(train_data, test_data, run_train, train_batch_size,
-                                                         test_batch_size, configs)
+    if configs["train_val_split"] == 'Random':
+        train_loader, val_loader = data_iterable_random(train_data, val_data, run_train, train_batch_size,
+                                                         val_batch_size, configs)
     logging.info("Data converted to iterable dataset")
 
     # Start the training process
-    process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method,
-            configs, train_batch_size, test_batch_size, configs['window']+1, num_train_data)
+    process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume, writer, transformation_method,
+            configs, train_batch_size, val_batch_size, configs['window']+1, num_train_data)
 
