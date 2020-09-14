@@ -734,7 +734,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         # pd.DataFrame(predictions).to_hdf(os.path.join(file_prefix, "predictions.h5"), key='df', mode='w')
         # pd.DataFrame(measured).to_hdf(os.path.join(file_prefix, "measured.h5"), key='df', mode='w')
 
-        building = configs["external_test"]["building"]
+        building = configs["building"]
         year = configs["external_test"]["year"]
         month = configs["external_test"]["month"]
         file = os.path.join(configs["data_dir"], "{}-{}-{}-processed.h5".format(building, month, year))

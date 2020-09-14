@@ -429,7 +429,7 @@ def prep_for_rnn(configs, data):
     else:
         test_df = data
         train_df = pd.DataFrame()
-        building = configs["external_test"]["building"]
+        building = configs["building"]
         year = configs["external_test"]["year"]
         month = configs["external_test"]["month"]
         file = os.path.join(configs["data_dir"], "{}-{}-{}-processed.h5".format(building, month, year))
@@ -514,7 +514,7 @@ def prep_for_seq2seq(configs, data):
     else:
         test_df = data
         train_df = pd.DataFrame()
-        building = configs["external_test"]["building"]
+        building = configs["building"]
         year = configs["external_test"]["year"]
         month = configs["external_test"]["month"]
         file = os.path.join(configs["data_dir"], "{}-{}-{}-processed.h5".format(building, month, year))

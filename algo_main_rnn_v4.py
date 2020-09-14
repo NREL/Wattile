@@ -701,7 +701,7 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         predictions, targets, errors, Q_vals, hist_data = test_processing(test_df, test_loader, model, seq_dim, input_dim,
                                               test_batch_size, transformation_method, configs, True)
 
-        building = configs["external_test"]["building"]
+        building = configs["building"]
         year = configs["external_test"]["year"]
         month = configs["external_test"]["month"]
         file = os.path.join(configs["data_dir"], "{}-{}-{}-processed.h5".format(building, month, year))
@@ -724,6 +724,22 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
         ax1.legend()
         plt.show()
         #fig.savefig(os.path.join(configs["results_dir"], "{}_test.png".format(configs["target_var"])))
+
+        # Plotting residuals for the test set
+        residuals = predictions.iloc[:, int(len(configs["qs"])/2)] - targets.iloc[:, int(len(configs["qs"])/2)]
+        file = os.path.join(configs["data_dir"], "{}-{}-{}-processed.h5".format(building, month, year))
+        processed = pd.read_hdf(file, key='df')
+        fig, ax2 = plt.subplots()
+        ax2.scatter(processed.index, residuals.values, s=0.5, alpha=0.3, color="blue")
+        ax2.set_ylabel('Median Forecast Residual (kW)')
+        plt.show()
+        print("Done")
+
+        # Plotting out of bounds
+        fig, ax3 = plt.subplots()
+        mask = ~np.logical_and(predictions.iloc[:,0] < targets.iloc[:, int(len(configs["qs"])/2)], predictions.iloc[:,-1] > targets.iloc[:, int(len(configs["qs"])/2)])
+        dates = processed.index[mask]
+        plt.vlines(dates, 0, 1, alpha=0.05)
 
 
 def eval_trained_model(file_prefix, train_data, train_batch_size, configs):
