@@ -230,64 +230,60 @@ def input_data_split(data, configs):
     :param configs: (Dict)
     :return:
     """
+    train_ratio = int(configs["data_split"].split(":")[0])/100
+    val_ratio = int(configs["data_split"].split(":")[1])/100
+    test_ratio = int(configs["data_split"].split(":")[2])/100
+
+    file_prefix = os.path.join(configs["results_dir"], configs["arch_type"] + '_M' + str(configs["target_var"].replace(" ", "")) + '_T' + str(
+        configs["exp_id"]))
 
     if configs['train_val_split'] == 'Random':
         pathlib.Path(configs["data_dir"]).mkdir(parents=True, exist_ok=True)
-        mask_file = os.path.join(configs["data_dir"], "mask_{}_{}.h5".format(configs["target_var"].replace(" ", ""), "-".join(configs['year'])))
-        # Check if a mask for the building/year combination already exists
-        if pathlib.Path(mask_file).exists():
-            # Open the mask file
-            mask = pd.read_hdf(mask_file, key='df')
-            msk = mask['msk'].values
-            # Check if the saved mask is the same size as the data file
-            if len(msk) == data.shape[0]:
-                msk = np.array(msk)
-                train_df = data[msk]
-                val_df = data[~msk]
-                logging.info("Using an existing training mask: {}".format(mask_file))
+        # mask_file = os.path.join(configs["data_dir"], "mask_{}_{}.h5".format(configs["target_var"].replace(" ", ""), "-".join(configs['year'])))
+        mask_file = os.path.join(file_prefix, "mask.h5")
 
-            # If not, a recent architectural change must have changed the length of data. Make a new one.
-            else:
-                logging.info("There was a length mismatch between the existing mask and the data. Making a new mask and writing to file")
-                data_size = data.shape[0]
-                num_ones = (configs["target_split_ratio"] * data_size) - ((configs["target_split_ratio"] * data_size) % configs["train_factor"])
-                msk = np.zeros(data_size)
-                indices = np.random.choice(np.arange(data_size), replace=False, size=int(num_ones))
-                msk[indices] = 1
-                msk = msk.astype(bool)
-                train_df = data[msk]
-                val_df = data[~msk]
+        logging.info("Creating random training mask and writing to file")
 
-                # Put mask in dataframe along with time index, and save to file
-                mask = pd.DataFrame()
-                mask['msk'] = msk
-                mask.index = data.index
-                mask.to_hdf(mask_file, key='df', mode='w')
+        # DEV
+        # Set indices for training set
+        np.random.seed(seed=configs["random_seed"])
+        data_size = data.shape[0]
+        num_ones = (train_ratio * data_size) - ((train_ratio * data_size) % configs["train_factor"])
+        msk = np.zeros(data_size) + 2
+        indices = np.random.choice(np.arange(data_size), replace=False, size=int(num_ones))
+        msk[indices] = 0
 
-        # If no previously-saved mask exists, make one
+        # Set indices for validation and test set
+        remaining_indices = np.where(msk != 1)[0]
+        if test_ratio == 0:
+            num_val = remaining_indices.shape[0]
         else:
-            logging.info("Creating random training mask and writing to file")
-            data_size = data.shape[0]
-            num_ones = (configs["target_split_ratio"] * data_size) - ((configs["target_split_ratio"] * data_size) % configs["train_factor"])
-            msk = np.zeros(data_size)
-            indices = np.random.choice(np.arange(data_size), replace=False, size=int(num_ones))
-            msk[indices] = 1
-            msk = msk.astype(bool)
-            train_df = data[msk]
-            val_df = data[~msk]
+            num_val = int((val_ratio / (1-train_ratio)) * remaining_indices.shape[0])
+        val_indices = np.random.choice(remaining_indices, replace=False, size=num_val)
+        msk[val_indices] = 1
 
-            # Put mask in dataframe along with time index, and save to file
-            mask = pd.DataFrame()
-            mask['msk'] = msk
-            mask.index = data.index
-            mask.to_hdf(mask_file, key='df', mode='w')
+        print("Train: {}, validation: {}, test: {}".format((msk == 0).sum()/msk.shape[0], (msk == 1).sum()/msk.shape[0], (msk == 2).sum()/msk.shape[0]))
+
+        # Assign dataframes
+        train_df = data[msk == 0]
+        val_df = data[msk == 1]
+        test_df = data[msk == 2]
+
+        # Save test_df to file for later use
+        test_df.to_hdf(os.path.join(configs["data_dir"], "internal_test_{}.h5".format(str(configs["target_var"].replace(" ", "")))), key='df', mode='w')
+
+        # Still save dataframe to file to preserve timeseries index
+        mask = pd.DataFrame()
+        mask['msk'] = msk
+        mask.index = data.index
+        mask.to_hdf(mask_file, key='df', mode='w')
 
         # Get rid of datetime index
         train_df.reset_index(drop=True, inplace=True)
         val_df.reset_index(drop=True, inplace=True)
 
     else:
-        raise ConfigsError("{} is not a supported form of train/val splitting".format(configs['train_val_split']))
+        raise ConfigsError("{} is not a supported form of data splitting".format(configs['train_val_split']))
 
     return train_df, val_df
 

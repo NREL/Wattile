@@ -815,10 +815,10 @@ def eval_trained_model(file_prefix, train_data, train_batch_size, configs):
     semifinal_targs = np.concatenate(targets)
 
     # Get the saved binary mask from file
-    mask_file = os.path.join(configs["data_dir"], "mask_{}_{}.json".format(configs["target_var"].replace(" ", ""),
-                                                                           "-".join(configs['year'])))
+    mask_file = os.path.join(file_prefix, "mask.h5")
     mask = pd.read_hdf(mask_file, key='df')
     msk = mask["msk"]
+    msk = mask["msk"] == 0
 
     # Adjust the datetime index so it is in line with the EC data
     target_index = mask.index[msk] + pd.DateOffset(
@@ -971,10 +971,9 @@ def eval_tests(file_prefix, batch_tot):
     num_timestamps = configs["S2S_stagger"]["initial_num"] + configs["S2S_stagger"]["secondary_num"]
 
     # Read in mask from file
-    mask_file = os.path.join(configs["data_dir"],
-                             "mask_{}_{}.h5".format(configs["target_var"].replace(" ", ""), "-".join(configs['year'])))
+    mask_file = os.path.join(file_prefix, "mask.h5")
     mask = pd.read_hdf(mask_file, key='df')
-    msk = mask['msk'].values
+    msk = mask['msk'] == 0
 
     # Read in predictions from file
     data = pd.read_hdf(os.path.join(file_prefix, "predictions.h5"), key='df')
@@ -1145,8 +1144,8 @@ def main(train_df, val_df, configs):
     run_train = configs['run_train']
     num_epochs = configs['num_epochs']
     run_resume = configs['run_resume']
-    tr_desired_batch_size = configs['tr_batch_size']
-    te_desired_batch_size = configs['te_batch_size']
+    tr_desired_batch_size = configs['train_batch_size']
+    te_desired_batch_size = configs['val_batch_size']
     building_ID = configs["building"]
     exp_id = configs['exp_id']
     arch_type = configs['arch_type']

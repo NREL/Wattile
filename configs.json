@@ -1,9 +1,9 @@
 {
  "transformation_method": "minmaxscale",
- "run_train": false,
+ "run_train": true,
  "num_epochs": 100,
- "tr_batch_size": 32,
- "te_batch_size": 1,
+ "train_batch_size": 32,
+ "val_batch_size": 1,
  "run_resume": false,
  "preprocess": false,
  "arch_type": "RNN",
@@ -71,7 +71,7 @@
  },
  "train_factor": 64,
  "eval_frequency": 10,
- "target_split_ratio": 0.9,
  "data_split": "70:20:10",
- "train_val_split": "Random"
+ "train_val_split": "Random",
+ "random_seed": 1
 }

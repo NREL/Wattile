@@ -21,6 +21,7 @@ def main(configs):
     local_results_dir = os.path.join(configs["results_dir"], configs["arch_type"] + '_M' + str(configs["target_var"].replace(" ", "")) + '_T' + str(configs["exp_id"]))
     pathlib.Path(local_results_dir).mkdir(parents=True, exist_ok=True)
     logging_path = os.path.join(local_results_dir, "output.out")
+    print("Logging to: {}".format(logging_path))
     logging.basicConfig(filename=logging_path, format='%(asctime)s - %(levelname)-8s - %(message)s',
                         datefmt='%m/%d/%Y %I:%M:%S', level=logging.INFO)
 

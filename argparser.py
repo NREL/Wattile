@@ -80,11 +80,11 @@ def get_arguments():
     # args.num_epochs
     num_epochs = args.num_epochs #--num-epochs
 
-    # args.tr_batch_size
-    tr_batch_size = args.tr_batch_size  # --tr-batch-size
+    # args.train_batch_size
+    train_batch_size = args.train_batch_size  # --tr-batch-size
 
-    # args.te_batch_size
-    te_batch_size = args.te_batch_size  # --te-batch-size
+    # args.val_batch_size
+    val_batch_size = args.val_batch_size  # --te-batch-size
 
     # args.hidden_nodes
     hidden_nodes = args.hidden_nodes
@@ -139,7 +139,7 @@ def get_arguments():
                "test_start_date": dates['test_start_date'],
                "test_end_date": dates['test_end_date'],
                "transformation_method": transformation_method, "run_train": run_train,
-               "num_epochs": num_epochs, "tr_batch_size":tr_batch_size,"te_batch_size":te_batch_size,"run_resume": run_resume,
+               "num_epochs": num_epochs, "train_batch_size":train_batch_size,"val_batch_size":val_batch_size,"run_resume": run_resume,
                "preprocess": preprocess, "arch_type": arch_type,
                "train_exp_id": train_exp_id, "exp_id": exp_id,
                "hidden_nodes": hidden_nodes, 'weight_decay': weight_decay,

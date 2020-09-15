@@ -659,8 +659,8 @@ def main(train_df, val_df, configs):
     run_train = configs['run_train']
     num_epochs = configs['num_epochs']
     run_resume = configs['run_resume']
-    tr_desired_batch_size = configs['tr_batch_size']
-    te_desired_batch_size = configs['te_batch_size']
+    tr_desired_batch_size = configs['train_batch_size']
+    te_desired_batch_size = configs['val_batch_size']
 
     building_ID = configs["building"]
     exp_id = configs['exp_id']
