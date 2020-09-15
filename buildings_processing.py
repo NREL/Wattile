@@ -239,7 +239,6 @@ def input_data_split(data, configs):
 
     if configs['train_val_split'] == 'Random':
         pathlib.Path(configs["data_dir"]).mkdir(parents=True, exist_ok=True)
-        # mask_file = os.path.join(configs["data_dir"], "mask_{}_{}.h5".format(configs["target_var"].replace(" ", ""), "-".join(configs['year'])))
         mask_file = os.path.join(file_prefix, "mask.h5")
 
         logging.info("Creating random training mask and writing to file")
@@ -254,7 +253,7 @@ def input_data_split(data, configs):
         msk[indices] = 0
 
         # Set indices for validation and test set
-        remaining_indices = np.where(msk != 1)[0]
+        remaining_indices = np.where(msk != 0)[0]
         if test_ratio == 0:
             num_val = remaining_indices.shape[0]
         else:
@@ -262,7 +261,7 @@ def input_data_split(data, configs):
         val_indices = np.random.choice(remaining_indices, replace=False, size=num_val)
         msk[val_indices] = 1
 
-        print("Train: {}, validation: {}, test: {}".format((msk == 0).sum()/msk.shape[0], (msk == 1).sum()/msk.shape[0], (msk == 2).sum()/msk.shape[0]))
+        logging.info("Train: {}, validation: {}, test: {}".format((msk == 0).sum()/msk.shape[0], (msk == 1).sum()/msk.shape[0], (msk == 2).sum()/msk.shape[0]))
 
         # Assign dataframes
         train_df = data[msk == 0]
