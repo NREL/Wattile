@@ -704,7 +704,7 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
         building = configs["building"]
         year = configs["external_test"]["year"]
         month = configs["external_test"]["month"]
-        file = os.path.join(configs["data_dir"], "{}-{}-{}-processed.h5".format(building, month, year))
+        file = os.path.join(configs["data_dir"], "{}_external_test.h5".format(configs["target_var"]))
         index = pd.read_hdf(file, key='df').index
 
         # Plot the results of the test set
@@ -727,7 +727,7 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
 
         # Plotting residuals for the test set
         residuals = predictions.iloc[:, int(len(configs["qs"])/2)] - targets.iloc[:, int(len(configs["qs"])/2)]
-        file = os.path.join(configs["data_dir"], "{}-{}-{}-processed.h5".format(building, month, year))
+        file = os.path.join(configs["data_dir"], "{}_external_test.h5".format(configs["target_var"]))
         processed = pd.read_hdf(file, key='df')
         fig, ax2 = plt.subplots()
         ax2.scatter(processed.index, residuals.values, s=0.5, alpha=0.3, color="blue")

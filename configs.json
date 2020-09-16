@@ -1,34 +1,34 @@
 {
- "transformation_method": "minmaxscale",
- "run_train": true,
- "num_epochs": 100,
- "train_batch_size": 32,
- "val_batch_size": 1,
- "run_resume": false,
- "preprocess": false,
- "arch_type": "RNN",
- "arch_type_variant": "lstm",
- "arch_version": 4,
- "exp_id": "ESIF_demo",
- "hidden_nodes": 20,
- "layer_dim": 1,
- "weight_decay": 0.001,
- "fetch_n_parse": false,
- "network_path": "",
  "building": "ESIF",
+ "target_var": "ESIF Office Power (kW)",
  "year": [
   "2018",
   "2019"
  ],
- "target_var": "ESIF Office Power (kW)",
  "weather_include": [
   "SRRL BMS Global Horizontal Irradiance (W/m\u00b2_irr)",
   "SRRL BMS Dry Bulb Temperature (\u00b0F)",
   "SRRL BMS Relative Humidity (%RH)",
   "SRRL BMS Snow Depth (in)"
  ],
+ "arch_version": 4,
+ "exp_id": "ESIF_demo",
+ "arch_type": "RNN",
+ "arch_type_variant": "lstm",
+ "preprocess": false,
+ "fetch_n_parse": false,
+ "transformation_method": "minmaxscale",
+ "train_batch_size": 32,
+ "val_batch_size": 1,
+ "network_path": "",
+ "results_dir": "EnergyForecasting_Results",
+ "data_dir": "data",
  "resample_freq": 15,
  "sequence_freq": 15,
+ "splicer": {
+  "active": true,
+  "time": "1d"
+ },
  "rolling_window": {
   "active": false,
   "minutes": 15
@@ -39,15 +39,15 @@
  "MOY": ["sincos"],
  "HOD": ["sincos", "binary_reg"],
  "Holidays": true,
- "lr_config": {
-  "base": 0.0001,
-  "schedule": true,
-  "type": "performance",
-  "factor": 0.1,
-  "min": 1e-05,
-  "patience": 8,
-  "step_size": 75
+ "S2S_stagger": {
+  "initial_num": 72,
+  "decay": 0,
+  "secondary_num": 0
  },
+ "train_size_factor": 32,
+ "train_val_split": "Random",
+ "data_split": "70:20:10",
+ "random_seed": 1,
  "qs": [
   0.025,
   0.1,
@@ -57,21 +57,26 @@
   0.9,
   0.975
  ],
- "smoothing_alpha": 0.001,
- "S2S_stagger": {
-  "initial_num": 72,
-  "decay": 0,
-  "secondary_num": 0
+ "run_train": true,
+ "run_resume": false,
+ "num_epochs": 100,
+ "weight_decay": 0.001,
+ "hidden_nodes": 20,
+ "layer_dim": 1,
+ "eval_frequency": 10,
+ "lr_config": {
+  "base": 0.0001,
+  "schedule": true,
+  "type": "performance",
+  "factor": 0.1,
+  "min": 1e-05,
+  "patience": 8,
+  "step_size": 75
  },
- "results_dir": "EnergyForecasting_Results",
- "data_dir": "data",
+ "smoothing_alpha": 0.001,
+ "test_method": "internal",
  "external_test": {
   "year": "2020",
   "month": [1, 2, 3, 4, 5, 6]
- },
- "train_factor": 64,
- "eval_frequency": 10,
- "data_split": "70:20:10",
- "train_val_split": "Random",
- "random_seed": 1
+ }
 }

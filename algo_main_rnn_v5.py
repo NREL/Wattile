@@ -737,7 +737,7 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
         building = configs["building"]
         year = configs["external_test"]["year"]
         month = configs["external_test"]["month"]
-        file = os.path.join(configs["data_dir"], "{}-{}-{}-processed.h5".format(building, month, year))
+        file = os.path.join(configs["data_dir"], "{}_external_test.h5".format(configs["target_var"]))
         processed = pd.read_hdf(file, key='df')
 
         num_timestamps = configs["S2S_stagger"]["initial_num"] + configs["S2S_stagger"]["secondary_num"]

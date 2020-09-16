@@ -9,6 +9,11 @@ import os
 import pathlib
 
 
+class ConfigsError(Exception):
+    """Base class for exceptions in this module."""
+    pass
+
+
 def main(configs):
     """
     Main function for processing and structuring data.
@@ -36,12 +41,19 @@ def main(configs):
         # preprocessing module defines target_feat_name list and sends it back.
         configs['target_feat_name'] = [configs['target_var']]
 
-    # Get the full data
+    # Get the dataset
     if configs["run_train"]:
         data_full = bp.get_full_data(configs)
     else:
-        data_full = bp.get_test_data(configs["building"], configs["external_test"]["year"],
-                                  configs["external_test"]["month"], configs["data_dir"])
+        if configs["test_method"] == "external":
+            data_full = bp.get_test_data(configs["building"], configs["external_test"]["year"],
+                                      configs["external_test"]["month"], configs["data_dir"])
+        elif configs["test_method"] == "internal":
+            data_full = pd.read_hdf(os.path.join(local_results_dir, "internal_test_{}.h5".format(str(configs["target_var"].replace(" ", "")))))
+        else:
+            raise ConfigsError("run_train is FALSE but test_method designated in configs.json is not understood")
+
+
     # Remove all data columns we dont care about
     important_vars = configs['weather_include'] + [configs['target_var']]
     data = data_full[important_vars]
