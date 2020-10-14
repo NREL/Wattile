@@ -17,9 +17,10 @@ import os
 from historical_weather import get_nsrdb
 import tables
 import pathlib
+import json
 
 # Inputs
-data_dir = "data/GP"
+data_dir = os.path.join("data","GP")
 weather_url = "https://github.com/buds-lab/building-data-genome-project-2/blob/master/data/weather/weather.csv"
 meta_url = "https://github.com/buds-lab/building-data-genome-project-2/blob/master/data/metadata/metadata.csv"
 loads_url = "https://github.com/buds-lab/building-data-genome-project-2/blob/master/data/meters/cleaned/electricity_cleaned.csv"
@@ -52,46 +53,69 @@ loads["timestamp"] = pd.to_datetime(loads["timestamp"])
 loads = loads.set_index("timestamp", drop=True)
 
 # Find buildings with electricity data
-ids_with_loads = meta[meta["electricity"].notna()]["building_id"].values.tolist()
-sites_with_loads = meta[meta["electricity"].notna()]["site_id"].values.tolist()
+# sites_with_loads = meta[meta["electricity"].notna()]["site_id"].values.tolist()
+c1 = meta["electricity"].notna().values
+c2 = meta["lat"].notna().values
+c3 = meta["lng"].notna().values
+c4 = meta["timezone"].str.contains("US").values
+criteria = np.logical_and.reduce((c1, c2, c3, c4))
+filtered = dict()
+filtered["ids"] = meta[criteria]["building_id"].values.tolist()
+filtered["usage"] = np.unique(filtered["usage"], return_counts=True)
+
+# Save the fitlered building IDs for later use
+# with open(os.path.join(data_dir, "GP_ids.json"), 'w') as fp:
+#     json.dump(filtered["ids"], fp, indent=1)
 
 # Create datasets for each building
+print("Iterating")
 i = 0
-for id in ids_with_loads:
+
+# Make temporary holding stucture for site weather data
+sites_weather = dict()
+sites_weather["2016"] = dict()
+sites_weather["2017"] = dict()
+
+for id in filtered["ids"]:
     # Get load data
     id_load = loads[id]
 
-    # Get weather data
-    site = id.split("_")[0]
-    id_weather = weather[weather["site_id"] == site].drop("site_id", axis=1)
+    # Get weather data from the genome project data
+    # site = id.split("_")[0]
+    # id_weather = weather[weather["site_id"] == site].drop("site_id", axis=1)
 
-    # Put data together
-    id_data = pd.concat([id_weather, id_load], axis=1)
+    # Put load and weather data together
+    # id_data = pd.concat([id_weather, id_load], axis=1)
 
-    sites_weather = dict()
-    sites_weather["2016"] = dict()
-    sites_weather["2017"] = dict()
+
     site_id = meta[meta["building_id"] == id]["site_id"].values[0]
+
+    # Iterate through years
     for year in [2016, 2017]:
-        # Check if weather data is already gathered for this site
-        if site_id in sites_weather[str(year)]:
-            df = sites_weather[str(year)][site_id]
-        else:
-            # Get nsedb weather data for this site
-            site_lat = meta[meta["building_id"] == id]["lat"].values[0]
-            site_lng = meta[meta["building_id"] == id]["lng"].values[0]
-            df = get_nsrdb(year, site_lat, site_lng)
-            df = df.resample("60T").mean()
-            sites_weather[str(year)][site_id] = df
-
-        # Combine site data together
-        site_data = pd.concat([id_load[id_load.index.year == year], df[['GHI', 'Temperature', 'Relative Humidity']]], axis=1)
-
-        # Save dataset
         output_string = os.path.join(data_dir, "Data_{}_{}.h5".format(id, year))
-        site_data.to_hdf(output_string, key='df', mode='w')
+        if pathlib.Path(output_string).exists():
+            pass
+        else:
+            # Check if weather data is already gathered for this site
+            if site_id in sites_weather[str(year)]:
+                print("already have nsrdb data")
+                df = sites_weather[str(year)][site_id]
+            else:
+                print("Getting nsrdb data for {}".format(year))
+                # Get nsedb weather data for this site
+                site_lat = meta[meta["building_id"] == id]["lat"].values[0]
+                site_lng = meta[meta["building_id"] == id]["lng"].values[0]
+                df = get_nsrdb(year, site_lat, site_lng)
+                df = df.resample("60T").mean()
+                sites_weather[str(year)][site_id] = df
 
-    print("Done with {}/{} sites".format(i, len(ids_with_loads)))
+            # Combine site data together
+            site_data = pd.concat([id_load[id_load.index.year == year], df[['GHI', 'Temperature', 'Relative Humidity']]], axis=1)
+
+            # Save dataset
+            site_data.to_hdf(output_string, key='df', mode='w')
+
+    print("Done with {}: {}/{} sites".format(id, i, len(filtered["ids"])))
     i = i + 1
 
 print("Done")

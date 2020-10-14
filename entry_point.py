@@ -53,23 +53,26 @@ def main(configs):
         else:
             raise ConfigsError("run_train is FALSE but test_method designated in configs.json is not understood")
 
+    # Do some preprocessing, but only if the dataset needs it (i.e. it is not an
+    if configs["run_train"] or (not configs["run_train"] and configs["test_method"] == "external"):
+        # Remove all data columns we dont care about
+        important_vars = configs['weather_include'] + [configs['target_var']]
+        data = data_full[important_vars]
+        # Resample
+        resample_bin_size = "{}T".format(configs['resample_freq'])
+        data = data.resample(resample_bin_size).mean()
+        # Clean
+        data = bp.clean_data(data, configs)
+        # Add calculated features (if applicable)
 
-    # Remove all data columns we dont care about
-    important_vars = configs['weather_include'] + [configs['target_var']]
-    data = data_full[important_vars]
-    # Resample
-    resample_bin_size = "{}T".format(configs['resample_freq'])
-    data = data.resample(resample_bin_size).mean()
-    # Clean
-    data = bp.clean_data(data, configs)
-    # Add calculated features (if applicable)
+        # Convert data to rolling average (except output) and create min, mean, and max columns
+        if configs["rolling_window"]["active"]:
+            data = bp.rolling_stats(data, configs)
 
-    # Convert data to rolling average (except output) and create min, mean, and max columns
-    if configs["rolling_window"]["active"]:
-        data = bp.rolling_stats(data, configs)
-
-    # Add time-based dummy variables
-    data = bp.time_dummies(data, configs)
+        # Add time-based dummy variables
+        data = bp.time_dummies(data, configs)
+    else:
+        data = data_full
 
     # Choose what ML architecture to use and execute the corresponding script
     if configs['arch_type'] == 'RNN':

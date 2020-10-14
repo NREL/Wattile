@@ -684,7 +684,7 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
         pd.DataFrame(measured).to_hdf(os.path.join(file_prefix, "measured.h5"), key='df', mode='w')
 
         # Save the QQ information to a file
-        Q_vals.to_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df', mode='w')
+        Q_vals.to_hdf(os.path.join(file_prefix, "QQ_data_Train.h5"), key='df', mode='w')
 
         # Save the mid-train error statistics to a file
         mid_train_error_stats.to_hdf(os.path.join(file_prefix, "mid_train_error_stats.h5"), key='df', mode='w')
@@ -698,7 +698,6 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
             with open(r'Training_history.csv', 'a') as f:
                 writer = csv.writer(f, lineterminator='\n')
                 writer.writerow(["File Path", "RMSE", "CV(RMSE)", "NMBE", "GOF", "QS", "ACE", "IS", "Train time"])
-
         # Save the errors statistics to a file once everything is done
         with open(r'Training_history.csv', 'a') as f:
             writer = csv.writer(f, lineterminator='\n')
@@ -716,12 +715,12 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
         errors["train_time"] = train_time
         for k in errors:
             errors[k] = str(errors[k])
-        path = os.path.join(file_prefix, "error_stats.json")
+        path = os.path.join(file_prefix, "error_stats_train.json")
         with open(path, 'w') as fp:
             json.dump(errors, fp, indent=1)
 
 
-    # If you just want to immediately val the model on the existing (saved) model
+    # If you just want to immediately test the model on the existing (saved) model
     else:
         torch_model = torch.load(os.path.join(file_prefix, 'torch_model'))
         model = torch_model['torch_model']
@@ -730,15 +729,43 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
         predictions, errors, measured, Q_vals = test_processing(val_df, val_loader, model, seq_dim, input_dim,
                                                                 val_batch_size, transformation_method, configs, False)
 
-        # Save the final predictions to a file
-        # pd.DataFrame(predictions).to_hdf(os.path.join(file_prefix, "predictions.h5"), key='df', mode='w')
-        # pd.DataFrame(measured).to_hdf(os.path.join(file_prefix, "measured.h5"), key='df', mode='w')
+        # Save the QQ information to a file
+        Q_vals.to_hdf(os.path.join(file_prefix, "QQ_data_Test.h5"), key='df', mode='w')
 
-        building = configs["building"]
-        year = configs["external_test"]["year"]
-        month = configs["external_test"]["month"]
-        file = os.path.join(configs["data_dir"], "{}_external_test.h5".format(configs["target_var"]))
-        processed = pd.read_hdf(file, key='df')
+        # Save the errors to a file
+        for k in errors:
+            errors[k] = str(errors[k])
+        path = os.path.join(file_prefix, "error_stats_test.json")
+        with open(path, 'w') as fp:
+            json.dump(errors, fp, indent=1)
+
+        # If a training history csv file does not exist, make one
+        if not pathlib.Path("Testing_history.csv").exists():
+            with open(r'Testing_history.csv', 'a') as f:
+                writer = csv.writer(f, lineterminator='\n')
+                writer.writerow(["File Path", "RMSE", "CV(RMSE)", "NMBE", "GOF", "QS", "ACE", "IS"])
+        # Save the errors statistics to a central results csv once everything is done
+        with open(r'Testing_history.csv', 'a') as f:
+            writer = csv.writer(f, lineterminator='\n')
+            writer.writerow([file_prefix,
+                             errors["rmse"],
+                             errors["cvrmse"],
+                             errors["nmbe"],
+                             errors["gof"],
+                             errors["qs"],
+                             errors["ace"],
+                             errors["is"]])
+
+        # Plotting
+        if configs["test_method"] == "external":
+            building = configs["building"]
+            year = configs["external_test"]["year"]
+            month = configs["external_test"]["month"]
+            file = os.path.join(configs["data_dir"], "{}_external_test.h5".format(configs["target_var"]))
+            test_data = pd.read_hdf(file, key='df')
+            index = test_data.index
+        else:
+            test_data = pd.read_hdf(os.path.join(file_prefix, "internal_test_{}.h5".format(configs["target_var"])), key='df')
 
         num_timestamps = configs["S2S_stagger"]["initial_num"] + configs["S2S_stagger"]["secondary_num"]
         data = np.array(predictions)
@@ -747,8 +774,8 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
         # Plotting the test set with ALL of the sequence forecasts
         fig, ax1 = plt.subplots()
         cmap = plt.get_cmap('Reds')
-        for j in range(0, 2000, 4):
-            time_index = processed.index[j:j+72]
+        for j in range(0, test_data.shape[0]-1):
+            time_index = pd.date_range(start=test_data.index[j], periods=configs["S2S_stagger"]["initial_num"], freq="{}min".format(configs["resample_freq"]))
             ax1.plot(time_index, measured[j, :], label="Actual", color='black')
             ax1.plot(time_index, data[j, int(len(configs["qs"]) / 2), :], label='q = 0.5', color="red")
             for i, q in enumerate(configs["qs"]):
@@ -769,7 +796,7 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
 
         # Plot residuals for all times in test set
         fig, ax3 = plt.subplots()
-        ax3.scatter(processed.index, residuals[:,-1], s=0.5, alpha=0.5, color="blue")
+        ax3.scatter(test_data.index, residuals[:,-1], s=0.5, alpha=0.5, color="blue")
         ax3.set_ylabel('Residual of 18hr ahead forecast')
         # ax3.scatter(processed.index[np.logical_and(processed.index.weekday == 5, processed.index.hour == 12)],
         #             residuals[:, -1][np.logical_and(processed.index.weekday == 5, processed.index.hour == 12)],
