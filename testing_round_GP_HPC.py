@@ -4,13 +4,14 @@ import os
 from multiprocessing import Process
 
 # Get list of meters
-with open(os.path.join("data", "GP", "GP_ids.json"), "r") as read_file:
+data_dir = os.path.join("data", "GP")
+with open(os.path.join(data_dir, "GP_ids.json"), "r") as read_file:
     meters = json.load(read_file)
 
 test_ID = "initial_par_test"
-stop_num = 50
+stop_num = 3
 
-state = "Train" # Train, Test, get_results
+state = "Train"  # Train, Test, get_results
 test_dir_path = os.path.join("EnergyForecasting_Results", "GP_training_session_initial_tests")
 
 processes = list()
@@ -19,27 +20,27 @@ if state == "Train":
     i = 0
     for meter_ID in meters:
 
-            # Read in base configurations from json file
-            with open("configs.json", "r") as read_file:
-                configs = json.load(read_file)
+        # Read in base configurations from json file
+        with open("configs.json", "r") as read_file:
+            configs = json.load(read_file)
 
-            # Make a sub-directory in the main results directory specific to this test study
-            configs["results_dir"] = os.path.join(configs["results_dir"], "GP_training_session_{}".format(test_ID))
+        # Make a sub-directory in the main results directory specific to this test study
+        configs["results_dir"] = os.path.join(configs["results_dir"], "GP_training_session_{}".format(test_ID))
 
-            # Test the model
-            configs["building"] = meter_ID
-            configs["target_var"] = meter_ID
-            epb.main(configs)
+        # Test the model
+        configs["building"] = meter_ID
+        configs["target_var"] = meter_ID
+        # epb.main(configs)
 
-            if __name__ == '__main__':
-                p = Process(target=epb.main, args=(configs,))
-                processes.append(p)
-                p.start()
+        if __name__ == '__main__':
+            p = Process(target=epb.main, args=(configs,))
+            p.start()
+            processes.append(p)
 
-            i = i+1
-            print("Just finished training for target variable {} ({}/{})".format(meter_ID[1], i, len(meters)))
-            if i == stop_num:
-                break
+        i = i + 1
+        print("Just started process for {} ({}/{})".format(meter_ID[1], i, len(meters)))
+        if i == stop_num:
+            break
 
     print("Joining Processes...")
     for p in processes:
@@ -65,7 +66,7 @@ elif state == "Test":
         # Test the model
         epb.main(configs)
 
-        i = i+1
+        i = i + 1
         print("Just finished training for target variable {} ({}/{})".format(meter, i, len(meter_models)))
         if i == stop_num:
             break
@@ -83,8 +84,7 @@ elif state == "get_results":
 
         # Get Q data
 
-
-        i = i+1
+        i = i + 1
         print("Just finished training for target variable {} ({}/{})".format(meter, i, len(meter_models)))
         if i == stop_num:
             break
