@@ -3,9 +3,12 @@ import entry_point as epb
 import os
 from multiprocessing import Process
 
+# Read in base configurations from json file
+with open("configs.json", "r") as read_file:
+    configs = json.load(read_file)
+
 # Get list of meters
-data_dir = os.path.join("data", "GP")
-with open(os.path.join(data_dir, "GP_ids.json"), "r") as read_file:
+with open(os.path.join(configs["data_dir"], "GP_ids.json"), "r") as read_file:
     meters = json.load(read_file)
 
 test_ID = "initial_par_test"
@@ -20,9 +23,9 @@ if state == "Train":
     i = 0
     for meter_ID in meters:
 
-        # Read in base configurations from json file
-        with open("configs.json", "r") as read_file:
-            configs = json.load(read_file)
+        # # Read in base configurations from json file
+        # with open("configs.json", "r") as read_file:
+        #     configs = json.load(read_file)
 
         # Make a sub-directory in the main results directory specific to this test study
         configs["results_dir"] = os.path.join(configs["results_dir"], "GP_training_session_{}".format(test_ID))
