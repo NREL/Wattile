@@ -40,18 +40,18 @@ def seq_pad(a, window):
     return b
 
 
-def size_the_batches(train_data, test_data, tr_desired_batch_size, te_desired_batch_size):
+def size_the_batches(train_data, val_data, tr_desired_batch_size, te_desired_batch_size):
     train_bth = factors(train_data.shape[0])
     train_bt_size = min(train_bth, key=lambda x: abs(x - tr_desired_batch_size))
 
-    test_bth = factors(test_data.shape[0])
-    test_bt_size = min(test_bth, key=lambda x: abs(x - te_desired_batch_size))
+    val_bth = factors(val_data.shape[0])
+    val_bt_size = min(val_bth, key=lambda x: abs(x - te_desired_batch_size))
 
-    return train_bt_size, test_bt_size
+    return train_bt_size, val_bt_size
 
 
 # Normalization
-def data_transform(train_data, test_data, transformation_method, run_train):
+def data_transform(train_data, val_data, transformation_method, run_train):
     if run_train:
 
         # for the result de-normalization purpose, saving the max and min values of the STM_Xcel_Meter columns
@@ -71,7 +71,7 @@ def data_transform(train_data, test_data, transformation_method, run_train):
         else:
             train_data = (train_data - train_data.mean(axis=0)) / train_data.std(axis=0)
 
-    # reading back the train stats for normalizing test data w.r.t to train data
+    # reading back the train stats for normalizing val data w.r.t to train data
     file_loc = file_prefix + '/train_stats.json'
     with open(file_loc, 'r') as f:
         train_stats = json.load(f)
@@ -83,17 +83,17 @@ def data_transform(train_data, test_data, transformation_method, run_train):
 
     # Normalize data
     if transformation_method == "minmaxscale":
-        test_data = (test_data - train_min) / (train_max - train_min)
+        val_data = (val_data - train_min) / (train_max - train_min)
 
     else:
-        test_data = ((test_data - train_mean) / train_std)
+        val_data = ((val_data - train_mean) / train_std)
 
-    return train_data, test_data
+    return train_data, val_data
 
 
-# Create lagged variables and convert train and test data to torch data types
-def data_iterable(train_data, test_data, run_train, window, tr_desired_batch_size, te_desired_batch_size):
-    train_batch_size, test_batch_size = size_the_batches(train_data, test_data, tr_desired_batch_size,
+# Create lagged variables and convert train and val data to torch data types
+def data_iterable(train_data, val_data, run_train, window, tr_desired_batch_size, te_desired_batch_size):
+    train_batch_size, val_batch_size = size_the_batches(train_data, val_data, tr_desired_batch_size,
                                                          te_desired_batch_size)
 
     if run_train:
@@ -120,20 +120,20 @@ def data_iterable(train_data, test_data, run_train, window, tr_desired_batch_siz
         train_loader = []
 
 
-    # Do the same as above for the test set
-    X_test = test_data.drop('STM_Xcel_Meter', axis=1).values.astype(dtype='float32')
-    X_test = seq_pad(X_test, window)
+    # Do the same as above for the val set
+    X_val = val_data.drop('STM_Xcel_Meter', axis=1).values.astype(dtype='float32')
+    X_val = seq_pad(X_val, window)
 
-    y_test = test_data['STM_Xcel_Meter'].shift(-window).fillna(method='ffill')
-    y_test = y_test.values.astype(dtype='float32')
+    y_val = val_data['STM_Xcel_Meter'].shift(-window).fillna(method='ffill')
+    y_val = y_val.values.astype(dtype='float32')
 
-    test_feat_tensor = torch.from_numpy(X_test).type(torch.FloatTensor)
-    test_target_tensor = torch.from_numpy(y_test).type(torch.FloatTensor)
+    val_feat_tensor = torch.from_numpy(X_val).type(torch.FloatTensor)
+    val_target_tensor = torch.from_numpy(y_val).type(torch.FloatTensor)
 
-    test = data_utils.TensorDataset(test_feat_tensor, test_target_tensor)
-    test_loader = DataLoader(dataset=test, batch_size=test_batch_size, shuffle=False)
+    val = data_utils.TensorDataset(val_feat_tensor, val_target_tensor)
+    val_loader = DataLoader(dataset=val, batch_size=val_batch_size, shuffle=False)
 
-    return train_loader, test_loader, train_batch_size, test_batch_size
+    return train_loader, val_loader, train_batch_size, val_batch_size
 
 
 def save_model(model, epoch, n_iter):
@@ -143,20 +143,20 @@ def save_model(model, epoch, n_iter):
     prtime("RNN model checkpoint saved")
 
 
-def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method):
-    # test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method
+def test_processing(val_df, val_loader, model, seq_dim, input_dim, val_batch_size, transformation_method):
+    # val_df, val_loader, model, seq_dim, input_dim, val_batch_size, transformation_method
     model.eval()
-    test_y_at_t = torch.zeros(test_batch_size, seq_dim, 1)
+    val_y_at_t = torch.zeros(val_batch_size, seq_dim, 1)
     preds = []
     targets = []
-    for i, (feats, values) in enumerate(test_loader):
+    for i, (feats, values) in enumerate(val_loader):
         features = Variable(feats.view(-1, seq_dim, input_dim - 1))
-        outputs = model(torch.cat((features, test_y_at_t), dim=2))
-        test_y_at_t = tile(outputs.unsqueeze(2), 1, 5)
+        outputs = model(torch.cat((features, val_y_at_t), dim=2))
+        val_y_at_t = tile(outputs.unsqueeze(2), 1, 5)
         preds.append(outputs.data.numpy().squeeze())
         targets.append(values.data.numpy())
 
-    # concatenating the preds and targets for the whole epoch (iterating over test_loader once)
+    # concatenating the preds and targets for the whole epoch (iterating over val_loader once)
     semifinal_preds = np.concatenate(preds).ravel()
     semifinal_targs = np.concatenate(targets).ravel()  # Last 5 entries are nan
     mse = np.mean((semifinal_targs - semifinal_preds) ** 2)
@@ -171,7 +171,7 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
     train_mean = pd.DataFrame(train_stats['train_mean'], index=[1]).iloc[0]
     train_std = pd.DataFrame(train_stats['train_std'], index=[1]).iloc[0]
 
-    # Do do-normalization process on predictions from test set
+    # Do do-normalization process on predictions from val set
     if transformation_method == "minmaxscale":
         final_preds = ((train_max['STM_Xcel_Meter'] - train_min['STM_Xcel_Meter']) * semifinal_preds) + train_min[
             'STM_Xcel_Meter']
@@ -180,13 +180,13 @@ def test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_
         final_preds = ((semifinal_preds * train_std['STM_Xcel_Meter']) + train_mean['STM_Xcel_Meter'])
 
     predictions = pd.DataFrame(final_preds)
-    denormalized_rmse = np.array(np.sqrt(np.mean((predictions.values.squeeze() - test_df.STM_Xcel_Meter.values) ** 2)),
+    denormalized_rmse = np.array(np.sqrt(np.mean((predictions.values.squeeze() - val_df.STM_Xcel_Meter.values) ** 2)),
                                  ndmin=1)
     return predictions, denormalized_rmse, mse
 
 
-def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method,
-            configs, train_batch_size, test_batch_size, seq_dim):
+def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume, writer, transformation_method,
+            configs, train_batch_size, val_batch_size, seq_dim):
     # hyper-parameters
     num_epochs = num_epochs
     #learning_rate = 0.0005
@@ -211,9 +211,9 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
     # initializing lists to store losses over epochs:
     train_loss = []
     train_iter = []
-    test_loss = []
-    test_iter = []
-    test_rmse = []
+    val_loss = []
+    val_iter = []
+    val_rmse = []
 
     # If you want to continue training the model
     if run_train:
@@ -334,77 +334,77 @@ def process(train_loader, test_loader, test_df, num_epochs, run_train, run_resum
                 if n_iter % 50 == 0:
                     save_model(model, epoch, n_iter)
 
-                # Do a test batch every 100 iterations
+                # Do a val batch every 100 iterations
                 if n_iter % 100 == 0:
-                    predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, seq_dim, input_dim,
-                                                                    test_batch_size, transformation_method)
-                    test_iter.append(n_iter)
-                    test_loss.append(mse)
-                    test_rmse.append(denorm_rmse)
-                    writer.add_scalars("Loss", {"Test": mse}, n_iter)
-                    # Add matplotlib plot to compare actual test set vs predicted
+                    predictions, denorm_rmse, mse = test_processing(val_df, val_loader, model, seq_dim, input_dim,
+                                                                    val_batch_size, transformation_method)
+                    val_iter.append(n_iter)
+                    val_loss.append(mse)
+                    val_rmse.append(denorm_rmse)
+                    writer.add_scalars("Loss", {"val": mse}, n_iter)
+                    # Add matplotlib plot to compare actual val set vs predicted
                     if (epoch == 199):
                         fig = plt.figure()
                         ax1 = fig.add_subplot(2, 1, 1)
                         ax1.plot(predictions, label='Prediction')
                         ax2 = fig.add_subplot(2, 1, 2)
-                        ax2.plot(test_df['STM_Xcel_Meter'], label='Actual')
+                        ax2.plot(val_df['STM_Xcel_Meter'], label='Actual')
                         fig.savefig(file_prefix + '/test_graph.png')
                         writer.add_figure('Predictions', fig)
 
                         plt.plot(predictions, label='Prediction')
-                        plt.plot(test_df['STM_Xcel_Meter'], label='Actual')
+                        plt.plot(val_df['STM_Xcel_Meter'], label='Actual')
                         plt.savefig(file_prefix + '/overlayed-comparison.png')
 
-                    print('Epoch: {} Iteration: {}. Train_MSE: {}. Test_MSE: {}'.format(epoch, n_iter, loss.data.item(),mse))
+                    print('Epoch: {} Iteration: {}. Train_MSE: {}. val_MSE: {}'.format(epoch, n_iter, loss.data.item(),mse))
 
         # Once model training is done, save it
         save_model(model, epoch, n_iter)
 
-        predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, seq_dim, input_dim, test_batch_size, transformation_method)
+        predictions, denorm_rmse, mse = test_processing(val_df, val_loader, model, seq_dim, input_dim, val_batch_size, transformation_method)
 
-        actual_values = pd.DataFrame(test_df['STM_Xcel_Meter'])
+        actual_values = pd.DataFrame(val_df['STM_Xcel_Meter'])
         preds_targets = pd.concat([actual_values, predictions], axis=1)
         preds_targets.columns = ['actual_consumption', 'predictions']
         # writing both predictions and target values to the csv
         preds_targets.to_csv(file_prefix + '/predictions.csv', index=False)
         np.savetxt(file_prefix + '/final_rmse.csv', denorm_rmse, delimiter=",")
 
-    # If you just want to immediately test the model on the existing (saved) model
+    # If you just want to immediately val the model on the existing (saved) model
     else:
         torch_model = torch.load(file_prefix + '/torch_model')
         model = torch_model['torch_model']
         prtime("Loaded model from file, given run_train=False\n")
 
-        predictions, denorm_rmse, mse = test_processing(test_df, test_loader, model, seq_dim, input_dim,
-                                                        test_batch_size, transformation_method)
-        test_loss.append(mse)
-        test_rmse.append(denorm_rmse)
-        writer.add_scalars("Loss", {"Test": mse})
+        predictions, denorm_rmse, mse = test_processing(val_df, val_loader, model, seq_dim, input_dim,
+                                                        val_batch_size, transformation_method)
+        val_loss.append(mse)
+        val_rmse.append(denorm_rmse)
+        writer.add_scalars("Loss", {"val": mse})
 
-        prtime('Test_MSE: {}'.format(mse))
+        prtime('val_MSE: {}'.format(mse))
         predictions.to_csv(file_prefix + '/predictions.csv', index=False)
         np.savetxt(file_prefix + '/final_rmse.csv', denorm_rmse, delimiter=",")
 
 
-def main(train_df, test_df, configs):
+def main(train_df, val_df, configs):
     transformation_method = configs['transformation_method']
     run_train = configs['run_train']
     num_epochs = configs['num_epochs']
     run_resume = configs['run_resume']
-    tr_desired_batch_size = configs['tr_batch_size']
-    te_desired_batch_size = configs['te_batch_size']
+    tr_desired_batch_size = configs['train_batch_size']
+    te_desired_batch_size = configs['val_batch_size']
 
-    train_exp_num = configs['train_exp_num']
-    test_exp_num = configs['test_exp_num']
+    train_exp_id = configs['train_exp_id']
+    exp_id = configs['exp_id']
     arch_type = configs['arch_type']
 
     results_dir = "EnergyForecasting_Results"
     if not os.path.exists(results_dir):
         os.mkdir(results_dir)
     global file_prefix
-    file_prefix = os.path.join(results_dir, arch_type + '_M' + str(train_exp_num) + '_T' + str(
-        test_exp_num))
+    file_prefix = os.path.join(results_dir, arch_type + '_M' + str(train_exp_id) + '_T' + str(
+        exp_id))
 
     writer_path = file_prefix
     writer = SummaryWriter(writer_path)
@@ -418,19 +418,19 @@ def main(train_df, test_df, configs):
     else:
         train_data = train_df
 
-    test_data = test_df.copy(deep=True)
-    test_data = test_data.drop('Date_time_MT', axis=1)
+    val_data = val_df.copy(deep=True)
+    val_data = val_data.drop('Date_time_MT', axis=1)
 
     # Normalization transformation
-    train_data, test_data = data_transform(train_data, test_data, transformation_method, run_train)
+    train_data, val_data = data_transform(train_data, val_data, transformation_method, run_train)
     prtime("data transformed using {} as transformation method".format(transformation_method))
 
     # Convert to iterable dataset (DataLoaders)
     window = 5  # window is synonymous to the "sequence length" dimension
-    train_loader, test_loader, train_batch_size, test_batch_size = data_iterable(train_data, test_data, run_train,
+    train_loader, val_loader, train_batch_size, val_batch_size = data_iterable(train_data, val_data, run_train,
                                                                                  window, tr_desired_batch_size,
                                                                                  te_desired_batch_size)
     prtime("data converted to iterable dataset")
 
-    process(train_loader, test_loader, test_df, num_epochs, run_train, run_resume, writer, transformation_method,
-            configs, train_batch_size, test_batch_size, seq_dim=window)
+    process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume, writer, transformation_method,
+            configs, train_batch_size, val_batch_size, seq_dim=window)

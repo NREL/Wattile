@@ -221,79 +221,94 @@ def time_dummies(data, configs):
     return data
 
 
-def train_test_split(data, configs):
+def input_data_split(data, configs):
     """
-    Split a data set into a training set and a validation (test) set.
+    Split a data set into a training set and a validation (val) set.
     Methods: "Random" or "Sequential", specified in configs
 
     :param data: (DataFrame)
     :param configs: (Dict)
     :return:
     """
+    train_ratio = int(configs["data_split"].split(":")[0])/100
+    val_ratio = int(configs["data_split"].split(":")[1])/100
+    test_ratio = int(configs["data_split"].split(":")[2])/100
 
-    if configs['TrainTestSplit'] == 'Random':
+    file_prefix = os.path.join(configs["results_dir"], configs["arch_type"] + '_M' + str(configs["target_var"].replace(" ", "")) + '_T' + str(
+        configs["exp_id"]))
+
+    if configs['train_val_split'] == 'Random':
         pathlib.Path(configs["data_dir"]).mkdir(parents=True, exist_ok=True)
-        mask_file = os.path.join(configs["data_dir"], "mask_{}_{}.h5".format(configs["target_var"].replace(" ", ""), "-".join(configs['year'])))
-        # Check if a mask for the building/year combination already exists
-        if pathlib.Path(mask_file).exists():
-            # Open the mask file
-            mask = pd.read_hdf(mask_file, key='df')
-            msk = mask['msk'].values
-            # Check if the saved mask is the same size as the data file
-            if len(msk) == data.shape[0]:
-                msk = np.array(msk)
-                train_df = data[msk]
-                test_df = data[~msk]
-                logging.info("Using an existing training mask: {}".format(mask_file))
+        mask_file = os.path.join(file_prefix, "mask.h5")
+        logging.info("Creating random training mask and writing to file")
 
-            # If not, a recent architectural change must have changed the length of data. Make a new one.
+        # If you want to group datasets together into sequential chunks
+        if configs["splicer"]["active"]:
+            # Set indices for training set
+            np.random.seed(seed=configs["random_seed"])
+            splicer = ((data.index - data.index[0]) // pd.Timedelta(configs["splicer"]["time"])).values
+            num_chunks = splicer[-1]
+            num_train_chunks = (train_ratio * num_chunks) - ((train_ratio * num_chunks) % configs["train_size_factor"])
+            msk = np.zeros(data.shape[0]) + 2
+            train_chunks = np.random.choice(np.arange(num_chunks), replace=False, size=int(num_train_chunks))
+            for chunk in train_chunks:
+                indices = np.where(splicer == chunk)
+                msk[indices] = 0
+
+            # Set indices for validation and test set
+            remaining_chunks = np.setdiff1d(np.arange(num_chunks), train_chunks)
+            if test_ratio == 0:
+                msk[msk != 0] = 1
             else:
-                logging.info("There was a length mismatch between the existing mask and the data. Making a new mask and writing to file")
-                data_size = data.shape[0]
-                num_ones = (configs["target_split_ratio"] * data_size) - ((configs["target_split_ratio"] * data_size) % configs["train_factor"])
-                msk = np.zeros(data_size)
-                indices = np.random.choice(np.arange(data_size), replace=False, size=int(num_ones))
-                msk[indices] = 1
-                msk = msk.astype(bool)
-                train_df = data[msk]
-                test_df = data[~msk]
+                num_val_chunks = int((val_ratio / (1-train_ratio)) * remaining_chunks.shape[0])
+                val_chunks = np.random.choice(remaining_chunks, replace=False, size=num_val_chunks)
+                for chunk in val_chunks:
+                    indices = np.where(splicer == chunk)
+                    msk[indices] = 1
 
-                # Put mask in dataframe along with time index, and save to file
-                mask = pd.DataFrame()
-                mask['msk'] = msk
-                mask.index = data.index
-                mask.to_hdf(mask_file, key='df', mode='w')
-
-        # If no previously-saved mask exists, make one
+        # If you DONT want to group data into sequential chunks
         else:
-            logging.info("Creating random training mask and writing to file")
+            # Set indices for training set
+            np.random.seed(seed=configs["random_seed"])
             data_size = data.shape[0]
-            num_ones = (configs["target_split_ratio"] * data_size) - ((configs["target_split_ratio"] * data_size) % configs["train_factor"])
-            msk = np.zeros(data_size)
+            num_ones = (train_ratio * data_size) - ((train_ratio * data_size) % configs["train_size_factor"])
+            msk = np.zeros(data_size) + 2
             indices = np.random.choice(np.arange(data_size), replace=False, size=int(num_ones))
-            msk[indices] = 1
-            msk = msk.astype(bool)
-            train_df = data[msk]
-            test_df = data[~msk]
+            msk[indices] = 0
 
-            # Put mask in dataframe along with time index, and save to file
-            mask = pd.DataFrame()
-            mask['msk'] = msk
-            mask.index = data.index
-            mask.to_hdf(mask_file, key='df', mode='w')
+            # Set indices for validation and test set
+            remaining_indices = np.where(msk != 0)[0]
+            if test_ratio == 0:
+                msk[remaining_indices] = 1
+            else:
+                num_val = int((val_ratio / (1-train_ratio)) * remaining_indices.shape[0])
+                val_indices = np.random.choice(remaining_indices, replace=False, size=num_val)
+                msk[val_indices] = 1
+
+
+        logging.info("Train: {}, validation: {}, test: {}".format((msk == 0).sum()/msk.shape[0], (msk == 1).sum()/msk.shape[0], (msk == 2).sum()/msk.shape[0]))
+        # Assign dataframes
+        train_df = data[msk == 0]
+        val_df = data[msk == 1]
+        test_df = data[msk == 2]
+
+        # Save test_df to file for later use
+        test_df.to_hdf(os.path.join(file_prefix, "internal_test_{}.h5".format(str(configs["target_var"].replace(" ", "")))), key='df', mode='w')
+
+        # Still save dataframe to file to preserve timeseries index
+        mask = pd.DataFrame()
+        mask['msk'] = msk
+        mask.index = data.index
+        mask.to_hdf(mask_file, key='df', mode='w')
 
         # Get rid of datetime index
         train_df.reset_index(drop=True, inplace=True)
-        test_df.reset_index(drop=True, inplace=True)
-
-    # if configs['TrainTestSplit'] == 'Sequential':
-    #     train_df = data[~data.index.isin(data[configs['test_start']:configs['test_end']].index)]
-    #     test_df = data[data.index.isin(data[configs['test_start']:configs['test_end']].index)]
+        val_df.reset_index(drop=True, inplace=True)
 
     else:
-        raise ConfigsError("{} is not a supported form of train/test splitting".format(configs['TrainTestSplit']))
+        raise ConfigsError("{} is not a supported form of data splitting".format(configs['train_val_split']))
 
-    return train_df, test_df
+    return train_df, val_df
 
 
 def pad_full_data(data, configs):
@@ -415,32 +430,49 @@ def prep_for_rnn(configs, data):
     Prepare data for input to a RNN model.
 
     :param configs: (Dict)
-    :return: train and test DataFrames
+    :return: train and val DataFrames
     """
 
-    # Determine input dimension. All unique features are added by this point.
-    # Subtract 1 bc target variable is still present
-    configs['input_dim'] = data.shape[1] - 1
-    logging.info("Number of features: {}".format(configs['input_dim']))
-    logging.debug("Features: {}".format(data.columns.values))
-
-    # Do sequential padding
-    data = pad_full_data(data, configs)
-
-    # Split into training and test dataframes
     if configs["run_train"]:
-        train_df, test_df = train_test_split(data, configs)
-    else:
-        test_df = data
+        configs['input_dim'] = data.shape[1] - 1
+        logging.info("Number of features: {}".format(configs['input_dim']))
+        logging.debug("Features: {}".format(data.columns.values))
+
+        # Do sequential padding
+        data = pad_full_data(data, configs)
+
+        # Split data into train/val/test sets
+        train_df, val_df = input_data_split(data, configs)
+
+    elif not configs["run_train"] and configs["test_method"] == "external":
+        configs['input_dim'] = data.shape[1] - 1
+        logging.info("Number of features: {}".format(configs['input_dim']))
+        logging.debug("Features: {}".format(data.columns.values))
+
+        # Do sequential padding
+        data = pad_full_data(data, configs)
+
+        # Split data into /val/test sets
+        val_df = data
         train_df = pd.DataFrame()
-        building = configs["external_test"]["building"]
-        year = configs["external_test"]["year"]
-        month = configs["external_test"]["month"]
-        file = os.path.join(configs["data_dir"], "{}-{}-{}-processed.h5".format(building, month, year))
-        test_df.to_hdf(file, key='df', mode='w')
+        file = os.path.join(configs["data_dir"], "{}_external_test.h5".format(configs["target_var"]))
+        val_df.to_hdf(file, key='df', mode='w')
 
+    elif not configs["run_train"] and configs["test_method"] == "internal":
+        local_results_dir = os.path.join(configs["results_dir"], configs["arch_type"] + '_M' + str(
+            configs["target_var"].replace(" ", "")) + '_T' + str(configs["exp_id"]))
+        temp_config_file = os.path.join(local_results_dir, "configs.json")
+        with open(temp_config_file, 'r') as f:
+            temp_configs = json.load(f)
+        configs["input_dim"] = temp_configs["input_dim"]
 
-    return train_df, test_df
+        train_df = pd.DataFrame()
+        val_df = data
+
+    else:
+        raise ConfigsError("run_train and/or test_method not valid.")
+
+    return train_df, val_df
 
 
 def prep_for_quantile(configs, feature_df=pd.DataFrame()):
@@ -448,7 +480,7 @@ def prep_for_quantile(configs, feature_df=pd.DataFrame()):
     Prepare data for input to a quantile regression model.
 
     :param configs: (Dict)
-    :return: train and test DataFrames, and fully processed (pre-split) dataset
+    :return: train and val DataFrames, and fully processed (pre-split) dataset
     """
 
     if not configs["run_feature_selection"]:
@@ -458,11 +490,6 @@ def prep_for_quantile(configs, feature_df=pd.DataFrame()):
         # Remove all data columns that we don't care about from full dataset
         important_vars = configs['weather_include'] + [configs['target_var']]
         data = data_full[important_vars]
-
-        # Do derivative of barametric pressure
-        # box_pts = 100
-        # box = np.ones(box_pts) / box_pts
-        # data["SRRL BMS Barometric Pressure (mbar)"] = np.gradient(np.convolve(data["SRRL BMS Barometric Pressure (mbar)"], box, mode="same"))
 
         # Resample if requested
         resample_bin_size = "{}T".format(configs['resample_freq'])
@@ -480,10 +507,10 @@ def prep_for_quantile(configs, feature_df=pd.DataFrame()):
     if configs["run_feature_selection"]:
         data = feature_df
 
-    # Split into training and test
-    train_df, test_df = train_test_split(data, configs)
+    # Split into training and val
+    train_df, val_df = input_data_split(data, configs)
 
-    return train_df, test_df, data
+    return train_df, val_df, data
 
 
 def prep_for_seq2seq(configs, data):
@@ -491,40 +518,74 @@ def prep_for_seq2seq(configs, data):
     Prepare data for input to a RNN model.
 
     :param configs: (Dict)
-    :return: train and test DataFrames
+    :return: train and val DataFrames
     """
 
-    # Determine input dimension. All unique features are added by this point.
-    # Subtract 1 bc target variable is still present
-    configs['input_dim'] = data.shape[1] - 1
-    logging.info("Number of features: {}".format(configs['input_dim']))
+    if configs["run_train"]:
+        configs['input_dim'] = data.shape[1] - 1
+        logging.info("Number of features: {}".format(configs['input_dim']))
 
-
-    # Change data types to save memory, if needed
-    for column in data:
-        if data[column].dtype == int:
-            data[column] = data[column].astype("int8")
-        elif data[column].dtype == float:
-            data[column] = data[column].astype("float32")
-
-    # Do sequential padding now if we are doing random train/test splitting
-    if configs["TrainTestSplit"] == 'Random':
-        # Do padding
         data, target = pad_full_data_s2s(data, configs)
 
-    # Split into training and test dataframes
-    if configs["run_train"]:
-        train_df, test_df = train_test_split(data, configs)
-    else:
-        test_df = data
-        train_df = pd.DataFrame()
-        building = configs["external_test"]["building"]
-        year = configs["external_test"]["year"]
-        month = configs["external_test"]["month"]
-        file = os.path.join(configs["data_dir"], "{}-{}-{}-processed.h5".format(building, month, year))
-        test_df.to_hdf(file, key='df', mode='w')
+        train_df, val_df = input_data_split(data, configs)
 
-    return train_df, test_df
+    elif not configs["run_train"] and configs["test_method"] == "external":
+        configs['input_dim'] = data.shape[1] - 1
+        logging.info("Number of features: {}".format(configs['input_dim']))
+
+        data, target = pad_full_data_s2s(data, configs)
+
+        val_df = data
+        train_df = pd.DataFrame()
+        file = os.path.join(configs["data_dir"], "{}_external_test.h5".format(configs["target_var"]))
+        val_df.to_hdf(file, key='df', mode='w')
+
+    elif not configs["run_train"] and configs["test_method"] == "internal":
+        local_results_dir = os.path.join(configs["results_dir"], configs["arch_type"] + '_M' + str(
+            configs["target_var"].replace(" ", "")) + '_T' + str(configs["exp_id"]))
+        temp_config_file = os.path.join(local_results_dir, "configs.json")
+        with open(temp_config_file, 'r') as f:
+            temp_configs = json.load(f)
+        configs["input_dim"] = temp_configs["input_dim"]
+
+        train_df = pd.DataFrame()
+        val_df = data
+
+    else:
+        raise ConfigsError("run_train and/or test_method not valid.")
+
+
+    # # Determine input dimension. All unique features are added by this point.
+    # # Subtract 1 bc target variable is still present
+    # configs['input_dim'] = data.shape[1] - 1
+    # logging.info("Number of features: {}".format(configs['input_dim']))
+    #
+    #
+    # # Change data types to save memory, if needed
+    # for column in data:
+    #     if data[column].dtype == int:
+    #         data[column] = data[column].astype("int8")
+    #     elif data[column].dtype == float:
+    #         data[column] = data[column].astype("float32")
+    #
+    # # Do sequential padding now if we are doing random train/val splitting
+    # if configs["train_val_split"] == 'Random':
+    #     # Do padding
+    #     data, target = pad_full_data_s2s(data, configs)
+    #
+    # # Split into training and val dataframes
+    # if configs["run_train"]:
+    #     train_df, val_df = input_data_split(data, configs)
+    # else:
+    #     val_df = data
+    #     train_df = pd.DataFrame()
+    #     building = configs["building"]
+    #     year = configs["external_test"]["year"]
+    #     month = configs["external_test"]["month"]
+    #     file = os.path.join(configs["data_dir"], "{}_external_test.h5".format(configs["target_var"]))
+    #     val_df.to_hdf(file, key='df', mode='w')
+
+    return train_df, val_df
 
 
 def get_test_data(building, year, months, dir):
@@ -570,3 +631,15 @@ def get_test_data(building, year, months, dir):
         dataset = pd.concat([dataset, sub_dataset])
 
     return dataset
+
+
+def rolling_stats(data, configs):
+    # Convert data to rolling average (except output) and create min, mean, and max columns
+    target = data[configs["target_var"]]
+    X_data = data.drop(configs["target_var"], axis=1)
+    mins = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).min().add_suffix("_min")
+    means = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).mean().add_suffix("_mean")
+    maxs = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).max().add_suffix("_max")
+    data = pd.concat([mins, means, maxs], axis=1)
+    data[configs["target_var"]] = target
+    return data

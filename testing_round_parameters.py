@@ -37,5 +37,5 @@ for test in runs:
     # Test the model
     for i in runs[test]['iterables']:
         configs[runs[test]['iterable']] = runs[test]['iterable_type'](i)
-        configs["test_exp_num"] = "{}_{}".format(runs[test]['iterable'], i)
+        configs["exp_id"] = "{}_{}".format(runs[test]['iterable'], i)
         epb.main(configs)

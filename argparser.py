@@ -80,11 +80,11 @@ def get_arguments():
     # args.num_epochs
     num_epochs = args.num_epochs #--num-epochs
 
-    # args.tr_batch_size
-    tr_batch_size = args.tr_batch_size  # --tr-batch-size
+    # args.train_batch_size
+    train_batch_size = args.train_batch_size  # --tr-batch-size
 
-    # args.te_batch_size
-    te_batch_size = args.te_batch_size  # --te-batch-size
+    # args.val_batch_size
+    val_batch_size = args.val_batch_size  # --te-batch-size
 
     # args.hidden_nodes
     hidden_nodes = args.hidden_nodes
@@ -130,18 +130,18 @@ def get_arguments():
         parser.print_help()
         exit()
 
-    # args.tr_exp_num and args.te_exp_num
-    train_exp_num = args.tr_exp_num
-    test_exp_num = args.te_exp_num
+    # args.tr_exp_id and args.te_exp_id
+    train_exp_id = args.tr_exp_id
+    exp_id = args.te_exp_id
 
     configs = {"train_start_date": dates['train_start_date'],
                "train_end_date": dates['train_end_date'],
                "test_start_date": dates['test_start_date'],
                "test_end_date": dates['test_end_date'],
                "transformation_method": transformation_method, "run_train": run_train,
-               "num_epochs": num_epochs, "tr_batch_size":tr_batch_size,"te_batch_size":te_batch_size,"run_resume": run_resume,
+               "num_epochs": num_epochs, "train_batch_size":train_batch_size,"val_batch_size":val_batch_size,"run_resume": run_resume,
                "preprocess": preprocess, "arch_type": arch_type,
-               "train_exp_num": train_exp_num, "test_exp_num": test_exp_num,
+               "train_exp_id": train_exp_id, "exp_id": exp_id,
                "hidden_nodes": hidden_nodes, 'weight_decay': weight_decay,
                "fetch_n_parse": fetch_n_parse
                }
