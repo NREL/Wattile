@@ -62,7 +62,7 @@
  "run_resume": false,
  "num_epochs": 200,
  "weight_decay": 0.001,
- "hidden_nodes": 20,
+ "hidden_nodes": 25,
  "layer_dim": 1,
  "eval_frequency": 10,
  "lr_config": {

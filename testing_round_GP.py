@@ -7,7 +7,7 @@ with open(os.path.join("data", "GP", "GP_ids.json"), "r") as read_file:
     meters = json.load(read_file)
 
 test_ID = "initial_tests"
-stop_num = 2
+stop_num = 3
 
 state = "Test" # Train, Test, get_results
 test_dir_path = os.path.join("EnergyForecasting_Results", "GP_training_session_initial_tests")
