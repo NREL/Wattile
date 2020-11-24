@@ -57,8 +57,8 @@ def size_the_batches(train_data, val_data, tr_desired_batch_size, te_desired_bat
         val_ratio = 100 - train_ratio
         num_train_data = train_data.shape[0]
 
-        logging.info("Train size: {}, val size: {}, split {}%:{}%".format(train_data.shape[0], val_data.shape[0],
-                                                                    train_ratio, val_ratio))
+        # logging.info("Train size: {}, val size: {}, split {}%:{}%".format(train_data.shape[0], val_data.shape[0],
+        #                                                             train_ratio, val_ratio))
         logging.info("Available train batch factors: {}".format(sorted(train_bth)))
         logging.info("Requested number of batches per epoch - Train: {}, val: {}".format(tr_desired_batch_size,
                                                                                    te_desired_batch_size))
@@ -627,11 +627,11 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
                     writer.add_scalars("Loss", {"val": errors['pinball_loss']}, n_iter)
 
                     # Save the final predictions to a file
-                    pd.DataFrame(predictions).to_hdf(os.path.join(file_prefix, "predictions.h5"), key='df', mode='w')
-                    pd.DataFrame(measured).to_hdf(os.path.join(file_prefix, "measured.h5"), key='df', mode='w')
+                    # pd.DataFrame(predictions).to_hdf(os.path.join(file_prefix, "predictions.h5"), key='df', mode='w')
+                    # pd.DataFrame(measured).to_hdf(os.path.join(file_prefix, "measured.h5"), key='df', mode='w')
 
                     # Save the QQ information to a file
-                    Q_vals.to_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df', mode='w')
+                    # Q_vals.to_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df', mode='w')
 
                     # # Add parody plot to TensorBoard
                     # fig2, ax2 = plt.subplots()
@@ -756,51 +756,51 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
                              errors["ace"],
                              errors["is"]])
 
-        # Plotting
-        if configs["test_method"] == "external":
-            building = configs["building"]
-            year = configs["external_test"]["year"]
-            month = configs["external_test"]["month"]
-            file = os.path.join(configs["data_dir"], "{}_external_test.h5".format(configs["target_var"]))
-            test_data = pd.read_hdf(file, key='df')
-            index = test_data.index
-        else:
-            test_data = pd.read_hdf(os.path.join(file_prefix, "internal_test_{}.h5".format(configs["target_var"])), key='df')
-
-        num_timestamps = configs["S2S_stagger"]["initial_num"] + configs["S2S_stagger"]["secondary_num"]
-        data = np.array(predictions)
-        data = data.reshape((data.shape[0], len(configs["qs"]), num_timestamps))
-
-        # Plotting the test set with ALL of the sequence forecasts
-        fig, ax1 = plt.subplots()
-        cmap = plt.get_cmap('Reds')
-        for j in range(0, test_data.shape[0]-1):
-            time_index = pd.date_range(start=test_data.index[j], periods=configs["S2S_stagger"]["initial_num"], freq="{}min".format(configs["resample_freq"]))
-            ax1.plot(time_index, measured[j, :], label="Actual", color='black')
-            ax1.plot(time_index, data[j, int(len(configs["qs"]) / 2), :], label='q = 0.5', color="red")
-            for i, q in enumerate(configs["qs"]):
-                if q == 0.5:
-                    break
-                ax1.fill_between(time_index, data[j, i, :], data[j, -(i + 1), :], color=cmap(q), alpha=0.5,
-                                 lw=0)
-        plt.show()
-
-        # Plotting residuals vs time-step-ahead forecast
-        residuals = data[:,3,:] - measured
-        fig, ax2 = plt.subplots()
-        for i in range(0,residuals.shape[1]):
-            ax2.scatter(np.ones_like(residuals[:,i])*i, residuals[:,i], s=0.5, color="black")
-        ax2.set_xlabel('Forecast steps ahead')
-        ax2.set_ylabel('Residual')
-        plt.show()
-
-        # Plot residuals for all times in test set
-        fig, ax3 = plt.subplots()
-        ax3.scatter(test_data.index, residuals[:,-1], s=0.5, alpha=0.5, color="blue")
-        ax3.set_ylabel('Residual of 18hr ahead forecast')
-        # ax3.scatter(processed.index[np.logical_and(processed.index.weekday == 5, processed.index.hour == 12)],
-        #             residuals[:, -1][np.logical_and(processed.index.weekday == 5, processed.index.hour == 12)],
-        #             s=20, alpha=0.5, color="black")
+        # # Plotting
+        # if configs["test_method"] == "external":
+        #     building = configs["building"]
+        #     year = configs["external_test"]["year"]
+        #     month = configs["external_test"]["month"]
+        #     file = os.path.join(configs["data_dir"], "{}_external_test.h5".format(configs["target_var"]))
+        #     test_data = pd.read_hdf(file, key='df')
+        #     index = test_data.index
+        # else:
+        #     test_data = pd.read_hdf(os.path.join(file_prefix, "internal_test_{}.h5".format(configs["target_var"])), key='df')
+        #
+        # num_timestamps = configs["S2S_stagger"]["initial_num"] + configs["S2S_stagger"]["secondary_num"]
+        # data = np.array(predictions)
+        # data = data.reshape((data.shape[0], len(configs["qs"]), num_timestamps))
+        #
+        # # Plotting the test set with ALL of the sequence forecasts
+        # fig, ax1 = plt.subplots()
+        # cmap = plt.get_cmap('Reds')
+        # for j in range(0, test_data.shape[0]-1):
+        #     time_index = pd.date_range(start=test_data.index[j], periods=configs["S2S_stagger"]["initial_num"], freq="{}min".format(configs["resample_freq"]))
+        #     ax1.plot(time_index, measured[j, :], label="Actual", color='black')
+        #     ax1.plot(time_index, data[j, int(len(configs["qs"]) / 2), :], label='q = 0.5', color="red")
+        #     for i, q in enumerate(configs["qs"]):
+        #         if q == 0.5:
+        #             break
+        #         ax1.fill_between(time_index, data[j, i, :], data[j, -(i + 1), :], color=cmap(q), alpha=0.5,
+        #                          lw=0)
+        # plt.show()
+        #
+        # # Plotting residuals vs time-step-ahead forecast
+        # residuals = data[:,3,:] - measured
+        # fig, ax2 = plt.subplots()
+        # for i in range(0,residuals.shape[1]):
+        #     ax2.scatter(np.ones_like(residuals[:,i])*i, residuals[:,i], s=0.5, color="black")
+        # ax2.set_xlabel('Forecast steps ahead')
+        # ax2.set_ylabel('Residual')
+        # plt.show()
+        #
+        # # Plot residuals for all times in test set
+        # fig, ax3 = plt.subplots()
+        # ax3.scatter(test_data.index, residuals[:,-1], s=0.5, alpha=0.5, color="blue")
+        # ax3.set_ylabel('Residual of 18hr ahead forecast')
+        # # ax3.scatter(processed.index[np.logical_and(processed.index.weekday == 5, processed.index.hour == 12)],
+        # #             residuals[:, -1][np.logical_and(processed.index.weekday == 5, processed.index.hour == 12)],
+        # #             s=20, alpha=0.5, color="black")
 
 
 def eval_trained_model(file_prefix, train_data, train_batch_size, configs):
