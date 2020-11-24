@@ -19,13 +19,13 @@ if __name__ == '__main__':
     with open(os.path.join(base_configs["data_dir"], "GP_ids.json"), "r") as read_file:
         meters = json.load(read_file)
 
-    test_ID = "dev"
-    stop_num = 6
-    hpc_processes = 3
-    states = ["plot_results"]  # Train, Test, get_results
-    test_dir_path = os.path.join("EnergyForecasting_Results", "GP_training_BGP_batch_1")
+    test_ID = "batch_1"
+    stop_num = 30
+    hpc_processes = 12
+    states = ["Train", "Test"]  # Train, Test, get_results
 
-    # processes = list()
+    testing_round_dir = os.path.join(base_configs["results_dir"], "GP_training_{}".format(test_ID))
+
     # Run tests
     if "Train" in states:
         i = 0
@@ -37,7 +37,7 @@ if __name__ == '__main__':
             configs = base_configs.copy()
 
             # Make a sub-directory in the main results directory specific to this test study
-            configs["results_dir"] = os.path.join(configs["results_dir"], "GP_training_{}".format(test_ID))
+            configs["results_dir"] = testing_round_dir
 
             # Test the model
             configs["building"] = meter_ID
@@ -55,19 +55,19 @@ if __name__ == '__main__':
 
     elif "Test" in states:
         # Find the models that were trained and are currently in the folder with the name "test_dir_path"
-        meter_models = os.listdir(test_dir_path)
+        meter_models = os.listdir(testing_round_dir)
 
         # Iterate through those results directories, run a test set on each
         i = 0
         for meter in meter_models:
-            results_dir = os.path.join(test_dir_path, meter)
+            results_dir = os.path.join(testing_round_dir, meter)
 
             # Read in the configs from that training session
             with open(os.path.join(results_dir, "configs.json"), "r") as read_file:
                 configs = json.load(read_file)
             configs["run_train"] = False
             configs["test_method"] = "internal"
-            configs["results_dir"] = test_dir_path # Put this in if you are testing on a different platform than you trained on
+            configs["results_dir"] = testing_round_dir
 
             # Test the model
             epb.main(configs)
@@ -79,13 +79,13 @@ if __name__ == '__main__':
 
     elif "plot_results" in states:
         # Find the models that were trained and are currently in the folder with the name "test_dir_path"
-        meter_models = os.listdir(test_dir_path)
+        meter_models = os.listdir(testing_round_dir)
 
         # Iterate through those results directories, get the results data
         i = 0
         fig1, ax1 = plt.subplots()
         for meter in meter_models:
-            results_dir = os.path.join(test_dir_path, meter)
+            results_dir = os.path.join(testing_round_dir, meter)
 
             # Q data
             QQ_data = pd.read_hdf(os.path.join(results_dir, "QQ_data_test.h5"), key='df')
