@@ -19,10 +19,10 @@ if __name__ == '__main__':
     with open(os.path.join(base_configs["data_dir"], "GP_ids.json"), "r") as read_file:
         meters = json.load(read_file)
 
-    test_ID = "batch_1"
-    stop_num = 30
-    hpc_processes = 12
-    states = ["Train", "Test"]  # Train, Test, get_results
+    test_ID = "test_new_logging"
+    stop_num = 12
+    hpc_processes = 2
+    states = ["Train"]  # Train, Test, get_results
 
     testing_round_dir = os.path.join(base_configs["results_dir"], "GP_training_{}".format(test_ID))
 
@@ -50,7 +50,7 @@ if __name__ == '__main__':
             if i == stop_num:
                 break
 
-        pool.map(epb.main, inputs)
+        pool.map(epb.main, inputs, chunksize=1)
         print("Done")
 
     elif "Test" in states:

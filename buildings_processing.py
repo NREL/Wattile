@@ -10,6 +10,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import logging
 
+logger = logging.getLogger(str(os.getpid()))
 
 class ConfigsError(Exception):
     """Base class for exceptions in this module."""
@@ -52,8 +53,8 @@ def import_from_network(configs, year):
                            date_parser=dateparse,
                            index_col='Timestamp')
         data_e = pd.concat([data_e, df_e])
-        logging.info('Read energy month {}/12 in {} for {}'.format(month, year, configs['building']))
-    logging.info('Done reading in energy data')
+        logger.info('Read energy month {}/12 in {} for {}'.format(month, year, configs['building']))
+    logger.info('Done reading in energy data')
 
     # Read in WEATHER DATA (one month at a time)
     file_extension = os.path.join(configs["data_dir"], "Weather_{}.h5".format(year))
@@ -70,9 +71,9 @@ def import_from_network(configs, year):
                                date_parser=dateparse,
                                index_col='Timestamp')
             data_w = pd.concat([data_w, df_w])
-            logging.info('Read weather month {}/12 in {}'.format(month, year))
+            logger.info('Read weather month {}/12 in {}'.format(month, year))
         data_w.to_hdf(file_extension, key='df', mode='w')
-    logging.info('Done reading in weather data')
+    logger.info('Done reading in weather data')
 
     dataset = pd.concat([data_e, data_w], axis=1)
     output_string = os.path.join(configs["data_dir"], "Data_{}_{}.h5".format(configs['building'], year))
@@ -240,7 +241,7 @@ def input_data_split(data, configs):
     if configs['train_val_split'] == 'Random':
         pathlib.Path(configs["data_dir"]).mkdir(parents=True, exist_ok=True)
         mask_file = os.path.join(file_prefix, "mask.h5")
-        logging.info("Creating random training mask and writing to file")
+        logger.info("Creating random training mask and writing to file")
 
         # If you want to group datasets together into sequential chunks
         if configs["splicer"]["active"]:
@@ -286,14 +287,14 @@ def input_data_split(data, configs):
                 msk[val_indices] = 1
 
 
-        logging.info("Train: {}, validation: {}, test: {}".format((msk == 0).sum()/msk.shape[0], (msk == 1).sum()/msk.shape[0], (msk == 2).sum()/msk.shape[0]))
+        logger.info("Train: {}, validation: {}, test: {}".format((msk == 0).sum()/msk.shape[0], (msk == 1).sum()/msk.shape[0], (msk == 2).sum()/msk.shape[0]))
         # Assign dataframes
         train_df = data[msk == 0]
         val_df = data[msk == 1]
         test_df = data[msk == 2]
 
         # Save test_df to file for later use
-        test_df.to_hdf(os.path.join(file_prefix, "internal_test_{}.h5".format(str(configs["target_var"].replace(" ", "")))), key='df', mode='w')
+        test_df.to_hdf(os.path.join(file_prefix, "internal_test.h5"), key='df', mode='w')
 
         # Still save dataframe to file to preserve timeseries index
         mask = pd.DataFrame()
@@ -435,8 +436,8 @@ def prep_for_rnn(configs, data):
 
     if configs["run_train"]:
         configs['input_dim'] = data.shape[1] - 1
-        logging.info("Number of features: {}".format(configs['input_dim']))
-        logging.debug("Features: {}".format(data.columns.values))
+        logger.info("Number of features: {}".format(configs['input_dim']))
+        logger.debug("Features: {}".format(data.columns.values))
 
         # Do sequential padding
         data = pad_full_data(data, configs)
@@ -446,8 +447,8 @@ def prep_for_rnn(configs, data):
 
     elif not configs["run_train"] and configs["test_method"] == "external":
         configs['input_dim'] = data.shape[1] - 1
-        logging.info("Number of features: {}".format(configs['input_dim']))
-        logging.debug("Features: {}".format(data.columns.values))
+        logger.info("Number of features: {}".format(configs['input_dim']))
+        logger.debug("Features: {}".format(data.columns.values))
 
         # Do sequential padding
         data = pad_full_data(data, configs)
@@ -523,7 +524,7 @@ def prep_for_seq2seq(configs, data):
 
     if configs["run_train"]:
         configs['input_dim'] = data.shape[1] - 1
-        logging.info("Number of features: {}".format(configs['input_dim']))
+        logger.info("Number of features: {}".format(configs['input_dim']))
 
         data, target = pad_full_data_s2s(data, configs)
 
@@ -531,7 +532,7 @@ def prep_for_seq2seq(configs, data):
 
     elif not configs["run_train"] and configs["test_method"] == "external":
         configs['input_dim'] = data.shape[1] - 1
-        logging.info("Number of features: {}".format(configs['input_dim']))
+        logger.info("Number of features: {}".format(configs['input_dim']))
 
         data, target = pad_full_data_s2s(data, configs)
 
@@ -558,7 +559,7 @@ def prep_for_seq2seq(configs, data):
     # # Determine input dimension. All unique features are added by this point.
     # # Subtract 1 bc target variable is still present
     # configs['input_dim'] = data.shape[1] - 1
-    # logging.info("Number of features: {}".format(configs['input_dim']))
+    # logger.info("Number of features: {}".format(configs['input_dim']))
     #
     #
     # # Change data types to save memory, if needed
