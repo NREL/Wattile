@@ -9,12 +9,27 @@ import os
 import seaborn as sns
 import matplotlib.pyplot as plt
 import logging
+import torch
 
 logger = logging.getLogger(str(os.getpid()))
 
 class ConfigsError(Exception):
     """Base class for exceptions in this module."""
     pass
+
+
+def check_complete(torch_file, des_epochs):
+    """
+    Checks if an existing training session is complete
+    :param results_dir:
+    :param epochs:
+    :return:
+    """
+
+    torch_model = torch.load(torch_file)
+    model = torch_model['torch_model']
+    check = des_epochs == torch_model['epoch_num']+1
+    return check
 
 
 def import_from_network(configs, year):

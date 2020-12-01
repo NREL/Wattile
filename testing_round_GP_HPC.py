@@ -20,18 +20,21 @@ if __name__ == '__main__':
         meters = json.load(read_file)
 
     test_ID = "batch_1"
-    low_bound = 99
-    stop_num = 110
-    hpc_processes = 12
+    low_bound = 700
+    stop_num = 1000
+    hpc_processes = 1
     states = ["Train"]  # Train, Test, get_results
+    resume = True
 
     testing_round_dir = os.path.join(base_configs["results_dir"], "GP_training_{}".format(test_ID))
 
     # Run tests
     if "Train" in states:
         i = 0
-        pool = Pool(processes=hpc_processes, maxtasksperchild=1)
-        inputs = list()
+        if hpc_processes > 1:
+            pool = Pool(processes=hpc_processes, maxtasksperchild=1)
+            inputs = list()
+
         for meter_ID in meters:
             if i < low_bound:
                 i = i + 1
@@ -43,18 +46,24 @@ if __name__ == '__main__':
             # Make a sub-directory in the main results directory specific to this test study
             configs["results_dir"] = testing_round_dir
 
-            # Test the model
+            # Alter some configs
             configs["building"] = meter_ID
             configs["target_var"] = meter_ID
+            configs["run_resume"] = resume
 
-            inputs.append(configs)
+
+            if hpc_processes > 1:
+                inputs.append(configs)
+            else:
+                epb.main(configs)
 
             i = i + 1
             print("Just started process for {} ({}/{})".format(meter_ID, i, len(meters)))
             if i == stop_num:
                 break
 
-        pool.map(epb.main, inputs, chunksize=1)
+        if hpc_processes > 1:
+            pool.map(epb.main, inputs, chunksize=1)
         print("Done")
 
     elif "Test" in states:
