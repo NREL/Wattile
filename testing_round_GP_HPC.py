@@ -55,7 +55,10 @@ if __name__ == '__main__':
             if hpc_processes > 1:
                 inputs.append(configs)
             else:
-                epb.main(configs)
+                try:
+                    epb.main(configs)
+                except:
+                    print("Error in training for {}. Terminating training process".format(configs["target_var"]))
 
             i = i + 1
             print("Just started process for {} ({}/{})".format(meter_ID, i, len(meters)))

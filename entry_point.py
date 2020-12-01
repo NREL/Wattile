@@ -67,9 +67,6 @@ def main(configs):
     # Get the dataset
     if configs["run_train"]:
         data_full = bp.get_full_data(configs)
-        if all(data_full[configs["target_var"]].isna()):
-            print("{} data is empty. Terminating training process".format(configs["target_var"]))
-            return
 
     else:
         if configs["test_method"] == "external":
