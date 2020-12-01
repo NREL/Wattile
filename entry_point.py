@@ -30,7 +30,6 @@ def main(configs):
     if os.path.exists(torch_file):
         check = bp.check_complete(torch_file, configs["num_epochs"])
         # If we already have the desired number of epochs, don't do anything else
-        print(check)
         if check:
             print("{} already completed. Moving on...".format(configs["target_var"]))
             return
@@ -46,8 +45,6 @@ def main(configs):
     pathlib.Path(local_results_dir).mkdir(parents=True, exist_ok=True)
     logging_path = os.path.join(local_results_dir, "output.out")
     print("Logging to: {}, PID: {}".format(logging_path, PID))
-    # logger.basicConfig(filename=logging_path, format='%(asctime)s - %(levelname)-8s - %(message)s',
-    #                     datefmt='%m/%d/%Y %I:%M:%S', level=logger.INFO)
     logger = logging.getLogger(str(PID))
     hdlr = logging.FileHandler(logging_path)
     formatter = logging.Formatter('%(asctime)s - %(levelname)-8s - %(message)s', '%m/%d/%Y %I:%M:%S')
@@ -70,6 +67,10 @@ def main(configs):
     # Get the dataset
     if configs["run_train"]:
         data_full = bp.get_full_data(configs)
+        if all(data_full[configs["target_var"]].isna()):
+            print("{} data is empty. Terminating training process".format(configs["target_var"]))
+            return
+
     else:
         if configs["test_method"] == "external":
             data_full = bp.get_test_data(configs["building"], configs["external_test"]["year"],
