@@ -1,17 +1,18 @@
 {
- "building": "Panther_education_Misty",
- "target_var": "Panther_education_Misty",
+ "building": "Cafe",
+ "target_var": "Cafe Main Power (kW)",
  "year": [
-  "2016",
-  "2017"
+  "2018",
+  "2019"
  ],
  "weather_include": [
-  "GHI",
-  "Temperature",
-  "Relative Humidity"
+  "SRRL BMS Global Horizontal Irradiance (W/m\u00b2_irr)",
+  "SRRL BMS Dry Bulb Temperature (\u00b0F)",
+  "SRRL BMS Relative Humidity (%RH)",
+  "SRRL BMS Snow Depth (in)"
  ],
  "arch_version": 5,
- "exp_id": "demo",
+ "exp_id": "Final_run",
  "arch_type": "RNN",
  "arch_type_variant": "lstm",
  "preprocess": false,
@@ -21,9 +22,9 @@
  "val_batch_size": 1,
  "network_path": "",
  "results_dir": "EnergyForecasting_Results",
- "data_dir": "data\\GP",
- "resample_freq": 60,
- "sequence_freq": 60,
+ "data_dir": "data",
+ "resample_freq": 15,
+ "sequence_freq": 15,
  "splicer": {
   "active": true,
   "time": "2d"
@@ -32,14 +33,14 @@
   "active": false,
   "minutes": 15
  },
- "window": 12,
+ "window": 72,
  "EC_future_gap": 0,
  "DOW": ["binary_reg"],
  "MOY": ["sincos"],
  "HOD": ["sincos", "binary_reg"],
  "Holidays": true,
  "S2S_stagger": {
-  "initial_num": 18,
+  "initial_num": 72,
   "decay": 0,
   "secondary_num": 0
  },
@@ -60,18 +61,18 @@
  ],
  "run_train": true,
  "run_resume": false,
- "num_epochs": 200,
+ "num_epochs": 150,
  "weight_decay": 0.001,
- "hidden_nodes": 25,
+ "hidden_nodes": 20,
  "layer_dim": 1,
- "eval_frequency": 10,
+ "eval_frequency": 5,
  "lr_config": {
   "base": 0.001,
   "schedule": true,
   "type": "performance",
   "factor": 0.1,
   "min": 1e-05,
-  "patience": 10,
+  "patience": 30,
   "step_size": 75
  },
  "smoothing_alpha": 0.001,
