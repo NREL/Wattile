@@ -6,7 +6,8 @@ from multiprocessing import Process
 from multiprocessing import Pool
 from multiprocessing import set_start_method
 import matplotlib.pyplot as plt
-
+from matplotlib import rc
+import numpy as np
 
 if __name__ == '__main__':
     set_start_method("spawn")
@@ -19,14 +20,14 @@ if __name__ == '__main__':
     with open(os.path.join(base_configs["data_dir"], "GP_ids.json"), "r") as read_file:
         meters = json.load(read_file)
 
-    test_ID = "batch_1"
+    test_ID = "final"
     low_bound = 700
-    stop_num = 1000
+    stop_num = 2000
     hpc_processes = 1
-    states = ["Train"]  # Train, Test, get_results
+    states = ["plot_results"]  # Train, Test, plot_results
     resume = True
 
-    testing_round_dir = os.path.join(base_configs["results_dir"], "GP_training_{}".format(test_ID))
+    testing_round_dir = os.path.join(base_configs["results_dir"], "BGP_{}".format(test_ID))
 
     # Run tests
     if "Train" in states:
@@ -94,30 +95,82 @@ if __name__ == '__main__':
                 break
 
     elif "plot_results" in states:
+        # rc('text', usetex=True)
+        rc('xtick', labelsize=6)
+        rc('ytick', labelsize=6)
+        plt.rc('font', family='serif')
+
         # Find the models that were trained and are currently in the folder with the name "test_dir_path"
         meter_models = os.listdir(testing_round_dir)
 
+        # Get building metadata
+        meta = pd.read_csv("data\\GP\\metadata.csv")
+
         # Iterate through those results directories, get the results data
         i = 0
-        fig1, ax1 = plt.subplots()
+        # fig1, ax1 = plt.subplots()
+        fig, ax = plt.subplots(4, 4, sharex=True, sharey=True)
+        plt.subplots_adjust(hspace=0.2, wspace=0.1)
+        usages = dict()
+        data = dict()
+
         for meter in meter_models:
+            # Get QQ data
             results_dir = os.path.join(testing_round_dir, meter)
-
-            # Q data
             QQ_data = pd.read_hdf(os.path.join(results_dir, "QQ_data_test.h5"), key='df')
-            ax1.scatter(QQ_data["q_requested"], QQ_data["q_actual"], s=20)
+            if max(abs(QQ_data["q_actual"] - QQ_data["q_requested"])) > 0.7:
+                print("Dropping {}".format(meter))
+                continue
 
-            i = i + 1
-            print("Just finished plotting for target variable {} ({}/{})".format(meter, i, len(meter_models)))
-            if i == stop_num:
-                break
+            # Store data
+            usage = meta[meta["building_id"] == meter[5:-5]]["primaryspaceusage"].values[0]
+            if usage not in data:
+                data[usage] = pd.DataFrame()
+            data[usage] = pd.concat([data[usage], QQ_data["q_actual"]], axis=1)
 
-        ax1.plot([0, 1], [0, 1], c='k', alpha=0.5)
-        ax1.set_xlabel('Requested')
-        ax1.set_ylabel('Actual')
-        ax1.set_xlim(left=0, right=1)
-        ax1.set_ylim(bottom=0, top=1)
+            # plot_index = list(meta.primaryspaceusage.unique()).index(usage)
+            # usages[usage] = plot_index
+
+        print("done")
+        requested = np.array([0.025, 0.05, 0.1, 0.25, 0.5, 0.7, 0.9, 0.95, 0.975])
+        plt_ind = 0
+
+        flierprops = dict(marker=".", markersize=3, markerfacecolor="k")
+        num_meters = 0
+        for usage in data:
+            usage_data = np.array(data[usage]).T
+            ax[plt_ind % 4, int(plt_ind / 4)].boxplot(usage_data, whis=(5,95), flierprops=flierprops, showfliers=True, positions=requested, widths=0.08, manage_xticks=False)
+            ax[plt_ind % 4, int(plt_ind / 4)].text(.5, 1, usage, ha='center', va="bottom",
+                                                         transform=ax[plt_ind % 4, int(plt_ind / 4)].transAxes, fontsize=8)
+            ax[plt_ind % 4, int(plt_ind / 4)].text(0.02, 0.975, "n={}".format(usage_data.shape[0]), ha='left', va="top",
+                                                         transform=ax[plt_ind % 4, int(plt_ind / 4)].transAxes, fontsize=8)
+            ax[plt_ind % 4, int(plt_ind / 4)].plot([0, 1], [0, 1], c='k', alpha=0.5, linewidth=1.0)
+            ax[plt_ind % 4, int(plt_ind / 4)].set_xlim(left=0, right=1)
+            ax[plt_ind % 4, int(plt_ind / 4)].set_ylim(bottom=0, top=1)
+            num_meters = num_meters + usage_data.shape[0]
+            plt_ind = plt_ind + 1
+
+        print(num_meters)
+        fig.text(0.5, 0.04, r'$\tau_{Requested}$', ha='center', va='center', fontsize=10)
+        fig.text(0.06, 0.5, r'$\tau_{Evaluated}$', ha='center', va='center', rotation='vertical', fontsize=10)
         plt.show()
+
+        #     ax[plot_index % 4, int(plot_index/ 4)].scatter(QQ_data["q_requested"], QQ_data["q_actual"], s=5, c="black")
+        #
+        #     i = i + 1
+        #     # print("Just finished plotting for target variable {} ({}/{})".format(meter, i, len(meter_models)))
+        #     if i == stop_num:
+        #         break
+        #
+        # for usage in usages:
+        #     index = usages[usage]
+        #     ax[index % 4, int(index / 4)].text(.5, 1, usage, ha='center', va="bottom",
+        #                                                  transform=ax[index % 4, int(index / 4)].transAxes, fontsize=8)
+        #     ax[index % 4, int(index / 4)].plot([0, 1], [0, 1], c='k', alpha=0.5, linewidth=1.0)
+        #     ax[index % 4, int(index / 4)].set_xlim(left=0, right=1)
+        #     ax[index % 4, int(index / 4)].set_ylim(bottom=0, top=1)
+        #
+
 
     else:
         print("Command not understood")

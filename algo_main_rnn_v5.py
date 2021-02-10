@@ -22,6 +22,7 @@ import psutil
 from psutil import virtual_memory
 import buildings_processing as bp
 import logging
+import matplotlib.dates as mdates
 
 
 file_prefix = '/default'
@@ -380,7 +381,6 @@ def test_processing(val_df, val_loader, model, seq_dim, input_dim, val_batch_siz
               "ace": ACE,
               "is": IS}
 
-    # return predictions, errors, Q_vals, hist_data
     return final_preds, errors, target, Q_vals
 
 
@@ -492,11 +492,9 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
         logger.info("Initial memory statistics (GB): {}".format(mem))
 
         # Check for GPU
-        cuda_avail = torch.cuda.is_available()
-        if cuda_avail:
-            logger.info("GPU is available for training")
-        else:
-            logger.info("GPU is not available for training")
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        configs["device"] = device
+        logger.info("Training on {}".format(device))
 
         if (len(epoch_range) == 0):
             epoch = resume_num_epoch + 1
@@ -542,8 +540,8 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
                 time1 = timeit.default_timer()
 
                 # (batches, timesteps, features)
-                features = Variable(feats.view(-1, seq_dim, input_dim))
-                target = Variable(values)  # size: batch size
+                features = Variable(feats.view(-1, seq_dim, input_dim)).to(configs["device"])
+                target = Variable(values).to(configs["device"])  # size: batch size
 
                 time2 = timeit.default_timer()
 
@@ -757,33 +755,51 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
                              errors["is"]])
 
         # # Plotting
-        # if configs["test_method"] == "external":
-        #     building = configs["building"]
-        #     year = configs["external_test"]["year"]
-        #     month = configs["external_test"]["month"]
-        #     file = os.path.join(configs["data_dir"], "{}_external_test.h5".format(configs["target_var"]))
-        #     test_data = pd.read_hdf(file, key='df')
-        #     index = test_data.index
-        # else:
-        #      test_data = pd.read_hdf(os.path.join(file_prefix, "internal_test.h5"), key='df')
-        #
-        # num_timestamps = configs["S2S_stagger"]["initial_num"] + configs["S2S_stagger"]["secondary_num"]
-        # data = np.array(predictions)
-        # data = data.reshape((data.shape[0], len(configs["qs"]), num_timestamps))
-        #
-        # # Plotting the test set with ALL of the sequence forecasts
-        # fig, ax1 = plt.subplots()
-        # cmap = plt.get_cmap('Reds')
+        if configs["test_method"] == "external":
+            building = configs["building"]
+            year = configs["external_test"]["year"]
+            month = configs["external_test"]["month"]
+            file = os.path.join(configs["data_dir"], configs["building"], "{}_external_test.h5".format(configs["target_var"]))
+            test_data = pd.read_hdf(file, key='df')
+            index = test_data.index
+        else:
+             test_data = pd.read_hdf(os.path.join(file_prefix, "internal_test.h5"), key='df')
+
+        num_timestamps = configs["S2S_stagger"]["initial_num"] + configs["S2S_stagger"]["secondary_num"]
+        data = np.array(predictions)
+        data = data.reshape((data.shape[0], len(configs["qs"]), num_timestamps))
+
+        # Plotting the test set with ALL of the sequence forecasts
+        fig, ax1 = plt.subplots()
+        cmap = plt.get_cmap("Blues")
+        plt.rc('font', family='serif')
         # for j in range(0, test_data.shape[0]-1):
-        #     time_index = pd.date_range(start=test_data.index[j], periods=configs["S2S_stagger"]["initial_num"], freq="{}min".format(configs["resample_freq"]))
-        #     ax1.plot(time_index, measured[j, :], label="Actual", color='black')
-        #     ax1.plot(time_index, data[j, int(len(configs["qs"]) / 2), :], label='q = 0.5', color="red")
-        #     for i, q in enumerate(configs["qs"]):
-        #         if q == 0.5:
-        #             break
-        #         ax1.fill_between(time_index, data[j, i, :], data[j, -(i + 1), :], color=cmap(q), alpha=0.5,
-        #                          lw=0)
-        # plt.show()
+        for j in range(1515, 1528):
+            time_index = pd.date_range(start=test_data.index[j], periods=configs["S2S_stagger"]["initial_num"], freq="{}min".format(configs["resample_freq"]))
+            ax1.plot(time_index, measured[j, :], color='black', lw=1, zorder=5)
+            if j ==1522:
+                ax1.plot(time_index, measured[j, :], label="Load", color='black', lw=1, zorder=5)
+                ax1.plot(time_index, data[j, int(len(configs["qs"]) / 2), :], label='Median Predicted Load', color="Blue", zorder=5)
+                for i in range(int(len(configs["qs"])/2) - 1,-1,-1):
+                    q = configs["qs"][i]
+                    # ax1.plot(time_index, data[j, i, :], color='black', lw=0.3, alpha=1, zorder=i)
+                    # ax1.plot(time_index, data[j, -(i + 1), :], color='black', lw=0.3, alpha=1, zorder=i)
+                    ax1.fill_between(time_index, data[j, i, :], data[j, -(i + 1), :], color=cmap(q), alpha=1,
+                                     label="{}% PI".format(round((configs["qs"][-(i + 1)] - q) * 100)), zorder=i)
+
+        plt.axvline(test_data.index[1522], c="black", ls="--", lw=1, zorder=6)
+        plt.text(test_data.index[1522], 50, r' Forecast generation time $t_{gen}$', rotation=0, fontsize=8)
+
+        # plt.xticks(rotation=45, ha="right", va="top", fontsize=8)
+        myFmt = mdates.DateFormatter('%H:%M:%S\n%m/%d/%y')
+        ax1.xaxis.set_major_formatter(myFmt)
+        plt.xticks(fontsize=8)
+        plt.yticks(fontsize=8)
+        plt.ylabel("Cafe Main Power (kW)", fontsize=8)
+        plt.xlabel("Date & Time", fontsize=8)
+        ax1.legend(loc="upper center", fontsize=8)
+
+        plt.show()
         #
         # # Plotting residuals vs time-step-ahead forecast
         # residuals = data[:,3,:] - measured

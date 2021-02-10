@@ -32,7 +32,7 @@ def check_complete(torch_file, des_epochs):
     return check
 
 
-def import_from_network(configs, year):
+def import_from_csvs(configs, year):
     """
     For combination of config['year'] and config['building'], reads monthly weather and building csvs from network and
     concatenates data into master DataFrame.
@@ -43,55 +43,39 @@ def import_from_network(configs, year):
     :return:
     """
     # Imports EC data and weather data one year at a time
-    data_e = pd.DataFrame()
-    data_w = pd.DataFrame()
+    predictor_data = pd.DataFrame()
+    target_data = pd.DataFrame()
 
     # Make data directory if it does not exist
     pathlib.Path(configs["data_dir"]).mkdir(parents=True, exist_ok=True)
 
-    # Find the right subdirectory in the network
-    if configs['building'] == "Campus Energy":
-        sub_dir = "Campus Data"
-        suffix = ""
-    else:
-        sub_dir = "Building Load Data"
-        suffix = " Meter Trends"
+    # Define the path to the building directory
+    # building_path = configs['network_path']
+    building_path = os.path.join(configs["data_dir"], configs["building"])
 
-    # Read in ENERGY DATA from network file (one month at a time)
+    # Read in Predictor Data and target data from building data directory (one month at a time)
     for month in range(1, 13):
-        energy_data_dir = os.path.join(configs['network_path'], sub_dir)
-        energy_file = "{} {}-{}{}.csv".format(configs['building'], year, "{:02d}".format(month), suffix)
+        # energy_data_dir = os.path.join(building_path, sub_dir)
+        predictor_file = "{} Predictors {}-{}.csv".format(configs['building'], year, "{:02d}".format(month))
+        target_file = "{} Targets {}-{}.csv".format(configs['building'], year, "{:02d}".format(month))
         dateparse = lambda date: dt.datetime.strptime(date[:-13], '%Y-%m-%dT%H:%M:%S')
-        csv_path = os.path.join(energy_data_dir, energy_file)
-        df_e = pd.read_csv(csv_path,
+        predictor_file_path = os.path.join(building_path, predictor_file)
+        target_file_path = os.path.join(building_path, target_file)
+        pred_data_temp = pd.read_csv(predictor_file_path,
                            parse_dates=['Timestamp'],
                            date_parser=dateparse,
                            index_col='Timestamp')
-        data_e = pd.concat([data_e, df_e])
-        logger.info('Read energy month {}/12 in {} for {}'.format(month, year, configs['building']))
-    logger.info('Done reading in energy data')
+        target_data_temp = pd.read_csv(target_file_path,
+                           parse_dates=['Timestamp'],
+                           date_parser=dateparse,
+                           index_col='Timestamp')
+        predictor_data = pd.concat([predictor_data, pred_data_temp])
+        target_data = pd.concat([target_data, target_data_temp])
+        logger.info('Read data month {}/12 in {} for {}'.format(month, year, configs['building']))
+    logger.info('Done reading in data')
 
-    # Read in WEATHER DATA (one month at a time)
-    file_extension = os.path.join(configs["data_dir"], "Weather_{}.h5".format(year))
-    if pathlib.Path(file_extension).exists():
-        data_w = pd.read_hdf(file_extension, key='df')
-    else:
-        site = 'STM'
-        weather_data_dir = os.path.join(configs['network_path'], "Weather")
-        for month in range(1, 13):
-            weather_file = '{} Site Weather {}-{}.csv'.format(site, year, "{:02d}".format(month))
-            csv_path = os.path.join(weather_data_dir, weather_file)
-            df_w = pd.read_csv(csv_path,
-                               parse_dates=['Timestamp'],
-                               date_parser=dateparse,
-                               index_col='Timestamp')
-            data_w = pd.concat([data_w, df_w])
-            logger.info('Read weather month {}/12 in {}'.format(month, year))
-        data_w.to_hdf(file_extension, key='df', mode='w')
-    logger.info('Done reading in weather data')
-
-    dataset = pd.concat([data_e, data_w], axis=1)
-    output_string = os.path.join(configs["data_dir"], "Data_{}_{}.h5".format(configs['building'], year))
+    dataset = pd.concat([target_data, predictor_data], axis=1)
+    output_string = os.path.join(building_path, "Data_{}_{}.h5".format(configs['building'], year))
     dataset.to_hdf(output_string, key='df', mode='w')
 
     return output_string
@@ -99,7 +83,7 @@ def import_from_network(configs, year):
 
 def get_full_data(configs):
     """
-    Fetches all data for a requested building.
+    Fetches all data for a requested building. This function assumes the data is in yearly chunks.
 
     :param configs: (Dictionary)
     :return: (DataFrame)
@@ -113,17 +97,18 @@ def get_full_data(configs):
 
     # Collect data from the requested year(s) and put it in a single DataFrame
     dataset = dict()
+    building_data_dir = os.path.join(configs["data_dir"], configs["building"])
     for year in iterable:
         # Read in preprocessed data from HDFs
-        file_extension = os.path.join(configs["data_dir"], "Data_{}_{}.h5".format(configs['building'], year))
+        file_extension = os.path.join(building_data_dir, "Data_{}_{}.h5".format(configs['building'], year))
         if pathlib.Path(file_extension).exists():
             data_full = pd.read_hdf(file_extension, key='df')
         else:
-            if configs["network_path"] == "":
+            if configs["convert_csvs"] == False:
                 raise ConfigsError("{} was not found, and no network location specified for retrieval.".format(file_extension))
             else:
-                output_path = import_from_network(configs, year)
-                data_full = pd.read_hdf(file_extension, key='df')
+                output_path = import_from_csvs(configs, year)
+                data_full = pd.read_hdf(output_path, key='df')
         dataset[year] = data_full
 
     data_full = pd.DataFrame()
@@ -471,7 +456,7 @@ def prep_for_rnn(configs, data):
         # Split data into /val/test sets
         val_df = data
         train_df = pd.DataFrame()
-        file = os.path.join(configs["data_dir"], "{}_external_test.h5".format(configs["target_var"]))
+        file = os.path.join(configs["data_dir"], configs["building"], "{}_external_test.h5".format(configs["target_var"]))
         val_df.to_hdf(file, key='df', mode='w')
 
     elif not configs["run_train"] and configs["test_method"] == "internal":
@@ -553,7 +538,7 @@ def prep_for_seq2seq(configs, data):
 
         val_df = data
         train_df = pd.DataFrame()
-        file = os.path.join(configs["data_dir"], "{}_external_test.h5".format(configs["target_var"]))
+        file = os.path.join(configs["data_dir"], configs["building"], "{}_external_test.h5".format(configs["target_var"]))
         val_df.to_hdf(file, key='df', mode='w')
 
     elif not configs["run_train"] and configs["test_method"] == "internal":
@@ -653,9 +638,18 @@ def rolling_stats(data, configs):
     # Convert data to rolling average (except output) and create min, mean, and max columns
     target = data[configs["target_var"]]
     X_data = data.drop(configs["target_var"], axis=1)
-    mins = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).min().add_suffix("_min")
-    means = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).mean().add_suffix("_mean")
-    maxs = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).max().add_suffix("_max")
-    data = pd.concat([mins, means, maxs], axis=1)
-    data[configs["target_var"]] = target
+
+    if configs["rolling_window"]["type"] == "rolling":
+        mins = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).min().add_suffix("_min")
+        means = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).mean().add_suffix("_mean")
+        maxs = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).max().add_suffix("_max")
+        data = pd.concat([mins, means, maxs], axis=1)
+        data[configs["target_var"]] = target
+    if configs["rolling_window"]["type"] == "binned":
+        mins = X_data.resample(str(configs["rolling_window"]["minutes"]) + "T").min().add_suffix("_min")
+        means = X_data.resample(str(configs["rolling_window"]["minutes"]) + "T").mean().add_suffix("_mean")
+        maxs = X_data.resample(str(configs["rolling_window"]["minutes"]) + "T").max().add_suffix("_max")
+        data = pd.concat([mins, means, maxs], axis=1)
+        data[configs["target_var"]] = pd.DataFrame(target).resample(str(configs["rolling_window"]["minutes"]) + "T").mean()
+
     return data

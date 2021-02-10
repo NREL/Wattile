@@ -731,7 +731,7 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
             building = configs["building"]
             year = configs["external_test"]["year"]
             month = configs["external_test"]["month"]
-            file = os.path.join(configs["data_dir"], "{}_external_test.h5".format(configs["target_var"]))
+            file = os.path.join(configs["data_dir"], configs["building"], "{}_external_test.h5".format(configs["target_var"]))
             test_data = pd.read_hdf(file, key='df')
             index = test_data.index
         else:
