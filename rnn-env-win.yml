@@ -135,5 +135,5 @@ dependencies:
   - jupyter_client=5.2.3
   - cpuonly
   - pytorch=0.4.1
-
+prefix: C:\Users\rbuechle\Anaconda3\envs\ic-lf-deploy
 

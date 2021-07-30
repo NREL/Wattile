@@ -22,13 +22,38 @@ def main(configs):
     :return: None
     """
 
+    local_results_dir = os.path.join(configs["results_dir"], configs["arch_type"] + '_M' + str(
+        configs["target_var"].replace(" ", "")) + '_T' + str(configs["exp_id"]))
+
+    if configs["run_train"]:
+        # Check the model training process
+        torch_file = os.path.join(local_results_dir, 'torch_model')
+        if os.path.exists(torch_file):
+            check = bp.check_complete(torch_file, configs["num_epochs"])
+            # If we already have the desired number of epochs, don't do anything else
+            if check:
+                print("{} already completed. Moving on...".format(configs["target_var"]))
+                return
+        # If the torch file doesnt exist yet, and run_resume=True, then reset it to false so it can start from scratch
+        else:
+            if configs["run_resume"]:
+                configs["run_resume"] = False
+                print("Model for {} doesnt exist yet. Resetting run_resume to False".format(configs["target_var"]))
+
+
     # Initialize logging
-    local_results_dir = os.path.join(configs["results_dir"], configs["arch_type"] + '_M' + str(configs["target_var"].replace(" ", "")) + '_T' + str(configs["exp_id"]))
+    PID = os.getpid()
     pathlib.Path(local_results_dir).mkdir(parents=True, exist_ok=True)
     logging_path = os.path.join(local_results_dir, "output.out")
-    print("Logging to: {}".format(logging_path))
-    logging.basicConfig(filename=logging_path, format='%(asctime)s - %(levelname)-8s - %(message)s',
-                        datefmt='%m/%d/%Y %I:%M:%S', level=logging.INFO)
+    print("Logging to: {}, PID: {}".format(logging_path, PID))
+    logger = logging.getLogger(str(PID))
+    hdlr = logging.FileHandler(logging_path)
+    formatter = logging.Formatter('%(asctime)s - %(levelname)-8s - %(message)s', '%m/%d/%Y %I:%M:%S')
+    hdlr.setFormatter(formatter)
+    logger.handlers = []
+    logger.addHandler(hdlr)
+    logger.setLevel(logging.INFO)
+    logger.info("PID: {}".format(PID))
 
     # Preprocess if needed
     if configs['preprocess']:
@@ -44,12 +69,13 @@ def main(configs):
     # Get the dataset
     if configs["run_train"]:
         data_full = bp.get_full_data(configs)
+
     else:
         if configs["test_method"] == "external":
             data_full = bp.get_test_data(configs["building"], configs["external_test"]["year"],
                                       configs["external_test"]["month"], configs["data_dir"])
         elif configs["test_method"] == "internal":
-            data_full = pd.read_hdf(os.path.join(local_results_dir, "internal_test_{}.h5".format(str(configs["target_var"].replace(" ", "")))))
+            data_full = pd.read_hdf(os.path.join(local_results_dir, "internal_test.h5"))
         else:
             raise ConfigsError("run_train is FALSE but test_method designated in configs.json is not understood")
 
@@ -98,7 +124,7 @@ def main(configs):
             train_df, val_df = bp.prep_for_rnn(configs, data)
             rnn_mod.main(train_df, val_df, configs)
 
-    logging.info('Run with arch {}({}), on {}, with session ID {}, is done!'.format(configs['arch_type'],
+    logger.info('Run with arch {}({}), on {}, with session ID {}, is done!'.format(configs['arch_type'],
                                                                                                      configs["arch_type_variant"],
                                                                                           configs["target_var"],
                                                                                           configs["exp_id"]))

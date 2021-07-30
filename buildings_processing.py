@@ -9,14 +9,30 @@ import os
 import seaborn as sns
 import matplotlib.pyplot as plt
 import logging
+import torch
 
+logger = logging.getLogger(str(os.getpid()))
 
 class ConfigsError(Exception):
     """Base class for exceptions in this module."""
     pass
 
 
-def import_from_network(configs, year):
+def check_complete(torch_file, des_epochs):
+    """
+    Checks if an existing training session is complete
+    :param results_dir:
+    :param epochs:
+    :return:
+    """
+
+    torch_model = torch.load(torch_file)
+    model = torch_model['torch_model']
+    check = des_epochs == torch_model['epoch_num']+1
+    return check
+
+
+def import_from_csvs(configs, year):
     """
     For combination of config['year'] and config['building'], reads monthly weather and building csvs from network and
     concatenates data into master DataFrame.
@@ -27,55 +43,39 @@ def import_from_network(configs, year):
     :return:
     """
     # Imports EC data and weather data one year at a time
-    data_e = pd.DataFrame()
-    data_w = pd.DataFrame()
+    predictor_data = pd.DataFrame()
+    target_data = pd.DataFrame()
 
     # Make data directory if it does not exist
     pathlib.Path(configs["data_dir"]).mkdir(parents=True, exist_ok=True)
 
-    # Find the right subdirectory in the network
-    if configs['building'] == "Campus Energy":
-        sub_dir = "Campus Data"
-        suffix = ""
-    else:
-        sub_dir = "Building Load Data"
-        suffix = " Meter Trends"
+    # Define the path to the building directory
+    # building_path = configs['network_path']
+    building_path = os.path.join(configs["data_dir"], configs["building"])
 
-    # Read in ENERGY DATA from network file (one month at a time)
+    # Read in Predictor Data and target data from building data directory (one month at a time)
     for month in range(1, 13):
-        energy_data_dir = os.path.join(configs['network_path'], sub_dir)
-        energy_file = "{} {}-{}{}.csv".format(configs['building'], year, "{:02d}".format(month), suffix)
+        # energy_data_dir = os.path.join(building_path, sub_dir)
+        predictor_file = "{} Predictors {}-{}.csv".format(configs['building'], year, "{:02d}".format(month))
+        target_file = "{} Targets {}-{}.csv".format(configs['building'], year, "{:02d}".format(month))
         dateparse = lambda date: dt.datetime.strptime(date[:-13], '%Y-%m-%dT%H:%M:%S')
-        csv_path = os.path.join(energy_data_dir, energy_file)
-        df_e = pd.read_csv(csv_path,
+        predictor_file_path = os.path.join(building_path, predictor_file)
+        target_file_path = os.path.join(building_path, target_file)
+        pred_data_temp = pd.read_csv(predictor_file_path,
                            parse_dates=['Timestamp'],
                            date_parser=dateparse,
                            index_col='Timestamp')
-        data_e = pd.concat([data_e, df_e])
-        logging.info('Read energy month {}/12 in {} for {}'.format(month, year, configs['building']))
-    logging.info('Done reading in energy data')
+        target_data_temp = pd.read_csv(target_file_path,
+                           parse_dates=['Timestamp'],
+                           date_parser=dateparse,
+                           index_col='Timestamp')
+        predictor_data = pd.concat([predictor_data, pred_data_temp])
+        target_data = pd.concat([target_data, target_data_temp])
+        logger.info('Read data month {}/12 in {} for {}'.format(month, year, configs['building']))
+    logger.info('Done reading in data')
 
-    # Read in WEATHER DATA (one month at a time)
-    file_extension = os.path.join(configs["data_dir"], "Weather_{}.h5".format(year))
-    if pathlib.Path(file_extension).exists():
-        data_w = pd.read_hdf(file_extension, key='df')
-    else:
-        site = 'STM'
-        weather_data_dir = os.path.join(configs['network_path'], "Weather")
-        for month in range(1, 13):
-            weather_file = '{} Site Weather {}-{}.csv'.format(site, year, "{:02d}".format(month))
-            csv_path = os.path.join(weather_data_dir, weather_file)
-            df_w = pd.read_csv(csv_path,
-                               parse_dates=['Timestamp'],
-                               date_parser=dateparse,
-                               index_col='Timestamp')
-            data_w = pd.concat([data_w, df_w])
-            logging.info('Read weather month {}/12 in {}'.format(month, year))
-        data_w.to_hdf(file_extension, key='df', mode='w')
-    logging.info('Done reading in weather data')
-
-    dataset = pd.concat([data_e, data_w], axis=1)
-    output_string = os.path.join(configs["data_dir"], "Data_{}_{}.h5".format(configs['building'], year))
+    dataset = pd.concat([target_data, predictor_data], axis=1)
+    output_string = os.path.join(building_path, "Data_{}_{}.h5".format(configs['building'], year))
     dataset.to_hdf(output_string, key='df', mode='w')
 
     return output_string
@@ -83,7 +83,7 @@ def import_from_network(configs, year):
 
 def get_full_data(configs):
     """
-    Fetches all data for a requested building.
+    Fetches all data for a requested building. This function assumes the data is in yearly chunks.
 
     :param configs: (Dictionary)
     :return: (DataFrame)
@@ -97,17 +97,18 @@ def get_full_data(configs):
 
     # Collect data from the requested year(s) and put it in a single DataFrame
     dataset = dict()
+    building_data_dir = os.path.join(configs["data_dir"], configs["building"])
     for year in iterable:
         # Read in preprocessed data from HDFs
-        file_extension = os.path.join(configs["data_dir"], "Data_{}_{}.h5".format(configs['building'], year))
+        file_extension = os.path.join(building_data_dir, "Data_{}_{}.h5".format(configs['building'], year))
         if pathlib.Path(file_extension).exists():
             data_full = pd.read_hdf(file_extension, key='df')
         else:
-            if configs["network_path"] == "":
+            if configs["convert_csvs"] == False:
                 raise ConfigsError("{} was not found, and no network location specified for retrieval.".format(file_extension))
             else:
-                output_path = import_from_network(configs, year)
-                data_full = pd.read_hdf(file_extension, key='df')
+                output_path = import_from_csvs(configs, year)
+                data_full = pd.read_hdf(output_path, key='df')
         dataset[year] = data_full
 
     data_full = pd.DataFrame()
@@ -240,7 +241,7 @@ def input_data_split(data, configs):
     if configs['train_val_split'] == 'Random':
         pathlib.Path(configs["data_dir"]).mkdir(parents=True, exist_ok=True)
         mask_file = os.path.join(file_prefix, "mask.h5")
-        logging.info("Creating random training mask and writing to file")
+        logger.info("Creating random training mask and writing to file")
 
         # If you want to group datasets together into sequential chunks
         if configs["splicer"]["active"]:
@@ -286,14 +287,14 @@ def input_data_split(data, configs):
                 msk[val_indices] = 1
 
 
-        logging.info("Train: {}, validation: {}, test: {}".format((msk == 0).sum()/msk.shape[0], (msk == 1).sum()/msk.shape[0], (msk == 2).sum()/msk.shape[0]))
+        logger.info("Train: {}, validation: {}, test: {}".format((msk == 0).sum()/msk.shape[0], (msk == 1).sum()/msk.shape[0], (msk == 2).sum()/msk.shape[0]))
         # Assign dataframes
         train_df = data[msk == 0]
         val_df = data[msk == 1]
         test_df = data[msk == 2]
 
         # Save test_df to file for later use
-        test_df.to_hdf(os.path.join(file_prefix, "internal_test_{}.h5".format(str(configs["target_var"].replace(" ", "")))), key='df', mode='w')
+        test_df.to_hdf(os.path.join(file_prefix, "internal_test.h5"), key='df', mode='w')
 
         # Still save dataframe to file to preserve timeseries index
         mask = pd.DataFrame()
@@ -435,8 +436,8 @@ def prep_for_rnn(configs, data):
 
     if configs["run_train"]:
         configs['input_dim'] = data.shape[1] - 1
-        logging.info("Number of features: {}".format(configs['input_dim']))
-        logging.debug("Features: {}".format(data.columns.values))
+        logger.info("Number of features: {}".format(configs['input_dim']))
+        logger.debug("Features: {}".format(data.columns.values))
 
         # Do sequential padding
         data = pad_full_data(data, configs)
@@ -446,8 +447,8 @@ def prep_for_rnn(configs, data):
 
     elif not configs["run_train"] and configs["test_method"] == "external":
         configs['input_dim'] = data.shape[1] - 1
-        logging.info("Number of features: {}".format(configs['input_dim']))
-        logging.debug("Features: {}".format(data.columns.values))
+        logger.info("Number of features: {}".format(configs['input_dim']))
+        logger.debug("Features: {}".format(data.columns.values))
 
         # Do sequential padding
         data = pad_full_data(data, configs)
@@ -455,7 +456,7 @@ def prep_for_rnn(configs, data):
         # Split data into /val/test sets
         val_df = data
         train_df = pd.DataFrame()
-        file = os.path.join(configs["data_dir"], "{}_external_test.h5".format(configs["target_var"]))
+        file = os.path.join(configs["data_dir"], configs["building"], "{}_external_test.h5".format(configs["target_var"]))
         val_df.to_hdf(file, key='df', mode='w')
 
     elif not configs["run_train"] and configs["test_method"] == "internal":
@@ -523,7 +524,7 @@ def prep_for_seq2seq(configs, data):
 
     if configs["run_train"]:
         configs['input_dim'] = data.shape[1] - 1
-        logging.info("Number of features: {}".format(configs['input_dim']))
+        logger.info("Number of features: {}".format(configs['input_dim']))
 
         data, target = pad_full_data_s2s(data, configs)
 
@@ -531,13 +532,13 @@ def prep_for_seq2seq(configs, data):
 
     elif not configs["run_train"] and configs["test_method"] == "external":
         configs['input_dim'] = data.shape[1] - 1
-        logging.info("Number of features: {}".format(configs['input_dim']))
+        logger.info("Number of features: {}".format(configs['input_dim']))
 
         data, target = pad_full_data_s2s(data, configs)
 
         val_df = data
         train_df = pd.DataFrame()
-        file = os.path.join(configs["data_dir"], "{}_external_test.h5".format(configs["target_var"]))
+        file = os.path.join(configs["data_dir"], configs["building"], "{}_external_test.h5".format(configs["target_var"]))
         val_df.to_hdf(file, key='df', mode='w')
 
     elif not configs["run_train"] and configs["test_method"] == "internal":
@@ -558,7 +559,7 @@ def prep_for_seq2seq(configs, data):
     # # Determine input dimension. All unique features are added by this point.
     # # Subtract 1 bc target variable is still present
     # configs['input_dim'] = data.shape[1] - 1
-    # logging.info("Number of features: {}".format(configs['input_dim']))
+    # logger.info("Number of features: {}".format(configs['input_dim']))
     #
     #
     # # Change data types to save memory, if needed
@@ -637,9 +638,18 @@ def rolling_stats(data, configs):
     # Convert data to rolling average (except output) and create min, mean, and max columns
     target = data[configs["target_var"]]
     X_data = data.drop(configs["target_var"], axis=1)
-    mins = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).min().add_suffix("_min")
-    means = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).mean().add_suffix("_mean")
-    maxs = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).max().add_suffix("_max")
-    data = pd.concat([mins, means, maxs], axis=1)
-    data[configs["target_var"]] = target
+
+    if configs["rolling_window"]["type"] == "rolling":
+        mins = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).min().add_suffix("_min")
+        means = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).mean().add_suffix("_mean")
+        maxs = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).max().add_suffix("_max")
+        data = pd.concat([mins, means, maxs], axis=1)
+        data[configs["target_var"]] = target
+    if configs["rolling_window"]["type"] == "binned":
+        mins = X_data.resample(str(configs["rolling_window"]["minutes"]) + "T").min().add_suffix("_min")
+        means = X_data.resample(str(configs["rolling_window"]["minutes"]) + "T").mean().add_suffix("_mean")
+        maxs = X_data.resample(str(configs["rolling_window"]["minutes"]) + "T").max().add_suffix("_max")
+        data = pd.concat([mins, means, maxs], axis=1)
+        data[configs["target_var"]] = pd.DataFrame(target).resample(str(configs["rolling_window"]["minutes"]) + "T").mean()
+
     return data

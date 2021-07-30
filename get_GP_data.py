@@ -20,7 +20,7 @@ import pathlib
 import json
 
 # Inputs
-data_dir = os.path.join("data","GP")
+data_dir = "/projects/intelcamp21/data/GP_new"
 weather_url = "https://github.com/buds-lab/building-data-genome-project-2/blob/master/data/weather/weather.csv"
 meta_url = "https://github.com/buds-lab/building-data-genome-project-2/blob/master/data/metadata/metadata.csv"
 loads_url = "https://github.com/buds-lab/building-data-genome-project-2/blob/master/data/meters/cleaned/electricity_cleaned.csv"

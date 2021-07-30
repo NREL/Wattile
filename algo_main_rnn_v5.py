@@ -22,10 +22,11 @@ import psutil
 from psutil import virtual_memory
 import buildings_processing as bp
 import logging
+import matplotlib.dates as mdates
 
 
 file_prefix = '/default'
-
+logger = logging.getLogger(str(os.getpid()))
 
 class ConfigsError(Exception):
     """Base class for exceptions in this module."""
@@ -57,13 +58,13 @@ def size_the_batches(train_data, val_data, tr_desired_batch_size, te_desired_bat
         val_ratio = 100 - train_ratio
         num_train_data = train_data.shape[0]
 
-        logging.info("Train size: {}, val size: {}, split {}%:{}%".format(train_data.shape[0], val_data.shape[0],
-                                                                    train_ratio, val_ratio))
-        logging.info("Available train batch factors: {}".format(sorted(train_bth)))
-        logging.info("Requested number of batches per epoch - Train: {}, val: {}".format(tr_desired_batch_size,
+        # logger.info("Train size: {}, val size: {}, split {}%:{}%".format(train_data.shape[0], val_data.shape[0],
+        #                                                             train_ratio, val_ratio))
+        logger.info("Available train batch factors: {}".format(sorted(train_bth)))
+        logger.info("Requested number of batches per epoch - Train: {}, val: {}".format(tr_desired_batch_size,
                                                                                    te_desired_batch_size))
-        logging.info("Actual number of batches per epoch - Train: {}, val: {}".format(train_num_batches, val_num_batches))
-        logging.info("Number of data samples in each batch - Train: {}, val: {}".format(train_bt_size, val_bt_size))
+        logger.info("Actual number of batches per epoch - Train: {}, val: {}".format(train_num_batches, val_num_batches))
+        logger.info("Number of data samples in each batch - Train: {}, val: {}".format(train_bt_size, val_bt_size))
     else:
         val_bt_size = val_data.shape[0]
         train_bt_size = 0
@@ -380,7 +381,6 @@ def test_processing(val_df, val_loader, model, seq_dim, input_dim, val_batch_siz
               "ace": ACE,
               "is": IS}
 
-    # return predictions, errors, Q_vals, hist_data
     return final_preds, errors, target, Q_vals
 
 
@@ -436,9 +436,9 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
 
                 epoch_range = np.arange(resume_num_epoch + 1, num_epochs + 1)
             except FileNotFoundError:
-                logging.info("model does not exist in the given folder for resuming the training. Exiting...")
+                logger.info("model does not exist in the given folder for resuming the training. Exiting...")
                 exit()
-            logging.info("rune_resume=True, model loaded from: {}".format(file_prefix))
+            logger.info("rune_resume=True, model loaded from: {}".format(file_prefix))
 
         # If you want to start training a model from scratch
         else:
@@ -455,7 +455,7 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
                 raise ConfigsError(
                     "{} is not a supported architecture variant".format(configs["arch_type_variant"]))
             epoch_range = np.arange(num_epochs)
-            logging.info("A new {} {} model instantiated, with run_train=True".format(configs["arch_type_variant"],
+            logger.info("A new {} {} model instantiated, with run_train=True".format(configs["arch_type_variant"],
                                                                                configs["arch_type"]))
 
         # Instantiate Optimizer Class
@@ -487,20 +487,18 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
         mem = virtual_memory()
         mem = {"total": mem.total / 10 ** 9, "available": mem.available / 10 ** 9, "percent": mem.percent,
                "used": mem.used / 10 ** 9, "free": mem.free / 10 ** 9}
-        logging.info("Number of cores available: {}".format(num_cores))
-        logging.info("Number of logical processors available: {}".format(num_logical_processors))
-        logging.info("Initial memory statistics (GB): {}".format(mem))
+        logger.info("Number of cores available: {}".format(num_cores))
+        logger.info("Number of logical processors available: {}".format(num_logical_processors))
+        logger.info("Initial memory statistics (GB): {}".format(mem))
 
         # Check for GPU
-        cuda_avail = torch.cuda.is_available()
-        if cuda_avail:
-            logging.info("GPU is available for training")
-        else:
-            logging.info("GPU is not available for training")
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        configs["device"] = device
+        logger.info("Training on {}".format(device))
 
         if (len(epoch_range) == 0):
             epoch = resume_num_epoch + 1
-            logging.info("the previously saved model was at epoch= {}, which is same as num_epochs. So, not training"
+            logger.info("the previously saved model was at epoch= {}, which is same as num_epochs. So, not training"
                    .format(resume_num_epoch))
 
         if run_resume:
@@ -521,7 +519,7 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
 
         mid_train_error_stats = pd.DataFrame()
 
-        logging.info("Starting to train the model for {} epochs!".format(num_epochs))
+        logger.info("Starting to train the model for {} epochs!".format(num_epochs))
 
         # Loop through epochs
         for epoch in epoch_range:
@@ -532,7 +530,7 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
                     old_lr = param_group['lr']
                     param_group['lr'] = param_group['lr'] * configs['lr_config']['factor']
                     new_lr = param_group['lr']
-                logging.info("Changing learning rate from {} to {}".format(old_lr, new_lr))
+                logger.info("Changing learning rate from {} to {}".format(old_lr, new_lr))
 
             # This loop returns elements from the dataset batch by batch. Contains features AND targets
             for i, (feats, values) in enumerate(train_loader):
@@ -542,8 +540,8 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
                 time1 = timeit.default_timer()
 
                 # (batches, timesteps, features)
-                features = Variable(feats.view(-1, seq_dim, input_dim))
-                target = Variable(values)  # size: batch size
+                features = Variable(feats.view(-1, seq_dim, input_dim)).to(configs["device"])
+                target = Variable(values).to(configs["device"])  # size: batch size
 
                 time2 = timeit.default_timer()
 
@@ -627,11 +625,11 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
                     writer.add_scalars("Loss", {"val": errors['pinball_loss']}, n_iter)
 
                     # Save the final predictions to a file
-                    pd.DataFrame(predictions).to_hdf(os.path.join(file_prefix, "predictions.h5"), key='df', mode='w')
-                    pd.DataFrame(measured).to_hdf(os.path.join(file_prefix, "measured.h5"), key='df', mode='w')
+                    # pd.DataFrame(predictions).to_hdf(os.path.join(file_prefix, "predictions.h5"), key='df', mode='w')
+                    # pd.DataFrame(measured).to_hdf(os.path.join(file_prefix, "measured.h5"), key='df', mode='w')
 
                     # Save the QQ information to a file
-                    Q_vals.to_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df', mode='w')
+                    # Q_vals.to_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df', mode='w')
 
                     # # Add parody plot to TensorBoard
                     # fig2, ax2 = plt.subplots()
@@ -661,7 +659,7 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
                                            psutil.cpu_percent(interval=None, percpu=True)))
                     writer.add_scalars("CPU_utilization", percentages, n_iter)
 
-                    logging.info('Epoch: {} Iteration: {}. Train_loss: {}. val_loss: {}, LR: {}'.format(epoch_num, n_iter,
+                    logger.info('Epoch: {} Iteration: {}. Train_loss: {}. val_loss: {}, LR: {}'.format(epoch_num, n_iter,
                                                                                                   loss.data.item(),
                                                                                                   errors[
                                                                                                       'pinball_loss'],
@@ -724,7 +722,7 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
     else:
         torch_model = torch.load(os.path.join(file_prefix, 'torch_model'))
         model = torch_model['torch_model']
-        logging.info("Loaded model from file, given run_train=False\n")
+        logger.info("Loaded model from file, given run_train=False\n")
 
         predictions, errors, measured, Q_vals = test_processing(val_df, val_loader, model, seq_dim, input_dim,
                                                                 val_batch_size, transformation_method, configs, False)
@@ -756,16 +754,16 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
                              errors["ace"],
                              errors["is"]])
 
-        # Plotting
+        # # Plotting
         if configs["test_method"] == "external":
             building = configs["building"]
             year = configs["external_test"]["year"]
             month = configs["external_test"]["month"]
-            file = os.path.join(configs["data_dir"], "{}_external_test.h5".format(configs["target_var"]))
+            file = os.path.join(configs["data_dir"], configs["building"], "{}_external_test.h5".format(configs["target_var"]))
             test_data = pd.read_hdf(file, key='df')
             index = test_data.index
         else:
-            test_data = pd.read_hdf(os.path.join(file_prefix, "internal_test_{}.h5".format(configs["target_var"])), key='df')
+             test_data = pd.read_hdf(os.path.join(file_prefix, "internal_test.h5"), key='df')
 
         num_timestamps = configs["S2S_stagger"]["initial_num"] + configs["S2S_stagger"]["secondary_num"]
         data = np.array(predictions)
@@ -773,34 +771,52 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
 
         # Plotting the test set with ALL of the sequence forecasts
         fig, ax1 = plt.subplots()
-        cmap = plt.get_cmap('Reds')
-        for j in range(0, test_data.shape[0]-1):
+        cmap = plt.get_cmap("Blues")
+        plt.rc('font', family='serif')
+        # for j in range(0, test_data.shape[0]-1):
+        for j in range(1515, 1528):
             time_index = pd.date_range(start=test_data.index[j], periods=configs["S2S_stagger"]["initial_num"], freq="{}min".format(configs["resample_freq"]))
-            ax1.plot(time_index, measured[j, :], label="Actual", color='black')
-            ax1.plot(time_index, data[j, int(len(configs["qs"]) / 2), :], label='q = 0.5', color="red")
-            for i, q in enumerate(configs["qs"]):
-                if q == 0.5:
-                    break
-                ax1.fill_between(time_index, data[j, i, :], data[j, -(i + 1), :], color=cmap(q), alpha=0.5,
-                                 lw=0)
-        plt.show()
+            ax1.plot(time_index, measured[j, :], color='black', lw=1, zorder=5)
+            if j ==1522:
+                ax1.plot(time_index, measured[j, :], label="Load", color='black', lw=1, zorder=5)
+                ax1.plot(time_index, data[j, int(len(configs["qs"]) / 2), :], label='Median Predicted Load', color="Blue", zorder=5)
+                for i in range(int(len(configs["qs"])/2) - 1,-1,-1):
+                    q = configs["qs"][i]
+                    # ax1.plot(time_index, data[j, i, :], color='black', lw=0.3, alpha=1, zorder=i)
+                    # ax1.plot(time_index, data[j, -(i + 1), :], color='black', lw=0.3, alpha=1, zorder=i)
+                    ax1.fill_between(time_index, data[j, i, :], data[j, -(i + 1), :], color=cmap(q), alpha=1,
+                                     label="{}% PI".format(round((configs["qs"][-(i + 1)] - q) * 100)), zorder=i)
 
-        # Plotting residuals vs time-step-ahead forecast
-        residuals = data[:,3,:] - measured
-        fig, ax2 = plt.subplots()
-        for i in range(0,residuals.shape[1]):
-            ax2.scatter(np.ones_like(residuals[:,i])*i, residuals[:,i], s=0.5, color="black")
-        ax2.set_xlabel('Forecast steps ahead')
-        ax2.set_ylabel('Residual')
-        plt.show()
+        plt.axvline(test_data.index[1522], c="black", ls="--", lw=1, zorder=6)
+        plt.text(test_data.index[1522], 50, r' Forecast generation time $t_{gen}$', rotation=0, fontsize=8)
 
-        # Plot residuals for all times in test set
-        fig, ax3 = plt.subplots()
-        ax3.scatter(test_data.index, residuals[:,-1], s=0.5, alpha=0.5, color="blue")
-        ax3.set_ylabel('Residual of 18hr ahead forecast')
-        # ax3.scatter(processed.index[np.logical_and(processed.index.weekday == 5, processed.index.hour == 12)],
-        #             residuals[:, -1][np.logical_and(processed.index.weekday == 5, processed.index.hour == 12)],
-        #             s=20, alpha=0.5, color="black")
+        # plt.xticks(rotation=45, ha="right", va="top", fontsize=8)
+        myFmt = mdates.DateFormatter('%H:%M:%S\n%m/%d/%y')
+        ax1.xaxis.set_major_formatter(myFmt)
+        plt.xticks(fontsize=8)
+        plt.yticks(fontsize=8)
+        plt.ylabel("Cafe Main Power (kW)", fontsize=8)
+        plt.xlabel("Date & Time", fontsize=8)
+        ax1.legend(loc="upper center", fontsize=8)
+
+        plt.show()
+        #
+        # # Plotting residuals vs time-step-ahead forecast
+        # residuals = data[:,3,:] - measured
+        # fig, ax2 = plt.subplots()
+        # for i in range(0,residuals.shape[1]):
+        #     ax2.scatter(np.ones_like(residuals[:,i])*i, residuals[:,i], s=0.5, color="black")
+        # ax2.set_xlabel('Forecast steps ahead')
+        # ax2.set_ylabel('Residual')
+        # plt.show()
+        #
+        # # Plot residuals for all times in test set
+        # fig, ax3 = plt.subplots()
+        # ax3.scatter(test_data.index, residuals[:,-1], s=0.5, alpha=0.5, color="blue")
+        # ax3.set_ylabel('Residual of 18hr ahead forecast')
+        # # ax3.scatter(processed.index[np.logical_and(processed.index.weekday == 5, processed.index.hour == 12)],
+        # #             residuals[:, -1][np.logical_and(processed.index.weekday == 5, processed.index.hour == 12)],
+        # #             s=20, alpha=0.5, color="black")
 
 
 def eval_trained_model(file_prefix, train_data, train_batch_size, configs):
@@ -1188,7 +1204,7 @@ def main(train_df, val_df, configs):
     # Create writer object for TensorBoard
     writer_path = file_prefix
     writer = SummaryWriter(writer_path)
-    logging.info("Writer path: {}".format(writer_path))
+    logger.info("Writer path: {}".format(writer_path))
 
     # Reset DataFrame index
     if run_train:
@@ -1203,7 +1219,7 @@ def main(train_df, val_df, configs):
 
     # Normalization transformation
     train_data, val_data = data_transform(train_data, val_data, transformation_method, run_train)
-    logging.info("Data transformed using {} as transformation method".format(transformation_method))
+    logger.info("Data transformed using {} as transformation method".format(transformation_method))
 
     # Size the batches
     train_batch_size, val_batch_size, num_train_data = size_the_batches(train_data, val_data, tr_desired_batch_size,
@@ -1214,7 +1230,7 @@ def main(train_df, val_df, configs):
         train_loader, val_loader = data_iterable_random(train_data, val_data, run_train, train_batch_size,
                                                          val_batch_size, configs)
 
-    logging.info("Data converted to iterable dataset")
+    logger.info("Data converted to iterable dataset")
 
     # Start the training process
     process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume, writer, transformation_method,

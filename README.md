@@ -87,7 +87,12 @@ rnn_mod.main(train_df, test_df, configs)
 ---
 ### What are the parameters in configs.json?
 
-Description to follow
+`rolling window`
+* `active` - True or false, specify whether or not to use rolling window statistics
+* `type` 
+    * `binned` - This method creates min, max, and mean features for each original feature, computed by calculating the statistic over that last N minutes, separated into stationary bins. This has the same effect as downsampling the data to a lower frequency.    
+    * `rolling` - This method creates min, max, and mean features for each original feature, computed by calculating the statistic over that last N minutes in a rolling fashion. The time frequency of the original data is preserved.
+* `minutes` - Specifies the number of minutes to use for the window. For type `binned`, this is the size of the downsampling. This should be higher than `configs["resample_freq"]`, since the rolling windows are calculated after this step. For type `rolling`, this is the size of the rolling window.  
 
 ---
 ### Local Files
