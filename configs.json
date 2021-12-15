@@ -2,7 +2,8 @@
  "building": "Cafe",
  "target_var": "Cafe Whole Building Real Power Total",
  "year": [
-  "2018"
+  "2018",
+  "2019"
  ],
  "weather_include": [
   "SRRL BMS Global Horizontal Irradiance",
@@ -11,7 +12,7 @@
   "SRRL BMS Snow Depth"
  ],
  "arch_version": 5,
- "exp_id": "testing",
+ "exp_id": "Debugging_for_rolling_stats",
  "arch_type": "RNN",
  "arch_type_variant": "lstm",
  "preprocess": false,
@@ -57,9 +58,9 @@
  ],
  "run_train": true,
  "run_resume": false,
- "num_epochs": 2,
+ "num_epochs": 100,
  "weight_decay": 0.001,
- "hidden_nodes": 1,
+ "hidden_nodes": 5,
  "layer_dim": 1,
  "eval_frequency": 2,
  "lr_config": {
