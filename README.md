@@ -130,6 +130,10 @@ rnn_mod.main(train_df, test_df, configs)
     * `<study directory>` can be a directory for a single training session, or it can be a directory containing a collection of study subdirectories, which would result from running a hyperparameter study. 
 2. Open `http://localhost:6006/` in your browser of choice.
 
+#### run the tests?
+```
+$ poetry run pytest tests
+```
 ---
 ### What are the parameters in configs.json?
 
