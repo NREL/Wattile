@@ -1,5 +1,7 @@
 import numpy as np
 import pathlib
+import glob
+import sys
 import pandas as pd
 import datetime as dt
 import tables
@@ -32,62 +34,37 @@ def check_complete(torch_file, des_epochs):
     return check
 
 
-def import_from_csvs(configs, year):
-    """
-    For combination of config['year'] and config['building'], reads monthly weather and building csvs from network and
-    concatenates data into master DataFrame.
-    Combines data is saved to local data/ directory as hdf file and path to file is returned on success.
-
-    :param configs: (Dictionary)
-    :param year: (str)
-    :return:
-    """
-    # Imports EC data and weather data one year at a time
-    predictor_data = pd.DataFrame()
-    target_data = pd.DataFrame()
-
-    # Make data directory if it does not exist
-    pathlib.Path(configs["data_dir"]).mkdir(parents=True, exist_ok=True)
-
-    # Define the path to the building directory
-    # building_path = configs['network_path']
-    building_path = os.path.join(configs["data_dir"], configs["building"])
-
-    # Read in Predictor Data and target data from building data directory (one month at a time)
-    for month in range(1, 13):
-        # energy_data_dir = os.path.join(building_path, sub_dir)
-        predictor_file = "{} Predictors {}-{}.csv".format(configs['building'], year, "{:02d}".format(month))
-        target_file = "{} Targets {}-{}.csv".format(configs['building'], year, "{:02d}".format(month))
-        dateparse = lambda date: dt.datetime.strptime(date[:-13], '%Y-%m-%dT%H:%M:%S')
-        predictor_file_path = os.path.join(building_path, predictor_file)
-        target_file_path = os.path.join(building_path, target_file)
-        pred_data_temp = pd.read_csv(predictor_file_path,
-                           parse_dates=['Timestamp'],
-                           date_parser=dateparse,
-                           index_col='Timestamp')
-        target_data_temp = pd.read_csv(target_file_path,
-                           parse_dates=['Timestamp'],
-                           date_parser=dateparse,
-                           index_col='Timestamp')
-        predictor_data = pd.concat([predictor_data, pred_data_temp])
-        target_data = pd.concat([target_data, target_data_temp])
-        logger.info('Read data month {}/12 in {} for {}'.format(month, year, configs['building']))
-    logger.info('Done reading in data')
-
-    dataset = pd.concat([target_data, predictor_data], axis=1)
-    output_string = os.path.join(building_path, "Data_{}_{}.h5".format(configs['building'], year))
-    dataset.to_hdf(output_string, key='df', mode='w')
-
-    return output_string
-
-
 def get_full_data(configs):
     """
-    Fetches all data for a requested building. This function assumes the data is in yearly chunks.
+    Fetches all data for a requested building based on the information reflected in the input data summary json file.
 
     :param configs: (Dictionary)
     :return: (DataFrame)
     """
+
+    # assuming there is only one json file in the folder summerizing input data
+    # read json file
+    configs_file_inputdata = glob.glob(configs['data_dir'] + "/" + configs['building'] + "/{} config.json".format(configs['building']))[0]
+    with open(configs_file_inputdata, "r") as read_file:
+        configs_input = json.load(read_file)
+
+    # creating paths to each file based on file list in json 
+    list_paths = []
+    for entry in configs_input['files']:
+        list_paths.append(configs['data_dir'] + "/" + configs['building'] + "/" + entry['filename'])
+
+    # create dataframe that includes file path, target/predictor, year, month, day based on the file name string
+    df_list = pd.DataFrame([])
+    df_list['path'] = list_paths
+    df_list['type'] = pd.DataFrame(list_paths).iloc[:,0].str.split(configs['building'], expand=True).iloc[:,2].str.strip().str.split(" ",n=1,expand=True).iloc[:,0]
+    df_list['dateinfilename'] = pd.DataFrame(list_paths).iloc[:,0].str.split(configs['building'] + " " + "Predictors|Targets", expand=True).iloc[:,1].str.split(".csv", expand=True).iloc[:,0]
+    if df_list.dateinfilename.str.split("-", expand=True).shape[1] == 3:
+        df_list[['year','month','day']] = df_list.dateinfilename.str.split("-", expand=True)
+    if df_list.dateinfilename.str.split("-", expand=True).shape[1] == 2:
+        df_list[['year','month']] = df_list.dateinfilename.str.split("-", expand=True)
+    for col in df_list.columns:
+        df_list[col] = df_list[col].str.strip()
+    df_list = df_list.sort_values(by='dateinfilename', ascending=True)
 
     # For quantile regression model, "year" input will be a single year (str)
     if type(configs['year']) == str:
@@ -95,25 +72,46 @@ def get_full_data(configs):
     else:
         iterable = configs['year']
 
-    # Collect data from the requested year(s) and put it in a single DataFrame
-    dataset = dict()
-    building_data_dir = os.path.join(configs["data_dir"], configs["building"])
-    for year in iterable:
-        # Read in preprocessed data from HDFs
-        file_extension = os.path.join(building_data_dir, "Data_{}_{}.h5".format(configs['building'], year))
-        if pathlib.Path(file_extension).exists():
-            data_full = pd.read_hdf(file_extension, key='df')
-        else:
-            if configs["convert_csvs"] == False:
-                raise ConfigsError("{} was not found, and no network location specified for retrieval.".format(file_extension))
+    # filtering data based on input information in configs file
+    df_list_filtered = df_list.copy()            
+    df_list_filtered = df_list_filtered.loc[df_list_filtered.year.isin(iterable),:]
+    
+    data_full_p = pd.DataFrame()
+    data_full_t = pd.DataFrame()
+    for datatype in ["Predictors","Targets"]:
+        
+        df_list_datatype = df_list_filtered.loc[df_list_filtered.type==datatype,:]
+        
+        for filepath in df_list_datatype.path:
+            
+            if datatype=="Predictors":
+                print("Pre-process: reading predictor file = {}".format(filepath.split(configs['data_dir'])[1]))
+                try:
+                    data_full_p = pd.concat([data_full_p, pd.read_csv(filepath)])
+                except:
+                    print("Pre-process: error in read_csv with predictor file {}. not reading..".format(filepath.split(configs['data_dir'])[1]))
+                    continue
+            elif datatype=="Targets":
+                print("Pre-process: reading target file = {}".format(filepath.split(configs['data_dir'])[1]))
+                try:
+                    data_full_t = pd.concat([data_full_t, pd.read_csv(filepath)[['Timestamp', configs["target_var"]]]])
+                except:
+                    print("Pre-process: error in read_csv with target file {}. not reading..".format(filepath.split(configs['data_dir'])[1]))
+                    continue
             else:
-                output_path = import_from_csvs(configs, year)
-                data_full = pd.read_hdf(output_path, key='df')
-        dataset[year] = data_full
-
-    data_full = pd.DataFrame()
-    for year in dataset:
-        data_full = pd.concat([data_full, dataset[year]])
+                print("Pre-process: input file not properly differentiated between Predictors and Targets")
+                
+    if (data_full_p.empty)|(data_full_t.empty):
+        print("Pre-process: predictor and/or target dataframe is empty (even though files exist), so exiting..")
+        sys.exit()
+    else:
+        data_full = pd.merge(data_full_p, data_full_t, how='outer', on='Timestamp')
+        
+    # removing trailing string "-0?:00 Denver" to convert timestamp to datetime format
+    # not sure this is the best approach though
+    data_full['Timestamp'] = data_full.Timestamp.str.rsplit("-", 1, expand=True).iloc[:,0]
+    data_full = data_full.set_index('Timestamp')
+    data_full.index = pd.to_datetime(data_full.index, format='%Y-%m-%dT%H:%M:%S')
 
     return data_full
 
