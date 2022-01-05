@@ -1,16 +1,10 @@
 {
- "building": "Cafe",
- "target_var": "Cafe Whole Building Real Power Total",
+ "building": "Synthetic Site",
+ "target_var": "Synthetic Site Electricity Main Total Power",
  "year": [
-  "2018",
-  "2019"
+  "2021"
  ],
- "weather_include": [
-  "SRRL BMS Global Horizontal Irradiance",
-  "SRRL BMS Dry Bulb Temperature",
-  "SRRL BMS Relative Humidity",
-  "SRRL BMS Snow Depth"
- ],
+ "weather_include": [],
  "arch_version": 5,
  "exp_id": "7-9-21",
  "arch_type": "RNN",
