@@ -40,18 +40,9 @@ def test_model_trains(config_for_tests, tmpdir, config_patch):
     # train model
     epb.main(config_for_tests)
 
-    # check if results were created
-
-
-    
-    results_dir = os.path.join(
-        config_for_tests["results_dir"],
-        config_for_tests["arch_type"]
-        + "_M"
-        + str(config_for_tests["target_var"].replace(" ", ""))
-        + "_T"
-        + str(config_for_tests["exp_id"]),
-    )
+    # check result file were created
+    results_dir = os.path.join(config_for_tests["results_dir"], config_for_tests["arch_type"] + '_M' + str(
+        config_for_tests["target_var"].replace(" ", "")) + '_T' + str(config_for_tests["exp_id"]))
     results_dir = Path(results_dir).resolve()
 
     assert results_dir / "output.out"
