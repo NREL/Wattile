@@ -34,55 +34,6 @@ def check_complete(torch_file, des_epochs):
     return check
 
 
-def import_from_csvs(configs, year):
-    """
-    For combination of config['year'] and config['building'], reads monthly weather and building csvs from network and
-    concatenates data into master DataFrame.
-    Combines data is saved to local data/ directory as hdf file and path to file is returned on success.
-
-    :param configs: (Dictionary)
-    :param year: (str)
-    :return:
-    """
-    # Imports EC data and weather data one year at a time
-    predictor_data = pd.DataFrame()
-    target_data = pd.DataFrame()
-
-    # Make data directory if it does not exist
-    pathlib.Path(configs["data_dir"]).mkdir(parents=True, exist_ok=True)
-
-    # Define the path to the building directory
-    # building_path = configs['network_path']
-    building_path = os.path.join(configs["data_dir"], configs["building"])
-
-    # Read in Predictor Data and target data from building data directory (one month at a time)
-    for month in range(1, 13):
-        # energy_data_dir = os.path.join(building_path, sub_dir)
-        predictor_file = "{} Predictors {}-{}.csv".format(configs['building'], year, "{:02d}".format(month))
-        target_file = "{} Targets {}-{}.csv".format(configs['building'], year, "{:02d}".format(month))
-        dateparse = lambda date: dt.datetime.strptime(date[:-13], '%Y-%m-%dT%H:%M:%S')
-        predictor_file_path = os.path.join(building_path, predictor_file)
-        target_file_path = os.path.join(building_path, target_file)
-        pred_data_temp = pd.read_csv(predictor_file_path,
-                           parse_dates=['Timestamp'],
-                           date_parser=dateparse,
-                           index_col='Timestamp')
-        target_data_temp = pd.read_csv(target_file_path,
-                           parse_dates=['Timestamp'],
-                           date_parser=dateparse,
-                           index_col='Timestamp')
-        predictor_data = pd.concat([predictor_data, pred_data_temp])
-        target_data = pd.concat([target_data, target_data_temp])
-        logger.info('Read data month {}/12 in {} for {}'.format(month, year, configs['building']))
-    logger.info('Done reading in data')
-
-    dataset = pd.concat([target_data, predictor_data], axis=1)
-    output_string = os.path.join(building_path, "Data_{}_{}.h5".format(configs['building'], year))
-    dataset.to_hdf(output_string, key='df', mode='w')
-
-    return output_string
-
-
 def get_full_data(configs):
     """
     Fetches all data for a requested building. This function assumes the data is in yearly chunks.
