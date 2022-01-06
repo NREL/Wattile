@@ -36,7 +36,7 @@ def check_complete(torch_file, des_epochs):
 
 def get_full_data(configs):
     """
-    Fetches all data for a requested building. This function assumes the data is in yearly chunks.
+    Fetches all data for a requested building based on the information reflected in the input data summary json file.
 
     :param configs: (Dictionary)
     :return: (DataFrame)
