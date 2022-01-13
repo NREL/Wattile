@@ -9,12 +9,16 @@ python = "^3.6"
 pandas = "0.23.4"
 requests = "2.19.1"
 scipy = "1.1.0"
-torch = "0.4.1"
 tables = "3.6.1"
 seaborn = "0.9.0"
 tensorboardX = "1.4"
 psutil = "^5.8.0"
 matplotlib = "^3.0"
+torch = [
+    { markers = "sys_platform == 'linux'", url = "https://files.pythonhosted.org/packages/49/0e/e382bcf1a6ae8225f50b99cc26effa2d4cc6d66975ccf3fa9590efcbedce/torch-0.4.1-cp36-cp36m-manylinux1_x86_64.whl" },
+    { markers = "sys_platform == 'darwin'", url = "https://files.pythonhosted.org/packages/59/cf/404677f62d18609b3d8b4fdcd62c98981e1a6bd2d086ece3f84c880623a3/torch-0.4.1-cp36-cp36m-macosx_10_7_x86_64.whl" },
+    { markers = "sys_platform == 'win32'", url = "https://download.pytorch.org/whl/cpu/torch-0.4.1-cp36-cp36m-win_amd64.whl"}
+]
 
 [tool.poetry.dev-dependencies]
 

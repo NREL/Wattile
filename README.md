@@ -22,6 +22,11 @@ You can either use Conda or Poetry as your local package manager.
     $ python -V
     Python 3.6.6
     ```
+	If using conda for python management, use `environment.yml` to make an environment
+	```
+	$ conda env create -f environment.yml
+	```
+	
     * Note: Recommended python verison managers are [pyenv](https://github.com/pyenv/pyenv) or [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-python.html), but are not required.
 2. Install [Poetry](https://python-poetry.org/docs/#installation).
 
@@ -34,6 +39,12 @@ You can either use Conda or Poetry as your local package manager.
     ```
     $ (Invoke-WebRequest -Uri https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py -UseBasicParsing).Content | python -
     ```
+	
+	If using a conda environment, be sure to set the configs to not use a virtual environment
+	```
+	$ poetry config virtualenvs.create false
+	$ poetry config virtualenvs.in-project true
+	```
 3. Install dependencies.
     ```
     $ poetry install
