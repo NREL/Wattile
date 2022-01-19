@@ -16,7 +16,7 @@ This repository contains the source code for forecasting energy consumption usin
 You can either use Conda or Poetry as your local package manager.
 
 #### Poetry set up
-
+* Note: for many of these steps, you need to be off the vpn to avoid an SSLError
 1. Ensure that your local python version is 3.6.6
     ```
     $ python -V
@@ -27,7 +27,7 @@ You can either use Conda or Poetry as your local package manager.
 	$ conda env create -f environment.yml
 	```
 	
-    * Note: Recommended python verison managers are [pyenv](https://github.com/pyenv/pyenv) or [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-python.html), but are not required.
+    Recommended python verison managers are [pyenv](https://github.com/pyenv/pyenv) or [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-python.html), but are not required.
 2. Install [Poetry](https://python-poetry.org/docs/#installation).
 
     For osx / linux / bashonwindows:
@@ -35,7 +35,7 @@ You can either use Conda or Poetry as your local package manager.
     $ curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -      
     ```
 
-    For Windows:
+    For Windows powershell:
     ```
     $ (Invoke-WebRequest -Uri https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py -UseBasicParsing).Content | python -
     ```
@@ -45,12 +45,14 @@ You can either use Conda or Poetry as your local package manager.
 	$ poetry config virtualenvs.create false
 	$ poetry config virtualenvs.in-project true
 	```
-3. Install dependencies.
+3. If on Windows, install [Microsoft Visual C++ 14.0](https://visualstudio.microsoft.com/visual-cpp-build-tools/).
+
+4. Install dependencies.
     ```
     $ poetry install
     ```
 
-4. Run singluar commands in poetry's virtual environment
+5. Run singluar commands in poetry's virtual environment
     ```
     $ poetry run python entry_point.py
     ```
