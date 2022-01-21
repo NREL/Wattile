@@ -11,8 +11,67 @@ This repository contains the source code for forecasting energy consumption usin
 * Version: this is the initial version (0.1) of this project
 
 ---
-### Getting set up
+### Getting set up for development
 
+You can either use Conda or Poetry as your local package manager.
+
+#### Poetry set up
+* Note: for many of these steps, you need to be off the vpn to avoid an SSLError
+1. Ensure that your local python version is 3.6.6
+    ```
+    $ python -V
+    Python 3.6.6
+    ```
+	If using conda for python management, use `environment.yml` to make an environment
+	```
+	$ conda env create -f environment.yml
+	```
+	
+    Recommended python verison managers are [pyenv](https://github.com/pyenv/pyenv) or [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-python.html), but are not required.
+2. Install [Poetry](https://python-poetry.org/docs/#installation).
+
+    For osx / linux / bashonwindows:
+    ```
+    $ curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -      
+    ```
+
+    For Windows powershell:
+    ```
+    $ (Invoke-WebRequest -Uri https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py -UseBasicParsing).Content | python -
+    ```
+	
+	If using a conda environment, be sure to set the configs to not use a virtual environment
+	```
+	$ poetry config virtualenvs.create false
+	$ poetry config virtualenvs.in-project true
+	```
+3. If on Windows, install [Microsoft Visual C++ 14.0](https://visualstudio.microsoft.com/visual-cpp-build-tools/).
+
+4. Install dependencies.
+    ```
+    $ poetry install
+    ```
+
+5. Run singluar commands in poetry's virtual environment
+    ```
+    $ poetry run python entry_point.py
+    ```
+    or create a new shell within the virtual environment
+    ```
+    $ poetry shell
+    Spawning shell within /poetry_path/pypoetry/virtualenvs/intelligentcampus-pred-analytics-l9jvZEb_-py3.6
+    . /poetry_path/pypoetry/virtualenvs/intelligentcampus-pred-analytics-l9jvZEb_-py3.6/bin/activate
+
+    $ python entry_point.py
+    ...
+
+    $ exit
+    Saving session...completed.
+    Deleting expired sessions...
+    ```
+
+
+#### Conda set up
 1. Configuring conda environment 
 
     A conda environment file is provided for convenience. Assuming you have Anaconda python distribution available on your computer, you can create a new conda environment with the necessary packages using the following command:

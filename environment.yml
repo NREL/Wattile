@@ -1,0 +1,7 @@
+name: intelcamp
+
+channels:
+  - default
+
+dependencies:
+  - python=3.6.6 
