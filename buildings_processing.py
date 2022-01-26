@@ -13,6 +13,8 @@ import matplotlib.pyplot as plt
 import logging
 import torch
 
+PROJECT_DIRECTORY = pathlib.Path(__file__).resolve().parent
+
 logger = logging.getLogger(str(os.getpid()))
 
 class ConfigsError(Exception):
@@ -44,7 +46,7 @@ def get_full_data(configs):
 
     # assuming there is only one json file in the folder summerizing input data
     # read json file
-    configs_file_inputdata = glob.glob(configs['data_dir'] + "/" + configs['building'] + "/{} config.json".format(configs['building']))[0]
+    configs_file_inputdata = PROJECT_DIRECTORY / configs['data_dir'] / configs['building'] / f"{configs['building']} Config.json"
     with open(configs_file_inputdata, "r") as read_file:
         configs_input = json.load(read_file)
 
