@@ -55,59 +55,62 @@ def get_full_data(configs):
     for entry in configs_input['files']:
         list_paths.append(configs['data_dir'] + "/" + configs['building'] + "/" + entry['filename'])
 
-    # create dataframe that includes file path, target/predictor, year, month, day based on the file name string
-    df_list = pd.DataFrame([])
-    df_list['path'] = list_paths
-    df_list['type'] = pd.DataFrame(list_paths).iloc[:,0].str.split(configs['building'], expand=True).iloc[:,2].str.strip().str.split(" ",n=1,expand=True).iloc[:,0]
-    df_list['dateinfilename'] = pd.DataFrame(list_paths).iloc[:,0].str.split(configs['building'] + " " + "Predictors|Targets", expand=True).iloc[:,1].str.split(".csv", expand=True).iloc[:,0]
-    if df_list.dateinfilename.str.split("-", expand=True).shape[1] == 3:
-        df_list[['year','month','day']] = df_list.dateinfilename.str.split("-", expand=True)
-    if df_list.dateinfilename.str.split("-", expand=True).shape[1] == 2:
-        df_list[['year','month']] = df_list.dateinfilename.str.split("-", expand=True)
-    for col in df_list.columns:
-        df_list[col] = df_list[col].str.strip()
-    df_list = df_list.sort_values(by='dateinfilename', ascending=True)
-
-    # For quantile regression model, "year" input will be a single year (str)
-    if type(configs['year']) == str:
-        iterable = [configs['year']]
+    # converting json into dataframe 
+    df_inputdata = pd.DataFrame(configs_input['files'])
+    # this parsing below should not be this manual. needs better way to read differences between MDT and MST.
+    df_inputdata['start'] = df_inputdata['start'].str.rsplit(" ", 1, expand=True).iloc[:,0].values
+    df_inputdata['end'] = df_inputdata['end'].str.rsplit(" ", 1, expand=True).iloc[:,0].values
+    # converting date time column into pandas datetime
+    df_inputdata['start'] = pd.to_datetime(df_inputdata.start, format="s:%d-%b-%Y %a %H:%M:%S%p")
+    df_inputdata['end'] = pd.to_datetime(df_inputdata.end, format="s:%d-%b-%Y %a %H:%M:%S%p")
+    # creating thresholds dates from configs json file
+    timestamp_start = pd.Timestamp(configs['start_year'], configs['start_month'], configs['start_day'], 0)
+    if (configs['end_month']==12) & (configs['end_day']==31):
+        timestamp_end = pd.Timestamp(configs['end_year']+1, 1, 1, 0)
     else:
-        iterable = configs['year']
-
-    # filtering data based on input information in configs file
-    df_list_filtered = df_list.copy()            
-    df_list_filtered = df_list_filtered.loc[df_list_filtered.year.isin(iterable),:]
+        timestamp_end = pd.Timestamp(configs['end_year'], configs['end_month']+1, configs['end_day'], 0)
+    # filtering input data based on user specified date period
+    df_inputdata = df_inputdata.loc[ (df_inputdata.start.dt.date>=timestamp_start) & (df_inputdata.end.dt.date<=timestamp_end) , :]
+    df_inputdata['type'] = ""
+    df_inputdata.loc[df_inputdata.filename.str.contains("Targets"), "type"] = "Targets"
+    df_inputdata.loc[df_inputdata.filename.str.contains("Predictors"), "type"] = "Predictors"
+    df_inputdata['path'] = configs['data_dir'] + "/" + configs['building'] + "/" + df_inputdata['filename']
     
-    data_full_p = pd.DataFrame()
-    data_full_t = pd.DataFrame()
-    for datatype in ["Predictors","Targets"]:
-        
-        df_list_datatype = df_list_filtered.loc[df_list_filtered.type==datatype,:]
-        
-        for filepath in df_list_datatype.path:
-            
-            if datatype=="Predictors":
-                print("Pre-process: reading predictor file = {}".format(filepath.split(configs['data_dir'])[1]))
-                try:
-                    data_full_p = pd.concat([data_full_p, pd.read_csv(filepath)])
-                except:
-                    print("Pre-process: error in read_csv with predictor file {}. not reading..".format(filepath.split(configs['data_dir'])[1]))
-                    continue
-            elif datatype=="Targets":
-                print("Pre-process: reading target file = {}".format(filepath.split(configs['data_dir'])[1]))
-                try:
-                    data_full_t = pd.concat([data_full_t, pd.read_csv(filepath)[['Timestamp', configs["target_var"]]]])
-                except:
-                    print("Pre-process: error in read_csv with target file {}. not reading..".format(filepath.split(configs['data_dir'])[1]))
-                    continue
-            else:
-                print("Pre-process: input file not properly differentiated between Predictors and Targets")
-                
-    if (data_full_p.empty)|(data_full_t.empty):
-        print("Pre-process: predictor and/or target dataframe is empty (even though files exist), so exiting..")
+    if df_inputdata.empty:
+        logger.info("Pre-process: measurements during the specified year {} are empty.".format(iterable))
         sys.exit()
+
     else:
-        data_full = pd.merge(data_full_p, data_full_t, how='outer', on='Timestamp')
+        data_full_p = pd.DataFrame()
+        data_full_t = pd.DataFrame()
+        for datatype in ["Predictors","Targets"]:
+            
+            df_list_datatype = df_inputdata.loc[df_inputdata.type==datatype,:]
+            
+            for filepath in df_list_datatype.path:
+                
+                if datatype=="Predictors":
+                    logger.info("Pre-process: reading predictor file = {}".format(filepath.split(configs['data_dir'])[1]))
+                    try:
+                        data_full_p = pd.concat([data_full_p, pd.read_csv(filepath)])
+                    except:
+                        logger.info("Pre-process: error in read_csv with predictor file {}. not reading..".format(filepath.split(configs['data_dir'])[1]))
+                        continue
+                elif datatype=="Targets":
+                    logger.info("Pre-process: reading target file = {}".format(filepath.split(configs['data_dir'])[1]))
+                    try:
+                        data_full_t = pd.concat([data_full_t, pd.read_csv(filepath)[['Timestamp', configs["target_var"]]]])
+                    except:
+                        logger.info("Pre-process: error in read_csv with target file {}. not reading..".format(filepath.split(configs['data_dir'])[1]))
+                        continue
+                else:
+                    logger.info("Pre-process: input file not properly differentiated between Predictors and Targets")
+                    
+        if (data_full_p.empty)|(data_full_t.empty):
+            logger.info("Pre-process: predictor and/or target dataframe is empty (even though files exist), so exiting..")
+            sys.exit()
+        else:
+            data_full = pd.merge(data_full_p, data_full_t, how='outer', on='Timestamp')
         
     # removing trailing string "-0?:00 Denver" to convert timestamp to datetime format
     # not sure this is the best approach though
