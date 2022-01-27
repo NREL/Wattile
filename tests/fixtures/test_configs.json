@@ -1,94 +1,86 @@
 {
-    "building": "Synthetic Site",
-    "target_var": "Synthetic Site Electricity Main Total Power",
-    "year": [
-        "2021"
-    ],
-    "weather_include": [
-        "SRRL BMS Dew Point Temperature",
-        "SRRL BMS Diffuse Horizontal Irradiance",
-        "SRRL BMS Direct Normal Irradiance",
-        "SRRL BMS Dry Bulb Temperature",
-        "SRRL BMS Global Horizontal Irradiance",
-        "SRRL BMS Relative Humidity",
-        "SRRL BMS Wind Speed at 19'"
-    ],
-    "arch_version": 4,
-    "exp_id": "test_run",
-    "arch_type": "RNN",
-    "arch_type_variant": "lstm",
-    "preprocess": false,
-    "fetch_n_parse": false,
-    "transformation_method": "minmaxscale",
-    "train_batch_size": 26,
-    "val_batch_size": 1,
-    "convert_csvs": false,
-    "results_dir": "EnergyForecasting_Results",
-    "data_dir": "tests/data",
-    "resample_freq": 15,
-    "sequence_freq": 15,
-    "splicer": {
-        "active": true,
-        "time": "1m"
-    },
-    "rolling_window": {
-        "active": false,
-        "type": "binned",
-        "minutes": 15
-    },
-    "window": 72,
-    "EC_future_gap": 0,
-    "DOW": [],
-    "MOY": [],
-    "HOD": [],
-    "Holidays": false,
-    "S2S_stagger": {
-        "initial_num": 72,
-        "decay": 0,
-        "secondary_num": 0
-    },
-    "train_size_factor": 1024,
-    "train_val_split": "Random",
-    "data_split": "80:10:10",
-    "random_seed": 382,
-    "qs": [
-        0.025,
-        0.05,
-        0.1,
-        0.25,
-        0.5,
-        0.75,
-        0.9,
-        0.95,
-        0.975
-    ],
-    "run_train": true,
-    "run_resume": false,
-    "num_epochs": 2,
-    "weight_decay": 0.001,
-    "hidden_nodes": 25,
-    "layer_dim": 1,
-    "eval_frequency": 500,
-    "lr_config": {
-        "base": 0.001,
-        "schedule": false,
-        "type": "performance",
-        "factor": 0.1,
-        "min": 1e-05,
-        "patience": 30,
-        "step_size": 75
-    },
-    "smoothing_alpha": 0.001,
-    "test_method": "internal",
-    "external_test": {
-        "year": "2020",
-        "month": [
-            1,
-            2,
-            3,
-            4,
-            5,
-            6
-        ]
-    }
+ "building": "Synthetic Site",
+ "target_var": "Synthetic Site Electricity Main Total Power",
+ "start_year": 2018,
+ "start_month": 1,
+ "start_day": 1,
+ "end_year": 2021,
+ "end_month": 12,
+ "end_day": 31,
+ "weather_include": [
+    "SRRL BMS Dew Point Temperature",
+    "SRRL BMS Diffuse Horizontal Irradiance",
+    "SRRL BMS Direct Normal Irradiance",
+    "SRRL BMS Dry Bulb Temperature",
+    "SRRL BMS Global Horizontal Irradiance",
+    "SRRL BMS Relative Humidity",
+    "SRRL BMS Wind Speed at 19'"
+ ],
+ "arch_version": 4,
+ "exp_id": "Debugging_for_rolling_stats",
+ "arch_type": "RNN",
+ "arch_type_variant": "lstm",
+ "preprocess": false,
+ "fetch_n_parse": false,
+ "transformation_method": "minmaxscale",
+ "train_batch_size": 5,
+ "val_batch_size": 1,
+ "convert_csvs": false,
+ "results_dir": "EnergyForecasting_Results",
+ "data_dir": "tests/data",
+ "resample_freq": 1,
+ "sequence_freq": 1,
+ "splicer": {
+  "active": true,
+  "time": "3h"
+ },
+ "rolling_window": {
+  "active": true,
+  "type": "binned",
+  "minutes": 15
+ },
+ "window": 12,
+ "EC_future_gap": 0,
+ "DOW": ["binary_reg"],
+ "MOY": ["sincos"],
+ "HOD": ["sincos"],
+ "Holidays": false,
+ "S2S_stagger": {
+  "initial_num": 72,
+  "decay": 0,
+  "secondary_num": 0
+ },
+ "train_size_factor": 4,
+ "train_val_split": "Random",
+ "data_split": "80:10:10",
+ "random_seed": 1,
+ "qs": [
+  0.025,
+  0.25,
+  0.5,
+  0.75,
+  0.975
+ ],
+ "run_train": true,
+ "run_resume": false,
+ "num_epochs": 1,
+ "weight_decay": 0.001,
+ "hidden_nodes": 5,
+ "layer_dim": 1,
+ "eval_frequency": 2,
+ "lr_config": {
+  "base": 0.001,
+  "schedule": false,
+  "type": "performance",
+  "factor": 0.1,
+  "min": 1e-05,
+  "patience": 30,
+  "step_size": 75
+ },
+ "smoothing_alpha": 0.001,
+ "test_method": "internal",
+ "external_test": {
+  "year": "2020",
+  "month": [1, 2, 3, 4, 5, 6]
+ }
 }
