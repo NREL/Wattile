@@ -1,0 +1,110 @@
+name:hfMachineLearningTestData
+doc:
+  History function to create synthetic target data from predictor weather data for use in training ML models.
+  
+  Logic
+  -----
+  
+  Provides a synthetic power profile that combines the following:
+  
+  - 100 kW base load with ± 5 kW variability
+  - 50 kW with ± 30% variability diurnal load with fixed triangular shape: 8 AM start, 1 PM peak, 6 PM end.
+  - 1 kW/°F increase in load above 60°F and below 50°F (simple change-point model)
+  - Hypothetical simplified PV array output scaled to global horizontal irradiance (GHI): 100 kW output at 1000 W/m²
+  
+  This combination of factors provides a known, well-characterized (but still complex) behavior profile that can be used to evaluate the goodness of fit of predictive ML algorithms.
+  
+  Instructions for Exporting Data
+  -------------------------------
+  
+  To create test data using this function:
+  
+  1. Create a temporary "fake" site with associated 'elec' 'meter' 'siteMeter' 'equip'
+  2. Map the 'weatherStationRef' of the fake site to a real weather station with, at minimum, dry bulb temperature and GHI points
+  3. Under the fake electricity meter, create a 'total' 'power' 'sensor' 'his' 'point' point (with appropriate units) and assign it a history function with value '"hfMachineLearningTestData"'
+  4. Check a history read from the *Tools* app to ensure synthetic data generation is working
+  5. Create a second fake point under the same meter with tags 'total' 'power' 'prediction' and 'point'; this point is needed for the data export query in the next step to succeed
+  6. Use the 'exportTrainingData()' function pointed at the fake site to export the synthetic training data
+  
+  Good practice is to remove the temporary site, meter, and points from the SkySpark database once you have successfully exported the synthetic data you need.
+  
+  Disclaimer
+  ----------
+  
+  This function is intended for internal use by NREL with NREL's SkySpark instance and weather station data; it references resources and other SkySpark functions not included in the Intelligent Campus Predictive Analytics Github repository.
+func
+src:
+  // hfMachineLearningTestData(rec, dates, opts, yield) => Synthetic target data for ML model fitting
+  // See 'doc' tag for documentation
+  
+  (rec, dates, opts, yield) => do
+    
+    // Determine weather feed
+    weather: toWeather(rec)
+    
+    // Clip dates
+    if (dates.toSpan.end >= now()) dates = dates.toSpan.start()..now()
+    
+    // History interval
+    hisInterval: if (rec.has("hisInterval")) rec->hisInterval else 5min
+    
+    // Read dry bulb temperature data
+    tDB: read(point and weather and air and temp and sensor and weatherStationRef==weather.toRecId, true)
+      .hisRead(dates, {-limit})
+      .renameCol("v0","tDB")
+      
+    // Read global horizontal irradiance data
+    ghi: read(point and global and irradiance and sensor and weatherStationRef==weather.toRecId, true)
+      .hisRead(dates, {-limit})
+      .renameCol("v0","ghi")
+    
+    // Evaluate 4 components of synthetic power profile (see function doc)
+    power1: hisSlidingWindows(dates, hisInterval, hisInterval)
+      .hisMap() (v, t) => do
+        100kW + 5kW * (random(-100..100)/100) // 100 kW ± 5 kW (uniform dist.)
+      end
+    power2: hisSlidingWindows(dates, hisInterval, hisInterval)
+      .hisMap() (v, t) => do
+        // Fractional hour
+        fractionalHour: hour(t) + minute(t).to(1h)
+        
+        // Create triangle shape
+        if (fractionalHour <= 13) do
+          val: max(0, (fractionalHour - 8)/(13 - 8))
+        else do
+          val: max(0, (18 - fractionalHour)/(18 - 13))
+        end
+        
+        // Apply magnitude and random variability
+        val.as("kW") * 50 * (1 + 0.3*(random(-100..100)/100)) // 50 kW (peak) ± 30% (uniform dist.)
+      end
+    power3: tDB.hisMap() (v, t) => do
+        if (v.isNA) return null
+        v = v.to("°F")
+        if (v <= 50°F) do
+          return (50 - v).as("kW") // 1 kW/°F increase in load below 50°F
+        else if (v >= 60°F) do
+          return (v - 60).as("kW") // 1 kW/°F increase in load above 60°F
+        else do
+          return 0kW
+        end
+      end
+    power4: ghi.hisMap() (v, t) => do
+        if (v.isNA) return null
+        v = v.to("W/m²")
+        min(0, -100*(v / 1000W/m²)).as("kW") // 100 kW output at 1000 W/m² GHI
+      end
+    
+    // Join data, interpolate, and sum
+    data: hisJoin([power1, power2, power3, power4])
+      .hisInterpolate
+      .hisFoldCols(sum)
+    
+    // Note: All units above are kW
+    
+    // Debug?
+    if (opts.has("debug")) return data
+    
+    // Yield synthetic history in appropriate units
+    data.each() row => yield(row->ts, row["v0"].unitConvertHandleNA(rec->unit))
+  end

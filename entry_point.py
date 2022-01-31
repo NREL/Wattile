@@ -100,6 +100,9 @@ def main(configs):
     else:
         data = data_full
 
+    # removing columns with zero
+    data = data.loc[:, (data != 0).any(axis=0)]
+
     # Choose what ML architecture to use and execute the corresponding script
     if configs['arch_type'] == 'RNN':
         # What RNN version you are implementing? Specified in configs.
