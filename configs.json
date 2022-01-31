@@ -1,22 +1,19 @@
 {
- "building": "Synthetic Site",
- "target_var": "Synthetic Site Electricity Main Total Power",
+ "building": "Cafe",
+ "target_var": "Cafe Whole Building Real Power Total",
  "start_year": 2018,
  "start_month": 1,
  "start_day": 1,
- "end_year": 2021,
+ "end_year": 2019,
  "end_month": 12,
  "end_day": 31,
  "weather_include": [
-    "SRRL BMS Dew Point Temperature",
-    "SRRL BMS Diffuse Horizontal Irradiance",
-    "SRRL BMS Direct Normal Irradiance",
-    "SRRL BMS Dry Bulb Temperature",
-    "SRRL BMS Global Horizontal Irradiance",
-    "SRRL BMS Relative Humidity",
-    "SRRL BMS Wind Speed at 19'"
+  "SRRL BMS Global Horizontal Irradiance",
+  "SRRL BMS Dry Bulb Temperature",
+  "SRRL BMS Relative Humidity",
+  "SRRL BMS Snow Depth"
  ],
- "arch_version": 4,
+ "arch_version": 5,
  "exp_id": "Debugging_for_rolling_stats",
  "arch_type": "RNN",
  "arch_type_variant": "lstm",
@@ -29,28 +26,28 @@
  "results_dir": "EnergyForecasting_Results",
  "data_dir": "data",
  "resample_freq": 1,
- "sequence_freq": 1,
+ "sequence_freq": 15,
  "splicer": {
   "active": true,
-  "time": "3h"
+  "time": "2d"
  },
  "rolling_window": {
   "active": true,
   "type": "binned",
   "minutes": 15
  },
- "window": 12,
+ "window": 72,
  "EC_future_gap": 0,
  "DOW": ["binary_reg"],
  "MOY": ["sincos"],
  "HOD": ["sincos"],
- "Holidays": false,
+ "Holidays": true,
  "S2S_stagger": {
   "initial_num": 72,
   "decay": 0,
   "secondary_num": 0
  },
- "train_size_factor": 4,
+ "train_size_factor": 32,
  "train_val_split": "Random",
  "data_split": "80:10:10",
  "random_seed": 1,
@@ -63,7 +60,7 @@
  ],
  "run_train": true,
  "run_resume": false,
- "num_epochs": 1,
+ "num_epochs": 100,
  "weight_decay": 0.001,
  "hidden_nodes": 5,
  "layer_dim": 1,
