@@ -21,13 +21,26 @@ def config_for_tests():
 
 
 # test model training config patches
-VANILLA_CONFIG_PATCH = {}
-ARCH_VERSION_4_CONFIG_PATCH = {"arch_version": 4}
+ARCH_VERSION_4_RNN_CONFIG_PATCH = {"arch_version": 4, "arch_type_variant": "vanilla"}
+ARCH_VERSION_4_LSTM_CONFIG_PATCH = {"arch_version": 4, "arch_type_variant": "lstm"}
+ARCH_VERSION_4_STANDARD_TRANSFORMATION_CONFIG_PATCH = {"arch_version": 4, "transformation_method": "standard"}
+
+ARCH_VERSION_5_RNN_CONFIG_PATCH = {"arch_version": 5, "arch_type_variant": "vanilla"}
+ARCH_VERSION_5_LSTM_CONFIG_PATCH = {"arch_version": 5, "arch_type_variant": "lstm"}
+ARCH_VERSION_5_STANDARD_TRANSFORMATION_CONFIG_PATCH = {"arch_version": 5, "transformation_method": "standard"}
+
 
 
 @pytest.mark.parametrize(
     "config_patch",
-    [VANILLA_CONFIG_PATCH, ARCH_VERSION_4_CONFIG_PATCH],
+    [
+        ARCH_VERSION_4_RNN_CONFIG_PATCH,
+        ARCH_VERSION_4_LSTM_CONFIG_PATCH,
+        ARCH_VERSION_4_STANDARD_TRANSFORMATION_CONFIG_PATCH,
+        ARCH_VERSION_5_RNN_CONFIG_PATCH,
+        ARCH_VERSION_5_LSTM_CONFIG_PATCH,
+        ARCH_VERSION_5_STANDARD_TRANSFORMATION_CONFIG_PATCH
+    ],
 )
 def test_model_trains(config_for_tests, tmpdir, config_patch):
     """
