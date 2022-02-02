@@ -116,8 +116,8 @@ to evaluate the goodness of fit of predictive ML algorithms. (Note, however,
 that the quantity of synthetic training data included in the repo is too small
 to be used for algorithm validation.)
 
-The target data were generated using the computed history function of [SkySpark]
-3.0.27. For transparency and replicability, the history function implementation
-is included in the repository in `hfMachineLearningTestData.trio`.
+The target data were generated using the computed history function feature of
+[SkySpark] 3.0.27. For transparency and replicability, the history function
+implementation is included in the repository in `hfMachineLearningTestData.trio`.
 
 [SkySpark]: https://skyfoundry.com/product "SkySpark software"
