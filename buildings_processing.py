@@ -12,6 +12,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import logging
 import torch
+from util import get_exp_dir
 
 PROJECT_DIRECTORY = pathlib.Path(__file__).resolve().parent
 
@@ -233,8 +234,7 @@ def input_data_split(data, configs):
     val_ratio = int(configs["data_split"].split(":")[1])/100
     test_ratio = int(configs["data_split"].split(":")[2])/100
 
-    file_prefix = os.path.join(configs["results_dir"], configs["arch_type"] + '_M' + str(configs["target_var"].replace(" ", "")) + '_T' + str(
-        configs["exp_id"]))
+    file_prefix = get_exp_dir(configs)
 
     if configs['train_val_split'] == 'Random':
         pathlib.Path(configs["data_dir"]).mkdir(parents=True, exist_ok=True)
@@ -458,8 +458,7 @@ def prep_for_rnn(configs, data):
         val_df.to_hdf(file, key='df', mode='w')
 
     elif not configs["run_train"] and configs["test_method"] == "internal":
-        local_results_dir = os.path.join(configs["results_dir"], configs["arch_type"] + '_M' + str(
-            configs["target_var"].replace(" ", "")) + '_T' + str(configs["exp_id"]))
+        local_results_dir = get_exp_dir(configs)
         temp_config_file = os.path.join(local_results_dir, "configs.json")
         with open(temp_config_file, 'r') as f:
             temp_configs = json.load(f)
@@ -540,8 +539,7 @@ def prep_for_seq2seq(configs, data):
         val_df.to_hdf(file, key='df', mode='w')
 
     elif not configs["run_train"] and configs["test_method"] == "internal":
-        local_results_dir = os.path.join(configs["results_dir"], configs["arch_type"] + '_M' + str(
-            configs["target_var"].replace(" ", "")) + '_T' + str(configs["exp_id"]))
+        local_results_dir = get_exp_dir(configs)
         temp_config_file = os.path.join(local_results_dir, "configs.json")
         with open(temp_config_file, 'r') as f:
             temp_configs = json.load(f)

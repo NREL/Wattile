@@ -7,6 +7,7 @@ import buildings_processing as bp
 import logging
 import os
 import pathlib
+import util
 
 
 class ConfigsError(Exception):
@@ -22,8 +23,7 @@ def main(configs):
     :return: None
     """
 
-    local_results_dir = os.path.join(configs["results_dir"], configs["arch_type"] + '_M' + str(
-        configs["target_var"].replace(" ", "")) + '_T' + str(configs["exp_id"]))
+    local_results_dir = util.get_exp_dir(configs)
 
     if configs["run_train"]:
         # Check the model training process
