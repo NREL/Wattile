@@ -383,6 +383,7 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
     :param num_train_data: (Float)
     :return: None
     """
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     num_epochs = num_epochs
     hidden_dim = int(configs['hidden_nodes'])
@@ -430,7 +431,7 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
             if configs["arch_type_variant"] == "vanilla":
                 model = rnn.RNNModel(input_dim, hidden_dim, layer_dim, output_dim)
             elif configs["arch_type_variant"] == "lstm":
-                model = lstm.LSTM_Model(input_dim, hidden_dim, layer_dim, output_dim)
+                model = lstm.LSTM_Model(input_dim, hidden_dim, layer_dim, output_dim, device=device)
             else:
                 raise ConfigsError(
                     "{} is not a supported architecture variant".format(configs["arch_type_variant"]))

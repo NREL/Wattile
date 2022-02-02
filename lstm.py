@@ -12,8 +12,7 @@ class LSTM_Model(nn.Module):
         # Number of hidden layers
         self.layer_dim = layer_dim
 
-        # Building the LSTM
-        # self.lstm = nn.LSTM(input_dim, hidden_dim, layer_dim, output_dim, batch_first=True)
+        #Building the LSTM
         self.lstm = nn.LSTM(input_dim, hidden_dim, layer_dim, batch_first=True)
 
         # Linear Layers
