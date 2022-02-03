@@ -61,6 +61,7 @@ def get_full_data(configs):
     # converting date time column into pandas datetime (raw format based on ISO 8601)
     df_inputdata['start'] = pd.to_datetime(df_inputdata.start, format="t:%Y-%m-%dT%H:%M:%S", exact=False)
     df_inputdata['end'] = pd.to_datetime(df_inputdata.end, format="t:%Y-%m-%dT%H:%M:%S", exact=False)
+    df_inputdata['end'] = pd.to_datetime(df_inputdata.end, format="t:%Y-%m-%dT%H:%M:%S%z", exact=False, utc=True)
 
     # creating thresholds dates from configs json file
     timestamp_start = pd.Timestamp(configs['start_year'], configs['start_month'], configs['start_day'], 0)
@@ -80,20 +81,20 @@ def get_full_data(configs):
     else:
         data_full_p = pd.DataFrame()
         data_full_t = pd.DataFrame()
-        for datatype in ["Predictors","Targets"]:
+        for datatype in df_inputdata.contentType.unique():
             
-            df_list_datatype = df_inputdata.loc[df_inputdata.type==datatype,:]
+            df_list_datatype = df_inputdata.loc[df_inputdata.contentType==datatype,:]
             
             for filepath in df_list_datatype.path:
                 
-                if datatype=="Predictors":
+                if datatype=="predictors":
                     logger.info("Pre-process: reading predictor file = {}".format(filepath.split(configs['data_dir'])[1]))
                     try:
                         data_full_p = pd.concat([data_full_p, pd.read_csv(filepath)])
                     except:
                         logger.info("Pre-process: error in read_csv with predictor file {}. not reading..".format(filepath.split(configs['data_dir'])[1]))
                         continue
-                elif datatype=="Targets":
+                elif datatype=="targets":
                     logger.info("Pre-process: reading target file = {}".format(filepath.split(configs['data_dir'])[1]))
                     try:
                         data_full_t = pd.concat([data_full_t, pd.read_csv(filepath)[['Timestamp', configs["target_var"]]]])
@@ -109,11 +110,7 @@ def get_full_data(configs):
         else:
             data_full = pd.merge(data_full_p, data_full_t, how='outer', on='Timestamp')
         
-    # removing trailing string " Denver" to convert timestamp to datetime format
-    # not sure this is the best approach though
-    data_full['Timestamp'] = data_full.Timestamp.str.rsplit(" ", 1, expand=True).iloc[:,0]
-    data_full['Timestamp'] = pd.to_datetime(data_full['Timestamp'], format="%Y-%m-%dT%H:%M:%S%z")
-    data_full['Timestamp'] = data_full['Timestamp'].apply(lambda t: t.tz_localize(None)) #localizing timestamp
+    data_full['Timestamp'] = pd.to_datetime(data_full['Timestamp'], format="%Y-%m-%dT%H:%M:%S%z", exact=False, utc=True)
     data_full = data_full.set_index('Timestamp')
 
     return data_full
