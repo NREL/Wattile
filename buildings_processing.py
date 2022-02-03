@@ -59,8 +59,7 @@ def get_full_data(configs):
     df_inputdata = pd.DataFrame(configs_input['files'])
 
     # converting date time column into pandas datetime (raw format based on ISO 8601)
-    df_inputdata['start'] = pd.to_datetime(df_inputdata.start, format="t:%Y-%m-%dT%H:%M:%S", exact=False)
-    df_inputdata['end'] = pd.to_datetime(df_inputdata.end, format="t:%Y-%m-%dT%H:%M:%S", exact=False)
+    df_inputdata['start'] = pd.to_datetime(df_inputdata.start, format="t:%Y-%m-%dT%H:%M:%S%z", exact=False, utc=True)
     df_inputdata['end'] = pd.to_datetime(df_inputdata.end, format="t:%Y-%m-%dT%H:%M:%S%z", exact=False, utc=True)
 
     # creating thresholds dates from configs json file
