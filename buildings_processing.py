@@ -57,27 +57,24 @@ def get_full_data(configs):
 
     # converting json into dataframe 
     df_inputdata = pd.DataFrame(configs_input['files'])
-    # this parsing below should not be this manual. needs better way to read differences between MDT and MST.
-    df_inputdata['start'] = df_inputdata['start'].str.rsplit(" ", 1, expand=True).iloc[:,0].values
-    df_inputdata['end'] = df_inputdata['end'].str.rsplit(" ", 1, expand=True).iloc[:,0].values
-    # converting date time column into pandas datetime
-    df_inputdata['start'] = pd.to_datetime(df_inputdata.start, format="s:%d-%b-%Y %a %H:%M:%S%p")
-    df_inputdata['end'] = pd.to_datetime(df_inputdata.end, format="s:%d-%b-%Y %a %H:%M:%S%p")
+
+    # converting date time column into pandas datetime (raw format based on ISO 8601)
+    df_inputdata['start'] = pd.to_datetime(df_inputdata.start, format="t:%Y-%m-%dT%H:%M:%S", exact=False)
+    df_inputdata['end'] = pd.to_datetime(df_inputdata.end, format="t:%Y-%m-%dT%H:%M:%S", exact=False)
+
     # creating thresholds dates from configs json file
     timestamp_start = pd.Timestamp(configs['start_year'], configs['start_month'], configs['start_day'], 0)
     if (configs['end_month']==12) & (configs['end_day']==31):
         timestamp_end = pd.Timestamp(configs['end_year']+1, 1, 1, 0)
     else:
         timestamp_end = pd.Timestamp(configs['end_year'], configs['end_month']+1, configs['end_day'], 0)
+
     # filtering input data based on user specified date period
     df_inputdata = df_inputdata.loc[ (df_inputdata.start.dt.date>=timestamp_start) & (df_inputdata.end.dt.date<=timestamp_end) , :]
-    df_inputdata['type'] = ""
-    df_inputdata.loc[df_inputdata.filename.str.contains("Targets"), "type"] = "Targets"
-    df_inputdata.loc[df_inputdata.filename.str.contains("Predictors"), "type"] = "Predictors"
     df_inputdata['path'] = configs['data_dir'] + "/" + configs['building'] + "/" + df_inputdata['filename']
     
     if df_inputdata.empty:
-        logger.info("Pre-process: measurements during the specified year {} are empty.".format(iterable))
+        logger.info("Pre-process: measurements during the specified time period ({} to {}) are empty.".format(timestamp_start, timestamp_end))
         sys.exit()
 
     else:
@@ -112,11 +109,12 @@ def get_full_data(configs):
         else:
             data_full = pd.merge(data_full_p, data_full_t, how='outer', on='Timestamp')
         
-    # removing trailing string "-0?:00 Denver" to convert timestamp to datetime format
+    # removing trailing string " Denver" to convert timestamp to datetime format
     # not sure this is the best approach though
-    data_full['Timestamp'] = data_full.Timestamp.str.rsplit("-", 1, expand=True).iloc[:,0]
+    data_full['Timestamp'] = data_full.Timestamp.str.rsplit(" ", 1, expand=True).iloc[:,0]
+    data_full['Timestamp'] = pd.to_datetime(data_full['Timestamp'], format="%Y-%m-%dT%H:%M:%S%z")
+    data_full['Timestamp'] = data_full['Timestamp'].apply(lambda t: t.tz_localize(None)) #localizing timestamp
     data_full = data_full.set_index('Timestamp')
-    data_full.index = pd.to_datetime(data_full.index, format='%Y-%m-%dT%H:%M:%S')
 
     return data_full
 
