@@ -15,23 +15,27 @@ but this is not strictly required.
 
 ### CSV Data Files ###
 
-Each CSV file contains a single "Timestamp" column, which by convention must be
-the first column, and one or more value columns. In the current implementation,
+Each CSV file contains a single "Timestamp" column, which by convention is the
+first column, and one or more value columns. In the current implementation,
 separate CSV files are provided for target and predictor variables (which
 facilitates reuse of predictor variables for many different targets). One or
 more CSV files must be provided for both targets and predictors. The files must
 have the following characteristics:
 
 - The timestamp column must have the header "Timestamp" and contains datetimes
-  in the ISO 8601 standard format, including time zone offset and (optionally)
+  in the [ISO 8601] standard format, including time zone offset and (optionally)
   time zone name
 - Value columns contain numeric data and may have arbitrary names
 - Each file contains only target variables or only predictor variables
 - Time ranges within each CSV file are contiguous and do not overlap with other
   CSV files of the same content type (targets or predictors)
 
-After parsing, the range of timestamps common to all variables will be used in
-model training.
+[ISO 8601]: https://en.wikipedia.org/wiki/ISO_8601 "Wikipedia entry for ISO 8601"
+
+Number of files, time ranges and timestamps for the targets and predictors files
+are not required to be identical. Target and predictor data are ingested
+separately. After parsing, the range of timestamps common to all variables (both
+targets and predictors) is used in model training.
 
 ### JSON Configuration File ###
 
