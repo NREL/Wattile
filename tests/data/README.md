@@ -32,7 +32,7 @@ have the following characteristics:
 
 [ISO 8601]: https://en.wikipedia.org/wiki/ISO_8601 "Wikipedia entry for ISO 8601"
 
-Number of files, time ranges and timestamps for the targets and predictors files
+Number of files, time ranges, and timestamps for the target and predictor files
 are not required to be identical. Target and predictor data are ingested
 separately. After parsing, the range of timestamps common to all variables (both
 targets and predictors) is used in model training.
