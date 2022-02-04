@@ -116,7 +116,7 @@ def main(configs):
             rnn_mod.main(train_df, val_df, configs)
 
         # Sequence to sequence model
-        elif configs["arch_version"] == 5:
+        elif (configs["arch_version"] == 5) or (configs["arch_version"] == 6):
             # Prepare data for the RNN model type
             train_df, val_df = bp.prep_for_seq2seq(configs, data)
             rnn_mod.main(train_df, val_df, configs)

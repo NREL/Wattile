@@ -4,7 +4,7 @@ import glob
 import sys
 import pandas as pd
 import datetime as dt
-import tables
+# import tables
 from pandas.tseries.holiday import USFederalHolidayCalendar, get_calendar
 import json
 import os
