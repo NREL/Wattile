@@ -75,7 +75,7 @@ def get_full_data(configs):
     df_inputdata['path'] = configs['data_dir'] + "/" + configs['building'] + "/" + df_inputdata['filename']
     
     if df_inputdata.empty:
-        logging.debug("Pre-process: measurements during the specified time period ({} to {}) are empty.".format(timestamp_start, timestamp_end))
+        logger.info("Pre-process: measurements during the specified time period ({} to {}) are empty.".format(timestamp_start, timestamp_end))
         sys.exit()
 
     else:
@@ -88,24 +88,24 @@ def get_full_data(configs):
             for filepath in df_list_datatype.path:
                 
                 if datatype=="predictors":
-                    logging.debug("Pre-process: reading predictor file = {}".format(filepath.split(configs['data_dir'])[1]))
+                    logger.info("Pre-process: reading predictor file = {}".format(filepath.split(configs['data_dir'])[1]))
                     try:
                         data_full_p = pd.concat([data_full_p, pd.read_csv(filepath)])
                     except:
-                        logging.debug("Pre-process: error in read_csv with predictor file {}. not reading..".format(filepath.split(configs['data_dir'])[1]))
+                        logger.info("Pre-process: error in read_csv with predictor file {}. not reading..".format(filepath.split(configs['data_dir'])[1]))
                         continue
                 elif datatype=="targets":
-                    logging.debug("Pre-process: reading target file = {}".format(filepath.split(configs['data_dir'])[1]))
+                    logger.info("Pre-process: reading target file = {}".format(filepath.split(configs['data_dir'])[1]))
                     try:
                         data_full_t = pd.concat([data_full_t, pd.read_csv(filepath)[['Timestamp', configs["target_var"]]]])
                     except:
-                        logging.debug("Pre-process: error in read_csv with target file {}. not reading..".format(filepath.split(configs['data_dir'])[1]))
+                        logger.info("Pre-process: error in read_csv with target file {}. not reading..".format(filepath.split(configs['data_dir'])[1]))
                         continue
                 else:
-                    logging.debug("Pre-process: input file not properly differentiated between Predictors and Targets")
+                    logger.info("Pre-process: input file not properly differentiated between Predictors and Targets")
                     
         if (data_full_p.empty)|(data_full_t.empty):
-            logging.debug("Pre-process: predictor and/or target dataframe is empty (even though files exist), so exiting..")
+            logger.info("Pre-process: predictor and/or target dataframe is empty (even though files exist), so exiting..")
             sys.exit()
         else:
             data_full = pd.merge(data_full_p, data_full_t, how='outer', on='Timestamp')
