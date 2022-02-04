@@ -51,60 +51,65 @@ def get_full_data(configs):
     with open(configs_file_inputdata, "r") as read_file:
         configs_input = json.load(read_file)
 
+    # creating paths to each file based on file list in json 
+    list_paths = []
+    for entry in configs_input['files']:
+        list_paths.append(configs['data_dir'] + "/" + configs['building'] + "/" + entry['filename'])
+
     # converting json into dataframe 
     df_inputdata = pd.DataFrame(configs_input['files'])
-        
+
     # converting date time column into pandas datetime (raw format based on ISO 8601)
     df_inputdata['start'] = pd.to_datetime(df_inputdata.start, format="t:%Y-%m-%dT%H:%M:%S%z", exact=False, utc=True)
     df_inputdata['end'] = pd.to_datetime(df_inputdata.end, format="t:%Y-%m-%dT%H:%M:%S%z", exact=False, utc=True)
-    
+
     # creating thresholds dates from configs json file
     timestamp_start = pd.Timestamp(configs['start_year'], configs['start_month'], configs['start_day'], 0)
     if (configs['end_month']==12) & (configs['end_day']==31):
         timestamp_end = pd.Timestamp(configs['end_year']+1, 1, 1, 0)
     else:
         timestamp_end = pd.Timestamp(configs['end_year'], configs['end_month']+1, configs['end_day'], 0)
-        
+
     # filtering input data based on user specified date period
     df_inputdata = df_inputdata.loc[ (df_inputdata.start.dt.date>=timestamp_start) & (df_inputdata.end.dt.date<=timestamp_end) , :]
     df_inputdata['path'] = configs['data_dir'] + "/" + configs['building'] + "/" + df_inputdata['filename']
-
+    
     if df_inputdata.empty:
-        logger.info("Pre-process: measurements during the specified time period ({} to {}) are empty.".format(timestamp_start, timestamp_end))
+        logging.debug("Pre-process: measurements during the specified time period ({} to {}) are empty.".format(timestamp_start, timestamp_end))
         sys.exit()
 
     else:
         data_full_p = pd.DataFrame()
         data_full_t = pd.DataFrame()
         for datatype in df_inputdata.contentType.unique():
-
+            
             df_list_datatype = df_inputdata.loc[df_inputdata.contentType==datatype,:]
-
+            
             for filepath in df_list_datatype.path:
-
+                
                 if datatype=="predictors":
-                    logger.info("Pre-process: reading predictor file = {}".format(filepath.split(configs['data_dir'])[1]))
+                    logging.debug("Pre-process: reading predictor file = {}".format(filepath.split(configs['data_dir'])[1]))
                     try:
                         data_full_p = pd.concat([data_full_p, pd.read_csv(filepath)])
                     except:
-                        logger.info("Pre-process: error in read_csv with predictor file {}. not reading..".format(filepath.split(configs['data_dir'])[1]))
+                        logging.debug("Pre-process: error in read_csv with predictor file {}. not reading..".format(filepath.split(configs['data_dir'])[1]))
                         continue
                 elif datatype=="targets":
-                    logger.info("Pre-process: reading target file = {}".format(filepath.split(configs['data_dir'])[1]))
+                    logging.debug("Pre-process: reading target file = {}".format(filepath.split(configs['data_dir'])[1]))
                     try:
                         data_full_t = pd.concat([data_full_t, pd.read_csv(filepath)[['Timestamp', configs["target_var"]]]])
                     except:
-                        logger.info("Pre-process: error in read_csv with target file {}. not reading..".format(filepath.split(configs['data_dir'])[1]))
+                        logging.debug("Pre-process: error in read_csv with target file {}. not reading..".format(filepath.split(configs['data_dir'])[1]))
                         continue
                 else:
-                    logger.info("Pre-process: input file not properly differentiated between Predictors and Targets")
-
+                    logging.debug("Pre-process: input file not properly differentiated between Predictors and Targets")
+                    
         if (data_full_p.empty)|(data_full_t.empty):
-            logger.info("Pre-process: predictor and/or target dataframe is empty (even though files exist), so exiting..")
+            logging.debug("Pre-process: predictor and/or target dataframe is empty (even though files exist), so exiting..")
             sys.exit()
         else:
             data_full = pd.merge(data_full_p, data_full_t, how='outer', on='Timestamp')
-
+        
     data_full['Timestamp'] = pd.to_datetime(data_full['Timestamp'], format="%Y-%m-%dT%H:%M:%S%z", exact=False, utc=True)
     data_full = data_full.set_index('Timestamp')
 
