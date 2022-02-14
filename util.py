@@ -5,6 +5,8 @@ from functools import reduce
 import torch
 import numpy as np
 
+import os
+from pathlib import Path
 
 
 
@@ -30,3 +32,21 @@ def tile(a, dim, n_tile):
     a = a.repeat(*(repeat_idx))
     order_index = torch.LongTensor(np.concatenate([init_dim * np.arange(n_tile) + i for i in range(init_dim)]))
     return torch.index_select(a, dim, order_index)
+
+def get_exp_dir(configs):
+    """
+    Get absolute path of experiment results.
+
+    Assumes config "results_dir" is relative to the project dir.
+
+    :param dict configs: experiment configs.
+    :return: absolute path of experiment results.
+    :rtype: Path
+    """
+    project_dir = Path(__file__).resolve().parent
+    results_dir = project_dir / configs["results_dir"]
+
+    clean_target_var = configs["target_var"].replace(" ", "")
+    exp_dir_name = f"{configs['arch_type']}_M{clean_target_var}_T{configs['exp_id']}"
+
+    return results_dir / exp_dir_name

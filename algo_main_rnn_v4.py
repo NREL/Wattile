@@ -2,7 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 import json
-from util import prtime, factors, tile
+from util import prtime, factors, tile, get_exp_dir
 import rnn
 import lstm
 
@@ -1068,19 +1068,14 @@ def main(train_df, val_df, configs):
     tr_desired_batch_size = configs['train_batch_size']
     te_desired_batch_size = configs['val_batch_size']
     building_ID = configs["building"]
-    exp_id = configs['exp_id']
-    arch_type = configs['arch_type']
-    results_dir = configs["results_dir"]
 
     # Make results directory
-    if not os.path.exists(results_dir):
-        os.mkdir(results_dir)
     global file_prefix
-    file_prefix = os.path.join(results_dir, arch_type + '_M' + str(configs["target_var"].replace(" ", "")) + '_T' + str(
-        exp_id))
+    file_prefix = get_exp_dir(configs)
+    file_prefix.mkdir(parents=True, exist_ok=True)
 
     # Create writer object for TensorBoard
-    writer_path = file_prefix
+    writer_path = str(file_prefix)
     writer = SummaryWriter(writer_path)
     logger.info("Writer path: {}".format(writer_path))
 

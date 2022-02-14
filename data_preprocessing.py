@@ -9,7 +9,7 @@ import re
 from scipy import stats
 from dateutil.parser import parse
 from functools import reduce
-from util import prtime
+from util import prtime, get_exp_dir
 import time
 import json
 import glob
@@ -637,10 +637,9 @@ def main(configs):
 
     # Define the Directories to save the trained model and results.
     # Create the dir if it does not exist using pathlib
-    RESULTS_DIR = 'EnergyForecasting_Results/' + arch_type + '_M' + str(train_exp_id) + '_T' + str(
-        exp_id)
+    RESULTS_DIR = get_exp_dir(configs)
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
-    pathlib.Path(RESULTS_DIR).mkdir(parents=True, exist_ok=True)
     log_file = RESULTS_DIR + '/' + 'console.log'
     # print("Writing print statements to ", log_file)
     # sys.stdout = open(log_file, 'w')  # Redirect print statement's outputs to file
