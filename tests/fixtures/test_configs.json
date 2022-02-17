@@ -78,9 +78,6 @@
   "step_size": 75
  },
  "smoothing_alpha": 0.001,
- "test_method": "internal",
- "external_test": {
-  "year": "2020",
-  "month": [1, 2, 3, 4, 5, 6]
- }
+ "test_method": "external",
+ "plot_results": false
 }

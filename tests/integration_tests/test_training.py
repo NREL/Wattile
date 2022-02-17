@@ -2,8 +2,7 @@ import json
 import pathlib
 import entry_point as epb
 import pytest
-from pathlib import Path
-import os
+from util import get_exp_dir 
 
 TESTS_PATH = pathlib.Path(__file__).parents[1]
 TESTS_FIXTURES_PATH = TESTS_PATH / "fixtures"
@@ -54,10 +53,8 @@ def test_model_trains(config_for_tests, tmpdir, config_patch):
     epb.main(config_for_tests)
 
     # check result file were created
-    results_dir = os.path.join(config_for_tests["results_dir"], config_for_tests["arch_type"] + '_M' + str(
-        config_for_tests["target_var"].replace(" ", "")) + '_T' + str(config_for_tests["exp_id"]))
-    results_dir = Path(results_dir).resolve()
+    exp_dir = get_exp_dir(config_for_tests)
 
-    assert results_dir / "output.out"
-    assert results_dir / "torch_model"
-    assert results_dir / "train_stats.json"
+    assert (exp_dir / "output.out").exists()
+    assert (exp_dir / "torch_model").exists()
+    assert (exp_dir / "train_stats.json").exists()

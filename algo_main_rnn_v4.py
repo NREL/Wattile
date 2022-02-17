@@ -728,48 +728,52 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
                              errors["ace"],
                              errors["is"]])
 
-        if configs["test_method"] == "external":
-            building = configs["building"]
-            year = configs["external_test"]["year"]
-            month = configs["external_test"]["month"]
-            file = os.path.join(configs["data_dir"], configs["building"], "{}_external_test.h5".format(configs["target_var"]))
-            test_data = pd.read_hdf(file, key='df')
-            index = test_data.index
-        else:
-            test_data = pd.read_hdf(os.path.join(file_prefix, "internal_test.h5"), key='df')
+        if configs.get("plot_results", True):
+            _plot_results(configs, targets, predictions)
+
+
+def _plot_results(configs, targets, predictions):
+    """Plot some stats about the predictions
+    """
+    if configs["test_method"] == "external":
+        file = os.path.join(configs["data_dir"], configs["building"], "{}_external_test.h5".format(configs["target_var"]))
+        test_data = pd.read_hdf(file, key='df')
+        index = test_data.index
+    else:
+        test_data = pd.read_hdf(os.path.join(file_prefix, "internal_test.h5"), key='df')
 
 
 
-        # Plot the results of the test set
-        cmap = plt.get_cmap('Reds')
-        fig, ax1 = plt.subplots(figsize=(20, 4))
-        ax1.plot(test_data.index, targets.iloc[:,0], label="Actual Demand", color='black')
-        ax1.plot(test_data.index, predictions.iloc[:, int(len(configs["qs"]) / 2)], label='q = 0.5 forecast', color="red")
-        for i, q in enumerate(configs["qs"]):
-            if q == 0.5:
-                break
-            ax1.fill_between(test_data.index, predictions.iloc[:, i], predictions.iloc[:, -(i+1)], color=cmap(q), alpha=1,
-                             label="{}% PI".format(round((configs["qs"][-(i + 1)] - q) * 100)), lw=0)
-        plt.xticks(rotation=0)
-        ax1.set_ylabel(configs["target_var"])
-        ax1.legend()
-        plt.show()
-        #fig.savefig(os.path.join(configs["results_dir"], "{}_test.png".format(configs["target_var"])))
+    # Plot the results of the test set
+    cmap = plt.get_cmap('Reds')
+    fig, ax1 = plt.subplots(figsize=(20, 4))
+    ax1.plot(test_data.index, targets.iloc[:,0], label="Actual Demand", color='black')
+    ax1.plot(test_data.index, predictions.iloc[:, int(len(configs["qs"]) / 2)], label='q = 0.5 forecast', color="red")
+    for i, q in enumerate(configs["qs"]):
+        if q == 0.5:
+            break
+        ax1.fill_between(test_data.index, predictions.iloc[:, i], predictions.iloc[:, -(i+1)], color=cmap(q), alpha=1,
+                            label="{}% PI".format(round((configs["qs"][-(i + 1)] - q) * 100)), lw=0)
+    plt.xticks(rotation=0)
+    ax1.set_ylabel(configs["target_var"])
+    ax1.legend()
+    plt.show()
+    #fig.savefig(os.path.join(configs["results_dir"], "{}_test.png".format(configs["target_var"])))
 
-        # Plotting residuals for the test set
-        residuals = predictions.iloc[:, int(len(configs["qs"])/2)] - targets.iloc[:, int(len(configs["qs"])/2)]
-        fig, ax2 = plt.subplots()
-        ax2.scatter(test_data.index, residuals.values, s=0.5, alpha=0.3, color="blue")
-        ax2.set_ylabel('Median Forecast Residual (kW)')
-        plt.show()
-        print("Done")
+    # Plotting residuals for the test set
+    residuals = predictions.iloc[:, int(len(configs["qs"])/2)] - targets.iloc[:, int(len(configs["qs"])/2)]
+    fig, ax2 = plt.subplots()
+    ax2.scatter(test_data.index, residuals.values, s=0.5, alpha=0.3, color="blue")
+    ax2.set_ylabel('Median Forecast Residual (kW)')
+    plt.show()
+    print("Done")
 
-        # Plotting out of bounds
-        fig, ax3 = plt.subplots()
-        mask = ~np.logical_and(predictions.iloc[:,0] < targets.iloc[:, int(len(configs["qs"])/2)], predictions.iloc[:,-1] > targets.iloc[:, int(len(configs["qs"])/2)])
-        dates = test_data.index[mask]
-        plt.vlines(dates, 0, 1, alpha=0.05)
-        plt.show()
+    # Plotting out of bounds
+    fig, ax3 = plt.subplots()
+    mask = ~np.logical_and(predictions.iloc[:,0] < targets.iloc[:, int(len(configs["qs"])/2)], predictions.iloc[:,-1] > targets.iloc[:, int(len(configs["qs"])/2)])
+    dates = test_data.index[mask]
+    plt.vlines(dates, 0, 1, alpha=0.05)
+    plt.show()
 
 
 def eval_trained_model(file_prefix, train_data, train_batch_size, configs):

@@ -769,70 +769,73 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
                              errors["ace"],
                              errors["is"]])
 
-        # # Plotting
-        if configs["test_method"] == "external":
-            building = configs["building"]
-            year = configs["external_test"]["year"]
-            month = configs["external_test"]["month"]
-            file = os.path.join(configs["data_dir"], configs["building"], "{}_external_test.h5".format(configs["target_var"]))
-            test_data = pd.read_hdf(file, key='df')
-            index = test_data.index
-        else:
-             test_data = pd.read_hdf(os.path.join(file_prefix, "internal_test.h5"), key='df')
+        if configs.get("plot_results", True):
+            _plot_results(configs, measured, predictions)
 
-        num_timestamps = configs["S2S_stagger"]["initial_num"] + configs["S2S_stagger"]["secondary_num"]
-        data = np.array(predictions)
-        data = data.reshape((data.shape[0], len(configs["qs"]), num_timestamps))
+def _plot_results(configs, measured, predictions):
+    """
+    Plot some stats about the predictions
+    """    # # Plotting
+    if configs["test_method"] == "external":
+        file = os.path.join(configs["data_dir"], configs["building"], "{}_external_test.h5".format(configs["target_var"]))
+        test_data = pd.read_hdf(file, key='df')
+        index = test_data.index
+    else:
+            test_data = pd.read_hdf(os.path.join(file_prefix, "internal_test.h5"), key='df')
 
-        # Plotting the test set with ALL of the sequence forecasts
-        fig, ax1 = plt.subplots()
-        cmap = plt.get_cmap("Blues")
-        plt.rc('font', family='serif')
-        # for j in range(0, test_data.shape[0]-1):
-        # for j in range(1515, 1528):
-        for j in range(1, 100):
-            time_index = pd.date_range(start=test_data.index[j], periods=configs["S2S_stagger"]["initial_num"], freq="{}min".format(configs["resample_freq"]))
-            ax1.plot(time_index, measured[j, :], color='black', lw=1, zorder=5)
-            if j ==70:
-                ax1.plot(time_index, measured[j, :], label="Load", color='black', lw=1, zorder=5)
-                ax1.plot(time_index, data[j, int(len(configs["qs"]) / 2), :], label='Median Predicted Load', color="Blue", zorder=5)
-                # for i in range(int(len(configs["qs"])/2) - 1,-1,-1):
-                #     q = configs["qs"][i]
-                #     # ax1.plot(time_index, data[j, i, :], color='black', lw=0.3, alpha=1, zorder=i)
-                #     # ax1.plot(time_index, data[j, -(i + 1), :], color='black', lw=0.3, alpha=1, zorder=i)
-                #     ax1.fill_between(time_index, data[j, i, :], data[j, -(i + 1), :], color=cmap(q), alpha=1,
-                #                      label="{}% PI".format(round((configs["qs"][-(i + 1)] - q) * 100)), zorder=i)
+    num_timestamps = configs["S2S_stagger"]["initial_num"] + configs["S2S_stagger"]["secondary_num"]
+    data = np.array(predictions)
+    data = data.reshape((data.shape[0], len(configs["qs"]), num_timestamps))
 
-        # plt.axvline(test_data.index[1522], c="black", ls="--", lw=1, zorder=6)
-        # plt.text(test_data.index[1522], 50, r' Forecast generation time $t_{gen}$', rotation=0, fontsize=8)
+    # Plotting the test set with ALL of the sequence forecasts
+    fig, ax1 = plt.subplots()
+    cmap = plt.get_cmap("Blues")
+    plt.rc('font', family='serif')
+    # for j in range(0, test_data.shape[0]-1):
+    # for j in range(1515, 1528):
+    for j in range(1, 100):
+        time_index = pd.date_range(start=test_data.index[j], periods=configs["S2S_stagger"]["initial_num"], freq="{}min".format(configs["resample_freq"]))
+        ax1.plot(time_index, measured[j, :], color='black', lw=1, zorder=5)
+        if j ==70:
+            ax1.plot(time_index, measured[j, :], label="Load", color='black', lw=1, zorder=5)
+            ax1.plot(time_index, data[j, int(len(configs["qs"]) / 2), :], label='Median Predicted Load', color="Blue", zorder=5)
+            # for i in range(int(len(configs["qs"])/2) - 1,-1,-1):
+            #     q = configs["qs"][i]
+            #     # ax1.plot(time_index, data[j, i, :], color='black', lw=0.3, alpha=1, zorder=i)
+            #     # ax1.plot(time_index, data[j, -(i + 1), :], color='black', lw=0.3, alpha=1, zorder=i)
+            #     ax1.fill_between(time_index, data[j, i, :], data[j, -(i + 1), :], color=cmap(q), alpha=1,
+            #                      label="{}% PI".format(round((configs["qs"][-(i + 1)] - q) * 100)), zorder=i)
 
-        # plt.xticks(rotation=45, ha="right", va="top", fontsize=8)
-        myFmt = mdates.DateFormatter('%H:%M:%S\n%m/%d/%y')
-        ax1.xaxis.set_major_formatter(myFmt)
-        plt.xticks(fontsize=8)
-        plt.yticks(fontsize=8)
-        plt.ylabel("Cafe Main Power (kW)", fontsize=8)
-        plt.xlabel("Date & Time", fontsize=8)
-        ax1.legend(loc="upper center", fontsize=8)
+    # plt.axvline(test_data.index[1522], c="black", ls="--", lw=1, zorder=6)
+    # plt.text(test_data.index[1522], 50, r' Forecast generation time $t_{gen}$', rotation=0, fontsize=8)
 
-        plt.show()
-        #
-        # # Plotting residuals vs time-step-ahead forecast
-        # residuals = data[:,3,:] - measured
-        # fig, ax2 = plt.subplots()
-        # for i in range(0,residuals.shape[1]):
-        #     ax2.scatter(np.ones_like(residuals[:,i])*i, residuals[:,i], s=0.5, color="black")
-        # ax2.set_xlabel('Forecast steps ahead')
-        # ax2.set_ylabel('Residual')
-        # plt.show()
-        #
-        # # Plot residuals for all times in test set
-        # fig, ax3 = plt.subplots()
-        # ax3.scatter(test_data.index, residuals[:,-1], s=0.5, alpha=0.5, color="blue")
-        # ax3.set_ylabel('Residual of 18hr ahead forecast')
-        # # ax3.scatter(processed.index[np.logical_and(processed.index.weekday == 5, processed.index.hour == 12)],
-        # #             residuals[:, -1][np.logical_and(processed.index.weekday == 5, processed.index.hour == 12)],
-        # #             s=20, alpha=0.5, color="black")
+    # plt.xticks(rotation=45, ha="right", va="top", fontsize=8)
+    myFmt = mdates.DateFormatter('%H:%M:%S\n%m/%d/%y')
+    ax1.xaxis.set_major_formatter(myFmt)
+    plt.xticks(fontsize=8)
+    plt.yticks(fontsize=8)
+    plt.ylabel("Cafe Main Power (kW)", fontsize=8)
+    plt.xlabel("Date & Time", fontsize=8)
+    ax1.legend(loc="upper center", fontsize=8)
+
+    plt.show()
+    #
+    # # Plotting residuals vs time-step-ahead forecast
+    # residuals = data[:,3,:] - measured
+    # fig, ax2 = plt.subplots()
+    # for i in range(0,residuals.shape[1]):
+    #     ax2.scatter(np.ones_like(residuals[:,i])*i, residuals[:,i], s=0.5, color="black")
+    # ax2.set_xlabel('Forecast steps ahead')
+    # ax2.set_ylabel('Residual')
+    # plt.show()
+    #
+    # # Plot residuals for all times in test set
+    # fig, ax3 = plt.subplots()
+    # ax3.scatter(test_data.index, residuals[:,-1], s=0.5, alpha=0.5, color="blue")
+    # ax3.set_ylabel('Residual of 18hr ahead forecast')
+    # # ax3.scatter(processed.index[np.logical_and(processed.index.weekday == 5, processed.index.hour == 12)],
+    # #             residuals[:, -1][np.logical_and(processed.index.weekday == 5, processed.index.hour == 12)],
+    # #             s=20, alpha=0.5, color="black")
 
 
 def eval_trained_model(file_prefix, train_data, train_batch_size, configs):
