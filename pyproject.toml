@@ -5,7 +5,7 @@ description = ""
 authors = ["Your Name <you@example.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.6.2"
+python = "^3.7.0"
 pandas = "^1.1"
 requests = "^2.21.0"
 scipy = "1.1.0"
@@ -16,6 +16,8 @@ psutil = "^5.8.0"
 matplotlib = "^3.0"
 torch = "^1.9.0"
 tensorboard = "^2.8.0"
+Pillow = "^9.0.0"
+numpy = "^1.21"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
