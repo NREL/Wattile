@@ -432,7 +432,7 @@ def prep_for_rnn(configs, data):
     :return: train and val DataFrames
     """
 
-    if configs["run_train"]:
+    if configs["use_case"] == "train":
         configs['input_dim'] = data.shape[1] - 1
         logger.info("Number of features: {}".format(configs['input_dim']))
         logger.debug("Features: {}".format(data.columns.values))
@@ -443,7 +443,7 @@ def prep_for_rnn(configs, data):
         # Split data into train/val/test sets
         train_df, val_df = input_data_split(data, configs)
 
-    elif not configs["run_train"] and configs["test_method"] == "external":
+    elif configs["test_method"] == "external":
         configs['input_dim'] = data.shape[1] - 1
         logger.info("Number of features: {}".format(configs['input_dim']))
         logger.debug("Features: {}".format(data.columns.values))
@@ -457,7 +457,7 @@ def prep_for_rnn(configs, data):
         file = os.path.join(configs["data_dir"], configs["building"], "{}_external_test.h5".format(configs["target_var"]))
         val_df.to_hdf(file, key='df', mode='w')
 
-    elif not configs["run_train"] and configs["test_method"] == "internal":
+    elif configs["test_method"] == "internal":
         local_results_dir = get_exp_dir(configs)
         temp_config_file = os.path.join(local_results_dir, "configs.json")
         with open(temp_config_file, 'r') as f:
@@ -519,7 +519,7 @@ def prep_for_seq2seq(configs, data):
     :return: train and val DataFrames
     """
 
-    if configs["run_train"]:
+    if configs["use_case"] == "train":
         configs['input_dim'] = data.shape[1] - 1
         logger.info("Number of features: {}".format(configs['input_dim']))
 
@@ -527,7 +527,7 @@ def prep_for_seq2seq(configs, data):
 
         train_df, val_df = input_data_split(data, configs)
 
-    elif not configs["run_train"] and configs["test_method"] == "external":
+    elif configs["test_method"] == "external":
         configs['input_dim'] = data.shape[1] - 1
         logger.info("Number of features: {}".format(configs['input_dim']))
 
@@ -538,7 +538,7 @@ def prep_for_seq2seq(configs, data):
         file = os.path.join(configs["data_dir"], configs["building"], "{}_external_test.h5".format(configs["target_var"]))
         val_df.to_hdf(file, key='df', mode='w')
 
-    elif not configs["run_train"] and configs["test_method"] == "internal":
+    elif configs["test_method"] == "internal":
         local_results_dir = get_exp_dir(configs)
         temp_config_file = os.path.join(local_results_dir, "configs.json")
         with open(temp_config_file, 'r') as f:

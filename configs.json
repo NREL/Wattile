@@ -62,7 +62,7 @@
   0.95,
   0.975
  ],
- "run_train": true,
+ "use_case": "train",
  "run_resume": false,
  "num_epochs": 100,
  "weight_decay": 0.001,

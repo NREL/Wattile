@@ -59,7 +59,7 @@ def create_input_dataframe(configs):
         configs['target_feat_name'] = [configs['target_var']]
 
     # Get the dataset
-    if configs["run_train"] or configs["test_method"] == "external":
+    if configs["use_case"] == "train" or configs["test_method"] == "external":
         data_full = bp.get_full_data(configs)
     
     elif configs["test_method"] == "internal":
@@ -69,7 +69,7 @@ def create_input_dataframe(configs):
          raise ConfigsError("run_train is FALSE but test_method designated in configs.json is not understood")
 
     # Do some preprocessing, but only if the dataset needs it (i.e. it is not an
-    if configs["run_train"] or (not configs["run_train"] and configs["test_method"] == "external"):
+    if configs["use_case"] == "train" or configs["test_method"] == "external":
         # Remove all data columns we dont care about
         important_vars = configs['weather_include'] + [configs['target_var']]
         data = data_full[important_vars]
@@ -105,7 +105,9 @@ def run_model(configs, data):
     """
     local_results_dir = util.get_exp_dir(configs)
 
-    if configs["run_train"]:
+    local_results_dir = util.get_exp_dir(configs)
+
+    if configs["use_case"] == "train":
         # Check the model training process
         torch_file = os.path.join(local_results_dir, 'torch_model')
         if os.path.exists(torch_file):
@@ -119,7 +121,7 @@ def run_model(configs, data):
             if configs["run_resume"]:
                 configs["run_resume"] = False
                 print("Model for {} doesnt exist yet. Resetting run_resume to False".format(configs["target_var"]))
-
+                
     # Choose what ML architecture to use and execute the corresponding script
     if configs['arch_type'] == 'RNN':
         # What RNN version you are implementing? Specified in configs.

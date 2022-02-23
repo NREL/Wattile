@@ -43,7 +43,7 @@ def size_the_batches(train_data, val_data, tr_desired_batch_size, te_desired_bat
     :return:
     """
 
-    if configs["run_train"]:
+    if configs["use_case"] == "train":
         # Find factors of the length of train and val df's and pick the closest one to the requested batch sizes
         train_bth = factors(train_data.shape[0])
         train_num_batches = min(train_bth, key=lambda x: abs(x - tr_desired_batch_size))
@@ -1074,7 +1074,7 @@ def main(train_df, val_df, configs):
     """
 
     transformation_method = configs['transformation_method']
-    run_train = configs['run_train']
+    run_train = configs["use_case"] == "train"
     num_epochs = configs['num_epochs']
     run_resume = configs['run_resume']
     tr_desired_batch_size = configs['train_batch_size']
