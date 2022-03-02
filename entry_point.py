@@ -67,17 +67,14 @@ def main(configs):
         configs['target_feat_name'] = [configs['target_var']]
 
     # Get the dataset
-    if configs["run_train"]:
+    if configs["run_train"] or configs["test_method"] == "external":
         data_full = bp.get_full_data(configs)
+    
+    elif configs["test_method"] == "internal":
+        data_full = pd.read_hdf(os.path.join(local_results_dir, "internal_test.h5"))
 
     else:
-        if configs["test_method"] == "external":
-            data_full = bp.get_test_data(configs["building"], configs["external_test"]["year"],
-                                      configs["external_test"]["month"], configs["data_dir"])
-        elif configs["test_method"] == "internal":
-            data_full = pd.read_hdf(os.path.join(local_results_dir, "internal_test.h5"))
-        else:
-            raise ConfigsError("run_train is FALSE but test_method designated in configs.json is not understood")
+         raise ConfigsError("run_train is FALSE but test_method designated in configs.json is not understood")
 
     # Do some preprocessing, but only if the dataset needs it (i.e. it is not an
     if configs["run_train"] or (not configs["run_train"] and configs["test_method"] == "external"):
