@@ -781,6 +781,54 @@ def run_validation(val_loader, val_df, writer, transformation_method, configs, v
     if configs.get("plot_results", True):
         _plot_results(configs, measured, predictions)
 
+
+def run_prediction(val_loader, val_df, writer, transformation_method, configs, val_batch_size, seq_dim):
+    torch_model = torch.load(os.path.join(file_prefix, 'torch_model'))
+    model = torch_model['torch_model']
+    model.eval()
+
+    logger.info("Loaded model from file, given run_train=False\n")
+
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    with torch.no_grad():
+        preds = []
+        for (feats, v) in val_loader:
+            features = Variable(feats.view(-1, seq_dim, configs['input_dim']))
+            outputs = model(features)
+            preds.append(outputs.cpu().numpy())
+
+        file_loc = os.path.join(file_prefix, "train_stats.json")
+        with open(file_loc, 'r') as f:
+            train_stats = json.load(f)
+
+        semifinal_preds = np.concatenate(preds)
+
+        # Get normalization statistics
+        train_max = pd.DataFrame(train_stats['train_max'], index=[1]).iloc[0]
+        train_min = pd.DataFrame(train_stats['train_min'], index=[1]).iloc[0]
+        train_mean = pd.DataFrame(train_stats['train_mean'], index=[1]).iloc[0]
+        train_std = pd.DataFrame(train_stats['train_std'], index=[1]).iloc[0]
+
+         # Do de-normalization process on predictions and targets from val set
+        if transformation_method == "minmaxscale":
+            maxs = np.tile(train_max[train_max.filter(like=configs["target_var"], axis=0).index].values, len(configs["qs"]))
+            mins = np.tile(train_min[train_min.filter(like=configs["target_var"], axis=0).index].values, len(configs["qs"]))
+            final_preds = ((maxs - mins) * semifinal_preds) + mins  # (batch x (num time predictions * num q's)))
+        elif transformation_method == "standard":
+            stds = np.tile(train_std[train_std.filter(like=configs["target_var"], axis=0).index].values, len(configs["qs"]))
+            means = np.tile(train_mean[train_mean.filter(like=configs["target_var"], axis=0).index].values,
+                            len(configs["qs"]))
+            final_preds = (semifinal_preds * stds) + means
+        else:
+            raise ConfigsError("{} is not a supported form of data normalization".format(transformation_method))
+
+    num_timestamps = configs["S2S_stagger"]["initial_num"] + configs["S2S_stagger"]["secondary_num"]
+    final_preds = np.array(final_preds)
+    final_preds = final_preds.reshape((final_preds.shape[0], len(configs["qs"]), num_timestamps))
+
+    return final_preds
+
 def _plot_results(configs, measured, predictions):
     """
     Plot some stats about the predictions
@@ -1256,12 +1304,20 @@ def main(train_df, val_df, configs):
     logger.info("Data converted to iterable dataset")
 
     # Start the training process
-    if run_train:
+    if configs["use_case"] == "train":
         run_training(train_loader, val_loader, val_df, num_epochs, run_resume, writer, transformation_method,
                      configs, train_batch_size, val_batch_size, configs['window']+1, num_train_data)
-    else:
+
+    elif configs["use_case"] == "validation":
         run_validation(val_loader, val_df, writer, transformation_method,
                        configs, val_batch_size, configs['window']+1)
+    
+    elif configs["use_case"] == "prediction":
+        return run_prediction(val_loader, val_df, writer, transformation_method,
+                       configs, val_batch_size, configs['window']+1)
+
+    else:
+        raise ValueError
 
     # When training is done, wrap up the tensorboard files
     writer.flush()

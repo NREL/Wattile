@@ -271,7 +271,6 @@ def test_processing(val_df, val_loader, model, seq_dim, input_dim, val_batch_siz
     train_std = pd.DataFrame(train_stats['train_std'], index=[1]).iloc[0]
 
     # Do de-normalization process on predictions and targets from val set
-
     if transformation_method == "minmaxscale":
         final_preds = ((train_max[configs['target_var']] - train_min[configs['target_var']]) * semifinal_preds) + \
                       train_min[configs['target_var']]
@@ -739,6 +738,52 @@ def run_validation(val_loader, val_df, writer, transformation_method, configs, v
     if configs.get("plot_results", True):
         _plot_results(configs, targets, predictions)
 
+def run_prediction(val_loader, val_df, writer, transformation_method, configs, val_batch_size, seq_dim):
+    torch_model = torch.load(os.path.join(file_prefix, 'torch_model'))
+    model = torch_model['torch_model']
+    model.eval()
+
+    logger.info("Loaded model from file, given run_train=False\n")
+
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    with torch.no_grad():
+        preds = []
+        for (feats, v) in val_loader:
+            print(f"feats {feats.shape}")
+            features = Variable(feats.view(-1, seq_dim, configs['input_dim']))
+            print(f"features {features.shape}")
+            outputs = model(features)
+            print(f"outputs {outputs.shape}")
+            preds.append(outputs.cpu().numpy())
+
+    # (Normalized Data) Concatenate the predictions for the whole val set
+    semifinal_preds = np.concatenate(preds)
+
+    # Loading the training data stats for de-normalization purpose
+    file_loc = os.path.join(file_prefix, "train_stats.json")
+    with open(file_loc, 'r') as f:
+        train_stats = json.load(f)
+
+    # Get normalization statistics
+    train_max = pd.DataFrame(train_stats['train_max'], index=[1]).iloc[0]
+    train_min = pd.DataFrame(train_stats['train_min'], index=[1]).iloc[0]
+    train_mean = pd.DataFrame(train_stats['train_mean'], index=[1]).iloc[0]
+    train_std = pd.DataFrame(train_stats['train_std'], index=[1]).iloc[0]
+
+    # Do de-normalization process on predictions and targets from val set
+    if transformation_method == "minmaxscale":
+        final_preds = ((train_max[configs['target_var']] - train_min[configs['target_var']]) * semifinal_preds) + \
+                      train_min[configs['target_var']]
+
+    elif transformation_method == "standard":
+        final_preds = ((semifinal_preds * train_std[configs['target_var']]) + train_mean[configs['target_var']])
+
+    else:
+        raise ConfigsError("{} is not a supported form of data normalization".format(transformation_method))
+
+    return final_preds
+
 
 def _plot_results(configs, targets, predictions):
     """Plot some stats about the predictions
@@ -1116,8 +1161,16 @@ def main(train_df, val_df, configs):
                                                          val_batch_size, configs)
     logger.info("Data converted to iterable dataset")
 
-    if run_train:
+    if configs["use_case"] == "train":
         run_training(train_loader, val_loader, val_df, num_epochs, run_resume, writer, transformation_method,
                      configs, train_batch_size, val_batch_size, configs['window']+1, num_train_data)
+
+    elif configs["use_case"] == "validation":
+        run_validation(val_loader, val_df, writer, transformation_method, configs, val_batch_size, configs['window']+1)
+    
+    elif configs["use_case"] == "prediction":
+        return run_prediction(val_loader, val_df, writer, transformation_method,
+                       configs, val_batch_size, configs['window']+1)
+
     else:
-        run_validation(val_loader, val_df, writer, transformation_method,  configs, val_batch_size, configs['window']+1)
+        raise ValueError

@@ -59,17 +59,12 @@ def create_input_dataframe(configs):
         configs['target_feat_name'] = [configs['target_var']]
 
     # Get the dataset
-    if configs["use_case"] == "train" or configs["test_method"] == "external":
-        data_full = bp.get_full_data(configs)
-    
-    elif configs["test_method"] == "internal":
+    if configs["use_case"] == "validation" and configs["test_method"] == "internal":
         data_full = pd.read_hdf(os.path.join(local_results_dir, "internal_test.h5"))
 
     else:
-         raise ConfigsError("run_train is FALSE but test_method designated in configs.json is not understood")
+        data_full = bp.get_full_data(configs)
 
-    # Do some preprocessing, but only if the dataset needs it (i.e. it is not an
-    if configs["use_case"] == "train" or configs["test_method"] == "external":
         # Remove all data columns we dont care about
         important_vars = configs['weather_include'] + [configs['target_var']]
         data = data_full[important_vars]
@@ -86,8 +81,6 @@ def create_input_dataframe(configs):
 
         # Add time-based dummy variables
         data = bp.time_dummies(data, configs)
-    else:
-        data = data_full
 
     # removing columns with zero
     data = data.loc[:, (data != 0).any(axis=0)]
@@ -132,24 +125,27 @@ def run_model(configs, data):
             train_df = pd.read_csv('./data/STM_Train_Data_processed.csv')
             val_df = pd.read_csv('./data/STM_Test_Data_processed.csv')
             print("read data from locally stored csvs")
-            rnn_mod.main(train_df, val_df, configs)
+            results = rnn_mod.main(train_df, val_df, configs)
 
         # Sequence to sequence model
         elif (configs["arch_version"] == 5) or (configs["arch_version"] == 6):
             # Prepare data for the RNN model type
             train_df, val_df = bp.prep_for_seq2seq(configs, data)
-            rnn_mod.main(train_df, val_df, configs)
+            results = rnn_mod.main(train_df, val_df, configs)
 
         # All other models (2-4)
         else:
             # Prepare data for the RNN model type
             train_df, val_df = bp.prep_for_rnn(configs, data)
-            rnn_mod.main(train_df, val_df, configs)
+            results = rnn_mod.main(train_df, val_df, configs)
 
     logger.info('Run with arch {}({}), on {}, with session ID {}, is done!'.format(configs['arch_type'],
                                                                                                      configs["arch_type_variant"],
                                                                                           configs["target_var"],
                                                                                           configs["exp_id"]))
+    return results
+
+
 def main(configs):
     """
     Main function for processing and structuring data.
@@ -159,8 +155,8 @@ def main(configs):
     """
     init_logging(local_results_dir=util.get_exp_dir(configs))
     data = create_input_dataframe(configs)
-    run_model(configs, data)
-
+    
+    return run_model(configs, data)
 
 # If the model is being run locally (i.e. a single model is being trained), read in configs.json and pass to main()
 if __name__ == "__main__":
