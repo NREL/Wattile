@@ -10,38 +10,18 @@ import pathlib
 import util
 
 
+logger = logging.getLogger(str(os.getpid()))
 class ConfigsError(Exception):
     """Base class for exceptions in this module."""
     pass
 
 
-def main(configs):
+def init_logging(local_results_dir):
+    """init logger
+
+    :param local_results_dir: results dir
+    :type local_results_dir: Path
     """
-    Main function for processing and structuring data.
-    Feeds training and valing data to the requested model by calling the script where the model architecture is defined
-    :param configs: Dictionary
-    :return: None
-    """
-
-    local_results_dir = util.get_exp_dir(configs)
-
-    if configs["run_train"]:
-        # Check the model training process
-        torch_file = os.path.join(local_results_dir, 'torch_model')
-        if os.path.exists(torch_file):
-            check = bp.check_complete(torch_file, configs["num_epochs"])
-            # If we already have the desired number of epochs, don't do anything else
-            if check:
-                print("{} already completed. Moving on...".format(configs["target_var"]))
-                return
-        # If the torch file doesnt exist yet, and run_resume=True, then reset it to false so it can start from scratch
-        else:
-            if configs["run_resume"]:
-                configs["run_resume"] = False
-                print("Model for {} doesnt exist yet. Resetting run_resume to False".format(configs["target_var"]))
-
-
-    # Initialize logging
     PID = os.getpid()
     pathlib.Path(local_results_dir).mkdir(parents=True, exist_ok=True)
     logging_path = os.path.join(local_results_dir, "output.out")
@@ -54,6 +34,18 @@ def main(configs):
     logger.addHandler(hdlr)
     logger.setLevel(logging.INFO)
     logger.info("PID: {}".format(PID))
+
+
+def create_input_dataframe(configs):
+    """construct dataframe for model input
+
+    :param configs: config dict
+    :type configs: dict
+    :raises ConfigsError: if config is invalid
+    :return: data
+    :rtype: DataFrame
+    """
+    local_results_dir = util.get_exp_dir(configs)
 
     # Preprocess if needed
     if configs['preprocess']:
@@ -100,6 +92,34 @@ def main(configs):
     # removing columns with zero
     data = data.loc[:, (data != 0).any(axis=0)]
 
+    return data
+
+
+def run_model(configs, data):
+    """train, validate, or predict using a model
+
+    :param configs: dict of configs
+    :type configs: dcit
+    :param data: input data
+    :type data: DataFrame
+    """
+    local_results_dir = util.get_exp_dir(configs)
+
+    if configs["run_train"]:
+        # Check the model training process
+        torch_file = os.path.join(local_results_dir, 'torch_model')
+        if os.path.exists(torch_file):
+            check = bp.check_complete(torch_file, configs["num_epochs"])
+            # If we already have the desired number of epochs, don't do anything else
+            if check:
+                print("{} already completed. Moving on...".format(configs["target_var"]))
+                return
+        # If the torch file doesnt exist yet, and run_resume=True, then reset it to false so it can start from scratch
+        else:
+            if configs["run_resume"]:
+                configs["run_resume"] = False
+                print("Model for {} doesnt exist yet. Resetting run_resume to False".format(configs["target_var"]))
+
     # Choose what ML architecture to use and execute the corresponding script
     if configs['arch_type'] == 'RNN':
         # What RNN version you are implementing? Specified in configs.
@@ -128,6 +148,17 @@ def main(configs):
                                                                                                      configs["arch_type_variant"],
                                                                                           configs["target_var"],
                                                                                           configs["exp_id"]))
+def main(configs):
+    """
+    Main function for processing and structuring data.
+    Feeds training and valing data to the requested model by calling the script where the model architecture is defined
+    :param configs: Dictionary
+    :return: None
+    """
+    init_logging(local_results_dir=util.get_exp_dir(configs))
+    data = create_input_dataframe(configs)
+    run_model(configs, data)
+
 
 # If the model is being run locally (i.e. a single model is being trained), read in configs.json and pass to main()
 if __name__ == "__main__":
