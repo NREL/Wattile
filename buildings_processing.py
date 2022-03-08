@@ -32,6 +32,7 @@ def get_timeinterval(data):
 
     return dt
 
+
 def check_complete(torch_file, des_epochs):
     """
     Checks if an existing training session is complete
@@ -325,7 +326,6 @@ def pad_full_data(data, configs):
     Create lagged versions of exogenous variables in a DataFrame.
     Used specifically for RNN and LSTM deep learning methods.
     Called by prep_for_rnn and prep_for_quantile
-
     :param data: (DataFrame)
     :param configs: (Dict)
     :return: (DataFrame)
@@ -339,14 +339,14 @@ def pad_full_data(data, configs):
     temp_holder = list()
     temp_holder.append(data_orig)
     for i in range(1, configs['window']+1):
-        shifted = data_orig.shift(i * int(configs["sequence_freq"] / configs["resample_freq"])).astype("float32").add_suffix("_lag{}".format(i))
+        shifted = data_orig.shift(i * int(configs["sequence_freq_min"]), freq='min').astype("float32").add_suffix("_lag{}".format(i))
         temp_holder.append(shifted)
     temp_holder.reverse()
     data = pd.concat(temp_holder, axis=1)
 
     # If this is a linear quantile regression model (iterative)
     if configs["arch_type"] == "quantile" and configs["iterative"] == True:
-        for i in range(0, configs["EC_future_gap"]):
+        for i in range(0, configs["EC_future_gap_min"]):
             if i == 0:
                 data[configs["target_var"]] = target
             else:
@@ -358,26 +358,26 @@ def pad_full_data(data, configs):
     # If this is a linear quantile regression model (point)
     elif configs["arch_type"] == "quantile" and configs["iterative"] == False:
         # Re-append the shifted target column to the dataframe
-        data[configs["target_var"]] = target.shift(-configs['EC_future_gap'])
+        data[configs["target_var"]] = target.shift(-configs['EC_future_gap_min'])
 
         # Drop all nans
         data = data.dropna(how='any')
 
         # Adjust time index to match the EC values
-        data.index = data.index + pd.DateOffset(minutes=(configs["EC_future_gap"] * configs["resample_freq"]))
+        data.index = data.index + pd.DateOffset(minutes=(configs["EC_future_gap_min"]))
 
     # If this is an RNN model
     elif configs["arch_type"] == "RNN":
         # Re-append the shifted target column to the dataframe
-        data[configs["target_var"]] = target.shift(-configs['EC_future_gap'])
+        data[configs["target_var"]] = target.shift(-configs['EC_future_gap_min'])
 
         # Drop all nans
         data = data.dropna(how='any')
 
         # Adjust time index to match the EC values
-        data.index = data.index + pd.DateOffset(minutes=(configs["EC_future_gap"] * configs["resample_freq"]))
+        data.index = data.index + pd.DateOffset(minutes=(configs["EC_future_gap_min"]))
 
-    return data
+    return data, target
 
 
 def pad_full_data_s2s(data, configs):
@@ -397,7 +397,7 @@ def pad_full_data_s2s(data, configs):
     temp_holder = list()
     temp_holder.append(data_orig)
     for i in range(1, configs['window']+1):
-        shifted = data_orig.shift(i * int(configs["sequence_freq"] / configs["resample_freq"])).astype(
+        shifted = data_orig.shift(i * int(configs["sequence_freq_min"]), freq='min').astype(
             "float32").add_suffix("_lag{}".format(i))
         temp_holder.append(shifted)
     temp_holder.reverse()
@@ -406,13 +406,13 @@ def pad_full_data_s2s(data, configs):
     # Do fine padding for future predictions. Create a new df to preserve memory usage.
     local = pd.DataFrame()
     for i in range(0, configs["S2S_stagger"]["initial_num"]):
-        local["{}_lag_{}".format(configs["target_var"], i)] = target.shift(-i * int(configs["sequence_freq"] / configs["resample_freq"]))
+        local["{}_lag_{}".format(configs["target_var"], i)] = target.shift(-i * int(configs["sequence_freq_min"]), freq='min')
 
     # Do additional coarse padding for future predictions
     for i in range(1, configs["S2S_stagger"]["secondary_num"] + 1):
         base = configs["S2S_stagger"]["initial_num"]
         new = base + configs["S2S_stagger"]["decay"] * i
-        local["{}_lag_{}".format(configs["target_var"], base+i)] = target.shift(-new * int(configs["sequence_freq"] / configs["resample_freq"]))
+        local["{}_lag_{}".format(configs["target_var"], base+i)] = target.shift(-new * int(configs["sequence_freq_min"], freq='min'))
 
     data = pd.concat([data, local], axis=1)
 
