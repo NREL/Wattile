@@ -636,17 +636,30 @@ def rolling_stats(data, configs):
     target = data[configs["target_var"]]
     X_data = data.drop(configs["target_var"], axis=1)
 
+    # inferring timestep (frequency) from the dataframe
+    dt = get_timeinterval(data)
+    windowsize = int(configs["rolling_window"]["minutes"] / dt) + 1
+    logging.debug("Feature extraction: rolling window size = {} rows".format(windowsize))
+
     if configs["rolling_window"]["type"] == "rolling":
-        mins = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).min().add_suffix("_min")
-        means = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).mean().add_suffix("_mean")
-        maxs = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).max().add_suffix("_max")
-        data = pd.concat([mins, means, maxs], axis=1)
-        data[configs["target_var"]] = target
-    if configs["rolling_window"]["type"] == "binned":
+        mins = X_data.rolling(window=windowsize, min_periods=1).min().add_suffix("_min")
+        means = X_data.rolling(window=windowsize, min_periods=1).mean().add_suffix("_mean")
+        maxs = X_data.rolling(window=windowsize, min_periods=1).max().add_suffix("_max")
+        data_filter = pd.concat([mins, means, maxs], axis=1)
+        data_filter[configs["target_var"]] = target
+        data_training = data_filter.copy()
+
+    elif configs["rolling_window"]["type"] == "binned":
+        mins = X_data.rolling(window=windowsize, min_periods=1).min().add_suffix("_min")
+        means = X_data.rolling(window=windowsize, min_periods=1).mean().add_suffix("_mean")
+        maxs = X_data.rolling(window=windowsize, min_periods=1).max().add_suffix("_max")
+        data_training = pd.concat([mins, means, maxs], axis=1)
+        data_training[configs["target_var"]] = target
+
         mins = X_data.resample(str(configs["rolling_window"]["minutes"]) + "T").min().add_suffix("_min")
         means = X_data.resample(str(configs["rolling_window"]["minutes"]) + "T").mean().add_suffix("_mean")
         maxs = X_data.resample(str(configs["rolling_window"]["minutes"]) + "T").max().add_suffix("_max")
-        data = pd.concat([mins, means, maxs], axis=1)
-        data[configs["target_var"]] = pd.DataFrame(target).resample(str(configs["rolling_window"]["minutes"]) + "T").mean()
+        data_filter = pd.concat([mins, means, maxs], axis=1)
+        data_filter[configs["target_var"]] = pd.DataFrame(target).resample(str(configs["rolling_window"]["minutes"]) + "T").mean()
 
-    return data
+    return data_filter, data_training
