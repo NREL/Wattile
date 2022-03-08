@@ -448,7 +448,7 @@ def prep_for_rnn(configs, data):
         logger.debug("Features: {}".format(data.columns.values))
 
         # Do sequential padding
-        data = pad_full_data(data, configs)
+        data, target = pad_full_data(data, configs)
 
         # Split data into train/val/test sets
         train_df, val_df = input_data_split(data, configs)
@@ -459,7 +459,7 @@ def prep_for_rnn(configs, data):
         logger.debug("Features: {}".format(data.columns.values))
 
         # Do sequential padding
-        data = pad_full_data(data, configs)
+        data, target = pad_full_data(data, configs)
 
         # Split data into /val/test sets
         val_df = data
