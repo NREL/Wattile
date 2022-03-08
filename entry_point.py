@@ -60,37 +60,59 @@ def create_input_dataframe(configs):
 
     # Get the dataset
     if configs["run_train"] or configs["test_method"] == "external":
-        data_full = bp.get_full_data(configs)
+        data = bp.get_full_data(configs)
     
     elif configs["test_method"] == "internal":
-        data_full = pd.read_hdf(os.path.join(local_results_dir, "internal_test.h5"))
+        # temporarily assigning synthetic data for prediction testing
+        data = pd.read_hdf(os.path.join(local_results_dir, "internal_test.h5"))
 
     else:
          raise ConfigsError("run_train is FALSE but test_method designated in configs.json is not understood")
 
     # Do some preprocessing, but only if the dataset needs it (i.e. it is not an
-    if configs["run_train"] or (not configs["run_train"] and configs["test_method"] == "external"):
-        # Remove all data columns we dont care about
-        important_vars = configs['weather_include'] + [configs['target_var']]
-        data = data_full[important_vars]
-        # Resample
-        resample_bin_size = "{}T".format(configs['resample_freq'])
-        data = data.resample(resample_bin_size).mean()
+    if configs["run_train"]:
+
         # Clean
         data = bp.clean_data(data, configs)
-        # Add calculated features (if applicable)
 
-        # Convert data to rolling average (except output) and create min, mean, and max columns
-        if configs["rolling_window"]["active"]:
-            data = bp.rolling_stats(data, configs)
-
-        # Add time-based dummy variables
+        # Add time-based features 
         data = bp.time_dummies(data, configs)
-    else:
-        data = data_full
 
-    # removing columns with zero
-    data = data.loc[:, (data != 0).any(axis=0)]
+        # Add statistics features 
+        if configs["rolling_window"]["active"]:
+            data_filter, data = bp.rolling_stats(data, configs)
+
+        # Add lag features
+        configs['input_dim'] = data.shape[1] - 1
+        logger.info("Number of features: {}".format(configs['input_dim']))
+        logger.debug("Features: {}".format(data.columns.values))
+        data, target = bp.pad_full_data(data, configs)
+
+        # removing columns with zero
+        data = data.loc[:, (data != 0).any(axis=0)]
+
+    elif not configs['run_train']:
+
+        logger.info("performing data transformation for prediction")
+
+        # add time-based features (based on configs file from previous model training)
+        logger.info("adding time-based features")
+        data = bp.time_dummies(data, configs)
+
+        # add statistics features (based on configs file from previous model training)
+        if configs["rolling_window"]["active"]:
+            logger.info("adding statistic features")
+            data_filter, data = bp.rolling_stats(data, configs)
+
+        # add lag features (based on configs file from previous model training)
+        configs['input_dim'] = data.shape[1] - 1
+        logger.info("Number of features: {}".format(configs['input_dim']))
+        logger.debug("Features: {}".format(data.columns.values))
+        logger.info("adding time-lag features")
+        data, target = bp.pad_full_data(data, configs)
+
+    else:
+        data = data_full    
 
     return data
 
@@ -102,6 +124,11 @@ def run_model(configs, data):
     :type configs: dcit
     :param data: input data
     :type data: DataFrame
+
+    - reads raw data for prediction
+    - adds same features (time-based, statistics, time lag) that were added in the previous model training
+    - filters features based on down-selected features list from the previous model training
+    
     """
     local_results_dir = util.get_exp_dir(configs)
 
@@ -148,13 +175,23 @@ def run_model(configs, data):
                                                                                                      configs["arch_type_variant"],
                                                                                           configs["target_var"],
                                                                                           configs["exp_id"]))
-def main(configs):
+
+def main():
     """
     Main function for processing and structuring data.
     Feeds training and valing data to the requested model by calling the script where the model architecture is defined
     :param configs: Dictionary
     :return: None
     """
+    with open("configs.json", "r") as read_file:
+        configs = json.load(read_file)
+
+    if not configs["run_train"]:
+        with open(configs["trained_model_path"] + "/" + "configs.json", "r") as read_file:
+            print("reading statistics data (for normalization) from previously trained model results: {}".format(configs["trained_model_path"]))
+            configs = json.load(read_file)
+            configs['run_train'] = False
+
     init_logging(local_results_dir=util.get_exp_dir(configs))
     data = create_input_dataframe(configs)
     run_model(configs, data)
@@ -162,6 +199,4 @@ def main(configs):
 
 # If the model is being run locally (i.e. a single model is being trained), read in configs.json and pass to main()
 if __name__ == "__main__":
-    with open("configs.json", "r") as read_file:
-        config = json.load(read_file)
-    main(config)
+    main()
