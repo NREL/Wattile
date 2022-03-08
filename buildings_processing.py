@@ -23,6 +23,15 @@ class ConfigsError(Exception):
     pass
 
 
+def get_timeinterval(data):
+
+    # inferring timestep (frequency) from the dataframe
+    dt = data.index.to_series().diff().value_counts().idxmax() # in pandas timedelta
+    dt = int(dt.value/(10**9)/60) # in minutes
+    logging.debug("Pre-process: timestep of the dataframe = {} min".format(dt))
+
+    return dt
+
 def check_complete(torch_file, des_epochs):
     """
     Checks if an existing training session is complete
