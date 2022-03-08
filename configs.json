@@ -1,19 +1,14 @@
 {
- "building": "Cafe",
- "target_var": "Cafe Whole Building Real Power Total",
+ "building": "Synthetic Site",
+ "target_var": "Synthetic Site Electricity Main Total Power",
  "start_year": 2018,
  "start_month": 1,
  "start_day": 1,
- "end_year": 2019,
+ "end_year": 2021,
  "end_month": 12,
  "end_day": 31,
- "weather_include": [
-  "SRRL BMS Global Horizontal Irradiance",
-  "SRRL BMS Dry Bulb Temperature",
-  "SRRL BMS Relative Humidity",
-  "SRRL BMS Snow Depth"
- ],
- "arch_version": 5,
+ "weather_include": [],
+ "arch_version": 4,
  "exp_id": "7-9-21",
  "arch_type": "RNN",
  "arch_type_variant": "lstm",
@@ -26,22 +21,22 @@
  "results_dir": "EnergyForecasting_Results",
  "data_dir": "data",
  "resample_freq": 15,
- "sequence_freq": 15,
+ "sequence_freq_min": 15,
  "splicer": {
   "active": false,
-  "time": "2d"
+  "time": "12hr"
  },
  "rolling_window": {
-  "active": false,
+  "active": true,
   "type": "binned",
   "minutes": 15
  },
- "window": 72,
- "EC_future_gap": 0,
+ "window": 24,
+ "EC_future_gap_min": 0,
  "DOW": ["binary_reg"],
  "MOY": ["sincos"],
  "HOD": ["sincos"],
- "Holidays": true,
+ "Holidays": false,
  "S2S_stagger": {
   "initial_num": 72,
   "decay": 0,
@@ -62,7 +57,7 @@
   0.95,
   0.975
  ],
- "run_train": true,
+ "run_train": false,
  "run_resume": false,
  "num_epochs": 100,
  "weight_decay": 0.001,
@@ -79,9 +74,10 @@
   "step_size": 75
  },
  "smoothing_alpha": 0.001,
- "test_method": "internal",
+ "test_method": "external",
  "external_test": {
   "year": "2020",
   "month": [1, 2, 3, 4, 5, 6]
- }
+ },
+ "trained_model_path":"./EnergyForecasting_Results/RNN_MSyntheticSiteElectricityMainTotalPower_T7-9-21"
 }
