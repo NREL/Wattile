@@ -443,25 +443,12 @@ def prep_for_rnn(configs, data):
     """
 
     if configs["run_train"]:
-        configs['input_dim'] = data.shape[1] - 1
-        logger.info("Number of features: {}".format(configs['input_dim']))
-        logger.debug("Features: {}".format(data.columns.values))
-
-        # Do sequential padding
-        data, target = pad_full_data(data, configs)
-
-        # Split data into train/val/test sets
+        # split data into training/validation/testing sets
         train_df, val_df = input_data_split(data, configs)
 
     elif not configs["run_train"] and configs["test_method"] == "external":
-        configs['input_dim'] = data.shape[1] - 1
-        logger.info("Number of features: {}".format(configs['input_dim']))
-        logger.debug("Features: {}".format(data.columns.values))
 
-        # Do sequential padding
-        data, target = pad_full_data(data, configs)
-
-        # Split data into /val/test sets
+        # split data into training/validation/testing sets
         val_df = data
         train_df = pd.DataFrame()
         file = os.path.join(configs["data_dir"], configs["building"], "{}_external_test.h5".format(configs["target_var"]))
@@ -530,19 +517,11 @@ def prep_for_seq2seq(configs, data):
     """
 
     if configs["run_train"]:
-        configs['input_dim'] = data.shape[1] - 1
-        logger.info("Number of features: {}".format(configs['input_dim']))
-
-        data, target = pad_full_data_s2s(data, configs)
-
+        # split data into training/validation/testing sets
         train_df, val_df = input_data_split(data, configs)
 
     elif not configs["run_train"] and configs["test_method"] == "external":
-        configs['input_dim'] = data.shape[1] - 1
-        logger.info("Number of features: {}".format(configs['input_dim']))
-
-        data, target = pad_full_data_s2s(data, configs)
-
+        # split data into training/validation/testing sets
         val_df = data
         train_df = pd.DataFrame()
         file = os.path.join(configs["data_dir"], configs["building"], "{}_external_test.h5".format(configs["target_var"]))
