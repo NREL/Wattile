@@ -172,33 +172,34 @@ def time_dummies(data, configs):
     # HOD
     if "sincos" in configs["HOD"]:
         data['sin_HOD'] = np.sin(
-            2 * np.pi * (data.index.hour * 3600 + data.index.minute * 60 + data.index.minute).values / (
+            2 * np.pi * (data.index.hour * 3600 + data.index.minute * 60 + data.index.second).values / (
                     24 * 60 * 60))
         data['cos_HOD'] = np.cos(
-            2 * np.pi * (data.index.hour * 3600 + data.index.minute * 60 + data.index.minute).values / (
+            2 * np.pi * (data.index.hour * 3600 + data.index.minute * 60 + data.index.second).values / (
                     24 * 60 * 60))
     if "binary_reg" in configs["HOD"]:
-        for i in range(1,24):
+        for i in range(0, 24):
             data["HOD_binary_reg_{}".format(i)] = (data.index.hour == i).astype(int)
+
         #data = data.join(pd.get_dummies(data.index.hour, prefix='HOD_binary_reg', drop_first=True).set_index(data.index))
 
     if "binary_fuzzy" in configs["HOD"]:
-        for i in range(1,24):
-            data["HOD_binary_fuzzy_{}".format(i)] = (data.index.hour == i).astype(int)
+        # for i in range(1, 24):
+        #     data["HOD_binary_fuzzy_{}".format(i)] = (data.index.hour == i).astype(int)
         #data = data.join(pd.get_dummies(data.index.hour, prefix='HOD_binary_fuzzy', drop_first=True).set_index(data.index))
-        for HOD in range(1, 24):
+        for HOD in range(0, 24):
             data["HOD_binary_fuzzy_{}".format(HOD)] = np.maximum(1 - abs((data.index.hour + data.index.minute / 60) - HOD) / 1, 0)
 
     # DOW
     if "binary_reg" in configs["DOW"]:
-        for i in range(1,7):
+        for i in range(0, 7):
             data["DOW_binary_reg_{}".format(i)] = (data.index.weekday == i).astype(int)
         #data = data.join(pd.get_dummies(data.index.weekday, prefix='DOW_binary_reg', drop_first=True).set_index(data.index))
     if "binary_fuzzy" in configs["DOW"]:
-        for i in range(1,7):
+        for i in range(0, 7):
             data["DOW_binary_fuzzy_{}".format(i)] = (data.index.weekday == i).astype(int)
         #data = data.join(pd.get_dummies(data.index.weekday, prefix='DOW_binary_fuzzy', drop_first=True).set_index(data.index))
-        for DOW in range(1, 7):
+        for DOW in range(0, 7):
             data["DOW_binary_fuzzy_{}".format(DOW)] = np.maximum(1 - abs((data.index.weekday + data.index.hour / 24) - DOW) / 1, 0)
 
     # MOY
