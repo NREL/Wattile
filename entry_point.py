@@ -111,6 +111,9 @@ def create_input_dataframe(configs):
         logger.info("adding time-lag features")
         data, target = bp.pad_full_data(data, configs)
 
+        # filtering features based on down-selected features resulted from feature engineering
+        # place holder
+
     else:
         data = data_full    
 
@@ -176,15 +179,13 @@ def run_model(configs, data):
                                                                                           configs["target_var"],
                                                                                           configs["exp_id"]))
 
-def main():
+def main(configs):
     """
     Main function for processing and structuring data.
     Feeds training and valing data to the requested model by calling the script where the model architecture is defined
     :param configs: Dictionary
     :return: None
     """
-    with open("configs.json", "r") as read_file:
-        configs = json.load(read_file)
 
     if not configs["run_train"]:
         with open(configs["trained_model_path"] + "/" + "configs.json", "r") as read_file:
@@ -199,4 +200,6 @@ def main():
 
 # If the model is being run locally (i.e. a single model is being trained), read in configs.json and pass to main()
 if __name__ == "__main__":
-    main()
+    with open("configs.json", "r") as read_file:
+        configs = json.load(read_file)
+    main(configs)
