@@ -71,7 +71,7 @@ def size_the_batches(train_data, val_data, tr_desired_batch_size, te_desired_bat
     return train_bt_size, val_bt_size, num_train_data
 
 
-def data_transform(train_data, val_data, transformation_method, run_train, configs):
+def data_transform(train_data, val_data, transformation_method, configs):
     """
     Normalize the training and val data according to a user-defined criteria
 
@@ -81,7 +81,7 @@ def data_transform(train_data, val_data, transformation_method, run_train, confi
     :param run_train: Boolean
     :return:
     """
-    if run_train:
+    if configs["run_train"]:
         # For the result de-normalization purpose, saving the max and min values of the STM_Xcel_Meter columns
         train_stats = {}
         train_stats['train_max'] = train_data.max().to_dict()
@@ -1111,7 +1111,7 @@ def main(train_df, val_df, configs):
     val_df.reset_index(drop=True, inplace=True)
 
     # Normalization transformation
-    train_data, val_data = data_transform(train_data, val_data, transformation_method, run_train, configs)
+    train_data, val_data = data_transform(train_data, val_data, transformation_method, configs)
     logger.info("Data transformed using {} as transformation method".format(transformation_method))
 
     # Size the batches
