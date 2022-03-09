@@ -6,6 +6,14 @@
   "predictors": [
     {
       "site": "Synthetic Site",
+      "column": "SRRL BMS Dew Point Temperature",
+      "id": "r:p:dash:r:278f8943-6a199bd7 SRRL BMS Dew Point Temperature",
+      "description": "SRRL BMS Dew Point Temperature",
+      "unit": "°F",
+      "pv": false
+    },
+    {
+      "site": "Synthetic Site",
       "column": "SRRL BMS Diffuse Horizontal Irradiance",
       "id": "r:p:dash:r:278f79c0-03da5abc SRRL BMS Diffuse Horizontal Irradiance",
       "description": "SRRL BMS Diffuse Horizontal Irradiance",
@@ -151,7 +159,7 @@
   ],
   "export_options": {
     "path": "u:io/Training/",
-    "predictorFilter": "(air and temp) or (dew and temp) or humidity or ((global or direct or diffuse) and irradiance) or (wind and speed)",
+    "predictorFilter": "(air and temp) or (dewPoint and temp) or humidity or ((global or direct or diffuse) and irradiance) or (wind and speed)",
     "format": "CSV",
     "interval": "n:1 min",
     "splitBy": "day"
