@@ -43,7 +43,7 @@ src:
     weather: toWeather(rec)
     
     // History interval
-    hisInterval: if (rec.has("hisInterval")) rec->hisInterval else 5min
+    hisInterval: if (rec.has("hisInterval")) rec->hisInterval else 1min
     
     // Include 1 extra interval on each side of dates (for interpolation)
     dates = (dates.toSpan.start - hisInterval)..(dates.toSpan.end + hisInterval)
