@@ -43,7 +43,7 @@ src:
     weather: toWeather(rec)
     
     // History interval
-    hisInterval: if (rec.has("hisInterval")) rec->hisInterval else 1min
+    hisInterval: if (rec.has("hisInterval")) rec->hisInterval else 5min
     
     // Include 1 extra interval on each side of dates (for interpolation)
     dates = (dates.toSpan.start - hisInterval)..(dates.toSpan.end + hisInterval)
@@ -55,20 +55,27 @@ src:
     tDB: read(point and weather and air and temp and sensor and weatherStationRef==weather.toRecId, true)
       .hisRead(dates, {-limit})
       .hisRollup(mean, hisInterval)
+      .hisClip
       .renameCol("v0","tDB")
       
     // Read global horizontal irradiance data
     ghi: read(point and global and irradiance and sensor and weatherStationRef==weather.toRecId, true)
       .hisRead(dates, {-limit})
       .hisRollup(mean, hisInterval)
+      .hisClip
       .renameCol("v0","ghi")
+    
+    // Artificial history limit for downstream hisMaps...
+    hisLimit: ghi.meta["hisLimit"]
     
     // Evaluate 4 components of synthetic power profile (see function doc)
     power1: hisSlidingWindows(dates, hisInterval, hisInterval)
+      .addMeta({hisLimit:hisLimit})
       .hisMap() (v, t) => do
         100kW + 5kW * (random(-100..100)/100) // 100 kW ± 5 kW (uniform dist.)
       end
     power2: hisSlidingWindows(dates, hisInterval, hisInterval)
+      .addMeta({hisLimit:hisLimit})
       .hisMap() (v, t) => do
         // Fractional hour
         fractionalHour: hour(t) + minute(t).to(1h)
