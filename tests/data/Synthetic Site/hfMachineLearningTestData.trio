@@ -8,7 +8,7 @@ doc:
   Provides a synthetic power profile that combines the following:
   
   - 100 kW base load with ± 5 kW variability
-  - 50 kW with ± 30% variability diurnal load with fixed triangular shape: 8 AM start, 1 PM peak, 6 PM end.
+  - 50 kW with ± 50% variability diurnal load with fixed triangular shape: 8 AM start, 1 PM peak, 6 PM end.
   - 1 kW/°F increase in load above 60°F and below 50°F (simple change-point model)
   - Hypothetical simplified PV array output scaled to global horizontal irradiance (GHI): 100 kW output at 1000 W/m²
   
@@ -42,20 +42,25 @@ src:
     // Determine weather feed
     weather: toWeather(rec)
     
-    // Clip dates
-    if (dates.toSpan.end >= now()) dates = dates.toSpan.start()..now()
-    
     // History interval
     hisInterval: if (rec.has("hisInterval")) rec->hisInterval else 5min
+    
+    // Include 1 extra interval on each side of dates (for interpolation)
+    dates = (dates.toSpan.start - hisInterval)..(dates.toSpan.end + hisInterval)
+    
+    // Clip dates
+    if (dates.end >= now()) dates = dates.toSpan.start()..now()
     
     // Read dry bulb temperature data
     tDB: read(point and weather and air and temp and sensor and weatherStationRef==weather.toRecId, true)
       .hisRead(dates, {-limit})
+      .hisRollup(mean, hisInterval)
       .renameCol("v0","tDB")
       
     // Read global horizontal irradiance data
     ghi: read(point and global and irradiance and sensor and weatherStationRef==weather.toRecId, true)
       .hisRead(dates, {-limit})
+      .hisRollup(mean, hisInterval)
       .renameCol("v0","ghi")
     
     // Evaluate 4 components of synthetic power profile (see function doc)
@@ -76,7 +81,7 @@ src:
         end
         
         // Apply magnitude and random variability
-        val.as("kW") * 50 * (1 + 0.3*(random(-100..100)/100)) // 50 kW (peak) ± 30% (uniform dist.)
+        val.as("kW") * 50 * (1 + 0.5*(random(-100..100)/100)) // 50 kW (peak) ± 50% (uniform dist.)
       end
     power3: tDB.hisMap() (v, t) => do
         if (v.isNA) return null
