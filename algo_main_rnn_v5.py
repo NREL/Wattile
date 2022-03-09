@@ -100,6 +100,8 @@ def data_transform(train_data, val_data, transformation_method, run_train):
             train_data = (train_data - train_data.min()) / (train_data.max() - train_data.min())
         elif transformation_method == "standard":
             train_data = (train_data - train_data.mean(axis=0)) / train_data.std(axis=0)
+        elif transformation_method == "none":
+            train_data = train_data
         else:
             raise ConfigsError("{} is not a supported form of data normalization".format(transformation_method))
 
@@ -119,6 +121,8 @@ def data_transform(train_data, val_data, transformation_method, run_train):
         val_data = (val_data - train_min) / (train_max - train_min)
     elif transformation_method == "standard":
         val_data = ((val_data - train_mean) / train_std)
+    elif transformation_method == "none":
+        val_data = val_data
     else:
         raise ConfigsError("{} is not a supported form of data normalization".format(transformation_method))
 
@@ -308,6 +312,9 @@ def test_processing(val_df, val_loader, model, seq_dim, input_dim, val_batch_siz
                             len(configs["qs"]))
             final_preds = (semifinal_preds * stds) + means
             final_targs = (semifinal_targs * stds) + means
+        elif transformation_method == "none":
+            final_preds = semifinal_preds
+            final_targs = semifinal_targs
         else:
             raise ConfigsError("{} is not a supported form of data normalization".format(transformation_method))
 
@@ -1157,6 +1164,8 @@ def predict(data, file_prefix):
         data = (data - train_min.values) / (train_max.values - train_min.values)
     elif configs["transformation_method"] == "standard":
         data = ((data - train_mean.values) / train_std.values)
+    elif configs["transformation_method"] == "none":
+        data = data
     else:
         raise ConfigsError("{} is not a supported form of data normalization".format(configs["transformation_method"]))
 
@@ -1193,6 +1202,8 @@ def predict(data, file_prefix):
         means = np.tile(train_mean[train_mean.filter(like=configs["target_var"], axis=0).index].values,
                         len(configs["qs"]))
         final_preds = (semifinal_preds * stds) + means
+    elif configs["transformation_method"] == "none":
+        final_preds = semifinal_preds
     else:
         raise ConfigsError("{} is not a supported form of data normalization".format(configs["transformation_method"]))
 
