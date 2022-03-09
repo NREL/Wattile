@@ -83,7 +83,8 @@ consisting of a single target variable and seven predictor variables. The data
 set spans a single week (Wednesday, December 1, 2021 through Tuesday, December
 7, 2021) and has the following characteristics:
 
-- 1 minute interval
+- 1 minute predictor interval
+- 1 minute target interval
 - Split into individual CSV files by day
 
 ### Predictors ###
@@ -121,7 +122,7 @@ that the quantity of synthetic training data included in the repo is too small
 to be used for algorithm validation.)
 
 The target data were generated using the computed history function feature of
-[SkySpark] 3.0.27. For transparency and replicability, the history function
+[SkySpark] 3.1.2. For transparency and replicability, the history function
 implementation is included in the repository in `hfMachineLearningTestData.trio`.
 
 [SkySpark]: https://skyfoundry.com/product "SkySpark software"
