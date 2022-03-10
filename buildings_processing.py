@@ -23,16 +23,6 @@ class ConfigsError(Exception):
     pass
 
 
-def get_timeinterval(data):
-
-    # inferring timestep (frequency) from the dataframe
-    dt = data.index.to_series().diff().value_counts().idxmax() # in pandas timedelta
-    dt = int(dt.value/(10**9)/60) # in minutes
-    logger.info("Pre-process: timestep of the dataframe = {} min".format(dt))
-
-    return dt
-
-
 def check_complete(torch_file, des_epochs):
     """
     Checks if an existing training session is complete
@@ -625,7 +615,7 @@ def rolling_stats(data, configs):
     X_data = data.drop(configs["target_var"], axis=1)
 
     # inferring timestep (frequency) from the dataframe
-    dt = get_timeinterval(data)
+    dt = configs["data_time_interval"]
     windowsize = int(configs["rolling_window"]["minutes"] / dt) + 1
     logging.debug("Feature extraction: rolling window size = {} rows".format(windowsize))
 
