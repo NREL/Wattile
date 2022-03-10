@@ -86,7 +86,10 @@ def create_input_dataframe(configs):
         configs['input_dim'] = data.shape[1] - 1
         logger.info("Number of features: {}".format(configs['input_dim']))
         logger.debug("Features: {}".format(data.columns.values))
-        data, target = bp.pad_full_data(data, configs)
+        if (configs["arch_version"] == 4):
+            data, target = bp.pad_full_data(data, configs)
+        elif (configs["arch_version"] == 5):
+            data, target = bp.pad_full_data_s2s(data, configs)
 
         # removing columns with zero
         data = data.loc[:, (data != 0).any(axis=0)]
@@ -108,14 +111,13 @@ def create_input_dataframe(configs):
         configs['input_dim'] = data.shape[1] - 1
         logger.info("Number of features: {}".format(configs['input_dim']))
         logger.debug("Features: {}".format(data.columns.values))
-        logger.info("adding time-lag features")
-        data, target = bp.pad_full_data(data, configs)
+        if (configs["arch_version"] == 4):
+            data, target = bp.pad_full_data(data, configs)
+        elif (configs["arch_version"] == 5):
+            data, target = bp.pad_full_data_s2s(data, configs)
 
-        # filtering features based on down-selected features resulted from feature engineering
-        # place holder
-
-    else:
-        data = data_full    
+        # filtering features based on down-selected features resulted from feature selection
+        # place holder  
 
     return data
 
@@ -154,6 +156,7 @@ def run_model(configs, data):
     if configs['arch_type'] == 'RNN':
         # What RNN version you are implementing? Specified in configs.
         rnn_mod = importlib.import_module("algo_main_rnn_v{}".format(configs["arch_version"]))
+        logger.info("training with arch version {}".format(configs["arch_version"]))
 
         if configs["arch_version"] == 1:
             # read the preprocessed data from csvs
