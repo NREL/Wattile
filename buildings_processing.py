@@ -128,7 +128,7 @@ def clean_data(data, configs):
 
     # Clean data: Set negative GHI values to 0
     var_ref = 'SRRL BMS Global Horizontal Irradiance (W/m²_irr)'
-    if 'SRRL BMS Global Horizontal Irradiance (W/m²_irr)' in data.columns:
+    if var_ref in data.columns:
         data[var_ref][data[var_ref] < 0] = 0
 
     # Clean data: Total cloud cover: Set -1's to 0 and interpolate negative false values
