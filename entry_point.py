@@ -69,6 +69,14 @@ def create_input_dataframe(configs):
     else:
          raise ConfigsError("run_train is FALSE but test_method designated in configs.json is not understood")
 
+    # if certain predictor variables are pre-defined, then include only those.
+    if configs['weather_include']:
+        keep_cols = configs['weather_include'] + [configs['target_var']]
+        data = data[keep_cols]
+        logging.debug("columns specified in the configs.json are only included")
+    else:
+        logging.debug("all available predictor variables and target variable ({}) are included".format(configs['target_var']))
+
     # Do some preprocessing, but only if the dataset needs it (i.e. it is not an
     if configs["run_train"]:
 
@@ -95,7 +103,7 @@ def create_input_dataframe(configs):
         data = data.loc[:, (data != 0).any(axis=0)]
 
     elif not configs['run_train']:
-
+        
         logger.info("performing data transformation for prediction")
 
         # add time-based features (based on configs file from previous model training)
