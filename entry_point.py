@@ -80,7 +80,7 @@ def create_input_dataframe(configs):
 
         # Add statistics features 
         if configs["rolling_window"]["active"]:
-            data_filter, data = bp.rolling_stats(data, configs)
+            data = bp.rolling_stats(data, configs)
 
         # Add lag features
         configs['input_dim'] = data.shape[1] - 1
@@ -105,7 +105,7 @@ def create_input_dataframe(configs):
         # add statistics features (based on configs file from previous model training)
         if configs["rolling_window"]["active"]:
             logger.info("adding statistic features")
-            data_filter, data = bp.rolling_stats(data, configs)
+            data = bp.rolling_stats(data, configs)
 
         # add lag features (based on configs file from previous model training)
         configs['input_dim'] = data.shape[1] - 1
