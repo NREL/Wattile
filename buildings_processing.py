@@ -130,10 +130,16 @@ def clean_data(data, configs):
     var_ref = 'SRRL BMS Global Horizontal Irradiance (W/m²_irr)'
     if var_ref in configs['weather_include']:
         data[var_ref][data[var_ref] < 0] = 0
+    elif (configs['weather_include']==[]) & (var_ref in data.columns):
+        data[var_ref][data[var_ref] < 0] = 0
 
     # Clean data: Total cloud cover: Set -1's to 0 and interpolate negative false values
     var_ref = 'SRRL BMS Total Cloud Cover (%)'
     if var_ref in configs['weather_include']:
+        data[var_ref][data[var_ref] == -1] = 0
+        data[var_ref][data[var_ref] < 0] = float("NaN")
+        data[var_ref].interpolate(inplace=True)
+    elif (configs['weather_include']==[]) & (var_ref in data.columns):
         data[var_ref][data[var_ref] == -1] = 0
         data[var_ref][data[var_ref] < 0] = float("NaN")
         data[var_ref].interpolate(inplace=True)
@@ -144,10 +150,20 @@ def clean_data(data, configs):
         data[var_ref][data[var_ref] == -1] = 0
         data[var_ref][data[var_ref] < 0] = float("NaN")
         data[var_ref].interpolate(inplace=True)
+    elif (configs['weather_include']==[]) & (var_ref in data.columns):
+        data[var_ref][data[var_ref] == -1] = 0
+        data[var_ref][data[var_ref] < 0] = float("NaN")
+        data[var_ref].interpolate(inplace=True)
 
     # Clean data: Snow Depth: Set small and negative values to 0 to remove noise, and convolve to remove sharp/incorrect gradients
     var_ref = "SRRL BMS Snow Depth (in)"
     if var_ref in configs['weather_include']:
+        data[var_ref][data[var_ref] < 0.3] = 0
+        data[var_ref].interpolate(inplace=True)
+        box_pts = 20
+        box = np.ones(box_pts) / box_pts
+        data[var_ref] = np.convolve(data[var_ref], box, mode="same")
+    elif (configs['weather_include']==[]) & (var_ref in data.columns):
         data[var_ref][data[var_ref] < 0.3] = 0
         data[var_ref].interpolate(inplace=True)
         box_pts = 20
