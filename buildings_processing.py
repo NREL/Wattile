@@ -615,14 +615,14 @@ def rolling_stats(data, configs):
     X_data = data.drop(configs["target_var"], axis=1)
 
     # inferring timestep (frequency) from the dataframe
-    dt = configs["data_time_interval"]
+    dt = configs["data_time_interval_mins"]
     windowsize = int(configs["rolling_window"]["minutes"] / dt) + 1
     logging.debug("Feature extraction: rolling window size = {} rows".format(windowsize))
 
     if configs["rolling_window"]["type"] == "rolling":
-        mins = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).min().add_suffix("_min")
-        means = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).mean().add_suffix("_mean")
-        maxs = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).max().add_suffix("_max")
+        mins = X_data.rolling(window=windowsize, min_periods=1).min().add_suffix("_min")
+        means = X_data.rolling(window=windowsize, min_periods=1).mean().add_suffix("_mean")
+        maxs = X_data.rolling(window=windowsize, min_periods=1).max().add_suffix("_max")
         data = pd.concat([mins, means, maxs], axis=1)
         data[configs["target_var"]] = target
 
