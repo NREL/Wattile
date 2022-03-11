@@ -197,13 +197,6 @@ def main(configs):
     :param configs: Dictionary
     :return: None
     """
-
-    if not configs["run_train"]:
-        with open(configs["trained_model_path"] + "/" + "configs.json", "r") as read_file:
-            print("reading statistics data (for normalization) from previously trained model results: {}".format(configs["trained_model_path"]))
-            configs = json.load(read_file)
-            configs['run_train'] = False
-
     init_logging(local_results_dir=util.get_exp_dir(configs))
     data = create_input_dataframe(configs)
     run_model(configs, data)

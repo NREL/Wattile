@@ -71,7 +71,7 @@ def size_the_batches(train_data, val_data, tr_desired_batch_size, te_desired_bat
     return train_bt_size, val_bt_size, num_train_data
 
 
-def data_transform(train_data, val_data, transformation_method, configs):
+def data_transform(train_data, val_data, transformation_method, run_train):
     """
     Normalize the training and val data according to a user-defined criteria
 
@@ -81,7 +81,7 @@ def data_transform(train_data, val_data, transformation_method, configs):
     :param run_train: Boolean
     :return:
     """
-    if configs["run_train"]:
+    if run_train:
         # For the result de-normalization purpose, saving the max and min values of the STM_Xcel_Meter columns
         train_stats = {}
         train_stats['train_max'] = train_data.max().to_dict()
@@ -102,16 +102,9 @@ def data_transform(train_data, val_data, transformation_method, configs):
             raise ConfigsError("{} is not a supported form of data normalization".format(transformation_method))
 
     # Reading back the train stats for normalizing val data w.r.t to train data
-    if configs["run_train"]:
-        file_loc = os.path.join(file_prefix, "train_stats.json")
-        with open(file_loc, 'r') as f:
-            train_stats = json.load(f)
-
-    elif not configs["run_train"]:
-        file_loc = os.path.join(configs["trained_model_path"], "train_stats.json")
-        print("reading statistics data (for normalization) from previously trained model results: {}".format(file_loc))
-        with open(file_loc, 'r') as f:
-            train_stats = json.load(f)
+    file_loc = os.path.join(file_prefix, "train_stats.json")
+    with open(file_loc, 'r') as f:
+        train_stats = json.load(f)
 
     # get statistics for training data
     train_max = pd.DataFrame(train_stats['train_max'], index=[1]).iloc[0]
@@ -694,7 +687,6 @@ def run_training(train_loader, val_loader, val_df, num_epochs, run_resume, write
     with open(path, 'w') as fp:
         json.dump(errors, fp, indent=1)
 
-
 def run_validation(val_loader, val_df, writer, transformation_method, configs, val_batch_size, seq_dim):
     """
     run prediction
@@ -1111,7 +1103,7 @@ def main(train_df, val_df, configs):
     val_df.reset_index(drop=True, inplace=True)
 
     # Normalization transformation
-    train_data, val_data = data_transform(train_data, val_data, transformation_method, configs)
+    train_data, val_data = data_transform(train_data, val_data, transformation_method, run_train)
     logger.info("Data transformed using {} as transformation method".format(transformation_method))
 
     # Size the batches

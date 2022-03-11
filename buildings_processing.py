@@ -184,9 +184,6 @@ def time_dummies(data, configs):
         #data = data.join(pd.get_dummies(data.index.hour, prefix='HOD_binary_reg', drop_first=True).set_index(data.index))
 
     if "binary_fuzzy" in configs["HOD"]:
-        # for i in range(1, 24):
-        #     data["HOD_binary_fuzzy_{}".format(i)] = (data.index.hour == i).astype(int)
-        #data = data.join(pd.get_dummies(data.index.hour, prefix='HOD_binary_fuzzy', drop_first=True).set_index(data.index))
         for HOD in range(0, 24):
             data["HOD_binary_fuzzy_{}".format(HOD)] = np.maximum(1 - abs((data.index.hour + data.index.minute / 60) - HOD) / 1, 0)
 
@@ -320,7 +317,6 @@ def pad_full_data(data, configs):
     :param configs: (Dict)
     :return: (DataFrame)
     """
-
     target = data[configs["target_var"]]
     data = data.drop(configs['target_var'], axis=1)
     data_orig = data
