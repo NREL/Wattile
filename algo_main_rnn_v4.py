@@ -750,11 +750,8 @@ def run_prediction(val_loader, val_df, writer, transformation_method, configs, v
     with torch.no_grad():
         preds = []
         for (feats, v) in val_loader:
-            print(f"feats {feats.shape}")
             features = Variable(feats.view(-1, seq_dim, configs['input_dim']))
-            print(f"features {features.shape}")
             outputs = model(features)
-            print(f"outputs {outputs.shape}")
             preds.append(outputs.cpu().numpy())
 
     # (Normalized Data) Concatenate the predictions for the whole val set
