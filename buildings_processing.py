@@ -137,26 +137,26 @@ def clean_data(data, configs):
 
     # Clean data: Set negative GHI values to 0
     var_ref = 'SRRL BMS Global Horizontal Irradiance (W/m²_irr)'
-    if var_ref in configs['weather_include']:
+    if var_ref in data.columns:
         data[var_ref][data[var_ref] < 0] = 0
 
     # Clean data: Total cloud cover: Set -1's to 0 and interpolate negative false values
     var_ref = 'SRRL BMS Total Cloud Cover (%)'
-    if var_ref in configs['weather_include']:
+    if var_ref in data.columns:
         data[var_ref][data[var_ref] == -1] = 0
         data[var_ref][data[var_ref] < 0] = float("NaN")
         data[var_ref].interpolate(inplace=True)
 
     # Clean data: Opaque cloud cover: Set -1's to 0 and interpolate negative false values
     var_ref = 'SRRL BMS Opaque Cloud Cover (%)'
-    if var_ref in configs['weather_include']:
+    if var_ref in data.columns:
         data[var_ref][data[var_ref] == -1] = 0
         data[var_ref][data[var_ref] < 0] = float("NaN")
         data[var_ref].interpolate(inplace=True)
 
     # Clean data: Snow Depth: Set small and negative values to 0 to remove noise, and convolve to remove sharp/incorrect gradients
     var_ref = "SRRL BMS Snow Depth (in)"
-    if var_ref in configs['weather_include']:
+    if var_ref in data.columns:
         data[var_ref][data[var_ref] < 0.3] = 0
         data[var_ref].interpolate(inplace=True)
         box_pts = 20
@@ -181,33 +181,31 @@ def time_dummies(data, configs):
     # HOD
     if "sincos" in configs["HOD"]:
         data['sin_HOD'] = np.sin(
-            2 * np.pi * (data.index.hour * 3600 + data.index.minute * 60 + data.index.minute).values / (
+            2 * np.pi * (data.index.hour * 3600 + data.index.minute * 60 + data.index.second).values / (
                     24 * 60 * 60))
         data['cos_HOD'] = np.cos(
-            2 * np.pi * (data.index.hour * 3600 + data.index.minute * 60 + data.index.minute).values / (
+            2 * np.pi * (data.index.hour * 3600 + data.index.minute * 60 + data.index.second).values / (
                     24 * 60 * 60))
     if "binary_reg" in configs["HOD"]:
-        for i in range(1,24):
+        for i in range(0, 24):
             data["HOD_binary_reg_{}".format(i)] = (data.index.hour == i).astype(int)
+
         #data = data.join(pd.get_dummies(data.index.hour, prefix='HOD_binary_reg', drop_first=True).set_index(data.index))
 
     if "binary_fuzzy" in configs["HOD"]:
-        for i in range(1,24):
-            data["HOD_binary_fuzzy_{}".format(i)] = (data.index.hour == i).astype(int)
-        #data = data.join(pd.get_dummies(data.index.hour, prefix='HOD_binary_fuzzy', drop_first=True).set_index(data.index))
-        for HOD in range(1, 24):
+        for HOD in range(0, 24):
             data["HOD_binary_fuzzy_{}".format(HOD)] = np.maximum(1 - abs((data.index.hour + data.index.minute / 60) - HOD) / 1, 0)
 
     # DOW
     if "binary_reg" in configs["DOW"]:
-        for i in range(1,7):
+        for i in range(0, 7):
             data["DOW_binary_reg_{}".format(i)] = (data.index.weekday == i).astype(int)
         #data = data.join(pd.get_dummies(data.index.weekday, prefix='DOW_binary_reg', drop_first=True).set_index(data.index))
     if "binary_fuzzy" in configs["DOW"]:
-        for i in range(1,7):
+        for i in range(0, 7):
             data["DOW_binary_fuzzy_{}".format(i)] = (data.index.weekday == i).astype(int)
         #data = data.join(pd.get_dummies(data.index.weekday, prefix='DOW_binary_fuzzy', drop_first=True).set_index(data.index))
-        for DOW in range(1, 7):
+        for DOW in range(0, 7):
             data["DOW_binary_fuzzy_{}".format(DOW)] = np.maximum(1 - abs((data.index.weekday + data.index.hour / 24) - DOW) / 1, 0)
 
     # MOY
@@ -324,12 +322,10 @@ def pad_full_data(data, configs):
     Create lagged versions of exogenous variables in a DataFrame.
     Used specifically for RNN and LSTM deep learning methods.
     Called by prep_for_rnn and prep_for_quantile
-
     :param data: (DataFrame)
     :param configs: (Dict)
     :return: (DataFrame)
     """
-
     target = data[configs["target_var"]]
     data = data.drop(configs['target_var'], axis=1)
     data_orig = data
@@ -338,14 +334,14 @@ def pad_full_data(data, configs):
     temp_holder = list()
     temp_holder.append(data_orig)
     for i in range(1, configs['window']+1):
-        shifted = data_orig.shift(i * int(configs["sequence_freq"] / configs["resample_freq"])).astype("float32").add_suffix("_lag{}".format(i))
+        shifted = data_orig.shift(i * int(configs["sequence_freq_min"]), freq='min').astype("float32").add_suffix("_lag{}".format(i))
         temp_holder.append(shifted)
     temp_holder.reverse()
     data = pd.concat(temp_holder, axis=1)
 
     # If this is a linear quantile regression model (iterative)
     if configs["arch_type"] == "quantile" and configs["iterative"] == True:
-        for i in range(0, configs["EC_future_gap"]):
+        for i in range(0, configs["EC_future_gap_min"]):
             if i == 0:
                 data[configs["target_var"]] = target
             else:
@@ -357,26 +353,26 @@ def pad_full_data(data, configs):
     # If this is a linear quantile regression model (point)
     elif configs["arch_type"] == "quantile" and configs["iterative"] == False:
         # Re-append the shifted target column to the dataframe
-        data[configs["target_var"]] = target.shift(-configs['EC_future_gap'])
+        data[configs["target_var"]] = target.shift(-configs['EC_future_gap_min'])
 
         # Drop all nans
         data = data.dropna(how='any')
 
         # Adjust time index to match the EC values
-        data.index = data.index + pd.DateOffset(minutes=(configs["EC_future_gap"] * configs["resample_freq"]))
+        data.index = data.index + pd.DateOffset(minutes=(configs["EC_future_gap_min"]))
 
     # If this is an RNN model
     elif configs["arch_type"] == "RNN":
         # Re-append the shifted target column to the dataframe
-        data[configs["target_var"]] = target.shift(-configs['EC_future_gap'])
+        data[configs["target_var"]] = target.shift(-configs['EC_future_gap_min'])
 
         # Drop all nans
         data = data.dropna(how='any')
 
         # Adjust time index to match the EC values
-        data.index = data.index + pd.DateOffset(minutes=(configs["EC_future_gap"] * configs["resample_freq"]))
+        data.index = data.index + pd.DateOffset(minutes=(configs["EC_future_gap_min"]))
 
-    return data
+    return data, target
 
 
 def pad_full_data_s2s(data, configs):
@@ -396,7 +392,7 @@ def pad_full_data_s2s(data, configs):
     temp_holder = list()
     temp_holder.append(data_orig)
     for i in range(1, configs['window']+1):
-        shifted = data_orig.shift(i * int(configs["sequence_freq"] / configs["resample_freq"])).astype(
+        shifted = data_orig.shift(i * int(configs["sequence_freq_min"]), freq='min').astype(
             "float32").add_suffix("_lag{}".format(i))
         temp_holder.append(shifted)
     temp_holder.reverse()
@@ -405,13 +401,13 @@ def pad_full_data_s2s(data, configs):
     # Do fine padding for future predictions. Create a new df to preserve memory usage.
     local = pd.DataFrame()
     for i in range(0, configs["S2S_stagger"]["initial_num"]):
-        local["{}_lag_{}".format(configs["target_var"], i)] = target.shift(-i * int(configs["sequence_freq"] / configs["resample_freq"]))
+        local["{}_lag_{}".format(configs["target_var"], i)] = target.shift(-i * int(configs["sequence_freq_min"]), freq='min')
 
     # Do additional coarse padding for future predictions
     for i in range(1, configs["S2S_stagger"]["secondary_num"] + 1):
         base = configs["S2S_stagger"]["initial_num"]
         new = base + configs["S2S_stagger"]["decay"] * i
-        local["{}_lag_{}".format(configs["target_var"], base+i)] = target.shift(-new * int(configs["sequence_freq"] / configs["resample_freq"]))
+        local["{}_lag_{}".format(configs["target_var"], base+i)] = target.shift(-new * int(configs["sequence_freq_min"], freq='min'))
 
     data = pd.concat([data, local], axis=1)
 
@@ -441,32 +437,19 @@ def prep_for_rnn(configs, data):
     :return: train and val DataFrames
     """
 
-    if configs["use_case"] == "train":
-        configs['input_dim'] = data.shape[1] - 1
-        logger.info("Number of features: {}".format(configs['input_dim']))
-        logger.debug("Features: {}".format(data.columns.values))
-
-        # Do sequential padding
-        data = pad_full_data(data, configs)
-
-        # Split data into train/val/test sets
+    if configs["use_case"] == "train" or configs["use_case"] == "prediction":
+        # split data into training/validation/testing sets
         train_df, val_df = input_data_split(data, configs)
 
-    elif configs["test_method"] == "external":
-        configs['input_dim'] = data.shape[1] - 1
-        logger.info("Number of features: {}".format(configs['input_dim']))
-        logger.debug("Features: {}".format(data.columns.values))
+    elif configs["use_case"] == "validation" and configs["test_method"] == "external":
 
-        # Do sequential padding
-        data = pad_full_data(data, configs)
-
-        # Split data into /val/test sets
+        # split data into training/validation/testing sets
         val_df = data
         train_df = pd.DataFrame()
         file = os.path.join(configs["data_dir"], configs["building"], "{}_external_test.h5".format(configs["target_var"]))
         val_df.to_hdf(file, key='df', mode='w')
 
-    elif configs["test_method"] == "internal":
+    elif configs["use_case"] == "validation" and configs["test_method"] == "internal":
         local_results_dir = get_exp_dir(configs)
         temp_config_file = os.path.join(local_results_dir, "configs.json")
         with open(temp_config_file, 'r') as f:
@@ -529,19 +512,11 @@ def prep_for_seq2seq(configs, data):
     """
 
     if configs["use_case"] == "train" or configs["use_case"] == "prediction":
-        configs['input_dim'] = data.shape[1] - 1
-        logger.info("Number of features: {}".format(configs['input_dim']))
-
-        data, target = pad_full_data_s2s(data, configs)
-
+        # split data into training/validation/testing sets
         train_df, val_df = input_data_split(data, configs)
 
     elif configs["use_case"] == "validation" and configs["test_method"] == "external":
-        configs['input_dim'] = data.shape[1] - 1
-        logger.info("Number of features: {}".format(configs['input_dim']))
-
-        data, target = pad_full_data_s2s(data, configs)
-
+        # split data into training/validation/testing sets
         val_df = data
         train_df = pd.DataFrame()
         file = os.path.join(configs["data_dir"], configs["building"], "{}_external_test.h5".format(configs["target_var"]))
@@ -644,13 +619,19 @@ def rolling_stats(data, configs):
     target = data[configs["target_var"]]
     X_data = data.drop(configs["target_var"], axis=1)
 
+    # inferring timestep (frequency) from the dataframe
+    dt = configs["data_time_interval_mins"]
+    windowsize = int(configs["rolling_window"]["minutes"] / dt) + 1
+    logging.debug("Feature extraction: rolling window size = {} rows".format(windowsize))
+
     if configs["rolling_window"]["type"] == "rolling":
-        mins = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).min().add_suffix("_min")
-        means = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).mean().add_suffix("_mean")
-        maxs = X_data.rolling(window=configs["rolling_window"]["minutes"]+1).max().add_suffix("_max")
+        mins = X_data.rolling(window=windowsize, min_periods=1).min().add_suffix("_min")
+        means = X_data.rolling(window=windowsize, min_periods=1).mean().add_suffix("_mean")
+        maxs = X_data.rolling(window=windowsize, min_periods=1).max().add_suffix("_max")
         data = pd.concat([mins, means, maxs], axis=1)
         data[configs["target_var"]] = target
-    if configs["rolling_window"]["type"] == "binned":
+
+    elif configs["rolling_window"]["type"] == "binned":
         mins = X_data.resample(str(configs["rolling_window"]["minutes"]) + "T").min().add_suffix("_min")
         means = X_data.resample(str(configs["rolling_window"]["minutes"]) + "T").mean().add_suffix("_mean")
         maxs = X_data.resample(str(configs["rolling_window"]["minutes"]) + "T").max().add_suffix("_max")

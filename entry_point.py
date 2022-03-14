@@ -60,30 +60,67 @@ def create_input_dataframe(configs):
 
     # Get the dataset
     if configs["use_case"] == "validation" and configs["test_method"] == "internal":
-        data_full = pd.read_hdf(os.path.join(local_results_dir, "internal_test.h5"))
-
+        data = pd.read_hdf(os.path.join(local_results_dir, "internal_test.h5"))
     else:
-        data_full = bp.get_full_data(configs)
+        data = bp.get_full_data(configs)
 
-        # Remove all data columns we dont care about
-        important_vars = configs['weather_include'] + [configs['target_var']]
-        data = data_full[important_vars]
-        # Resample
-        resample_bin_size = "{}T".format(configs['resample_freq'])
-        data = data.resample(resample_bin_size).mean()
+    # if certain predictor variables are pre-defined, then include only those.
+    if configs['weather_include']:
+        keep_cols = configs['weather_include'] + [configs['target_var']]
+        data = data[keep_cols]
+        logger.info("columns specified in the configs.json are only included")
+    else:
+        logger.info("all available predictor variables and target variable ({}) are included".format(configs['target_var']))
+
+    # Do some preprocessing, but only if the dataset needs it (i.e. it is not an
+    if configs["use_case"] == "training":
+
         # Clean
         data = bp.clean_data(data, configs)
-        # Add calculated features (if applicable)
 
-        # Convert data to rolling average (except output) and create min, mean, and max columns
+        # Add time-based features 
+        data = bp.time_dummies(data, configs)
+
+        # Add statistics features 
         if configs["rolling_window"]["active"]:
             data = bp.rolling_stats(data, configs)
 
-        # Add time-based dummy variables
+        # Add lag features
+        configs['input_dim'] = data.shape[1] - 1
+        logger.info("Number of features: {}".format(configs['input_dim']))
+        logger.debug("Features: {}".format(data.columns.values))
+        if configs["arch_version"] == 4:
+            data, target = bp.pad_full_data(data, configs)
+        elif configs["arch_version"] == 5:
+            data, target = bp.pad_full_data_s2s(data, configs)
+
+        # removing columns with zero
+        data = data.loc[:, (data != 0).any(axis=0)]
+
+    else:
+
+        logger.info("performing data transformation for prediction")
+
+        # add time-based features (based on configs file from previous model training)
+        logger.info("adding time-based features")
         data = bp.time_dummies(data, configs)
 
-    # removing columns with zero
-    data = data.loc[:, (data != 0).any(axis=0)]
+        # add statistics features (based on configs file from previous model training)
+        if configs["rolling_window"]["active"]:
+            logger.info("adding statistic features")
+            data = bp.rolling_stats(data, configs)
+
+        # add lag features (based on configs file from previous model training)
+        configs['input_dim'] = data.shape[1] - 1
+        logger.info("Number of features: {}".format(configs['input_dim']))
+        logger.debug("Features: {}".format(data.columns.values))
+        if configs["arch_version"] == 4:
+            data, target = bp.pad_full_data(data, configs)
+        elif configs["arch_version"] == 5:
+            data, target = bp.pad_full_data_s2s(data, configs)
+
+        # filtering features based on down-selected features resulted from feature selection
+        # place holder  
 
     return data
 
@@ -95,6 +132,11 @@ def run_model(configs, data):
     :type configs: dcit
     :param data: input data
     :type data: DataFrame
+
+    - reads raw data for prediction
+    - adds same features (time-based, statistics, time lag) that were added in the previous model training
+    - filters features based on down-selected features list from the previous model training
+    
     """
     local_results_dir = util.get_exp_dir(configs)
 
@@ -119,6 +161,7 @@ def run_model(configs, data):
     if configs['arch_type'] == 'RNN':
         # What RNN version you are implementing? Specified in configs.
         rnn_mod = importlib.import_module("algo_main_rnn_v{}".format(configs["arch_version"]))
+        logger.info("training with arch version {}".format(configs["arch_version"]))
 
         if configs["arch_version"] == 1:
             # read the preprocessed data from csvs
@@ -161,5 +204,5 @@ def main(configs):
 # If the model is being run locally (i.e. a single model is being trained), read in configs.json and pass to main()
 if __name__ == "__main__":
     with open("configs.json", "r") as read_file:
-        config = json.load(read_file)
-    main(config)
+        configs = json.load(read_file)
+    main(configs)
