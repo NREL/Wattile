@@ -372,7 +372,7 @@ def pad_full_data(data, configs):
         # Adjust time index to match the EC values
         data.index = data.index + pd.DateOffset(minutes=(configs["EC_future_gap_min"]))
 
-    return data, target
+    return data
 
 
 def pad_full_data_s2s(data, configs):
@@ -414,7 +414,7 @@ def pad_full_data_s2s(data, configs):
     # Drop all nans
     data = data.dropna(how='any')
 
-    return data, target
+    return data
 
 
 def corr_heatmap(data):

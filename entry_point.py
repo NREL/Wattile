@@ -90,9 +90,9 @@ def create_input_dataframe(configs):
         logger.info("Number of features: {}".format(configs['input_dim']))
         logger.debug("Features: {}".format(data.columns.values))
         if configs["arch_version"] == 4:
-            data, target = bp.pad_full_data(data, configs)
+            data = bp.pad_full_data(data, configs)
         elif configs["arch_version"] == 5:
-            data, target = bp.pad_full_data_s2s(data, configs)
+            data = bp.pad_full_data_s2s(data, configs)
 
         # removing columns with zero
         data = data.loc[:, (data != 0).any(axis=0)]
@@ -115,9 +115,9 @@ def create_input_dataframe(configs):
         logger.info("Number of features: {}".format(configs['input_dim']))
         logger.debug("Features: {}".format(data.columns.values))
         if configs["arch_version"] == 4:
-            data, target = bp.pad_full_data(data, configs)
+            data = bp.pad_full_data(data, configs)
         elif configs["arch_version"] == 5:
-            data, target = bp.pad_full_data_s2s(data, configs)
+            data = bp.pad_full_data_s2s(data, configs)
 
         # filtering features based on down-selected features resulted from feature selection
         # place holder  
