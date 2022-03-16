@@ -104,10 +104,19 @@ def get_full_data(configs):
                         continue
                 else:
                     logger.info("Pre-process: input file not properly differentiated between Predictors and Targets")
-                    
-        if (data_full_p.empty)|(data_full_t.empty):
-            logger.info("Pre-process: predictor and/or target dataframe is empty (even though files exist), so exiting..")
+
+        if data_full_p.empty:
+            logger.info("Pre-process: predictor dataframe is empty. Exiting process...")
             sys.exit()
+
+        elif data_full_t.empty and configs["use_case"] != "prediction":
+            logger.info("Pre-process: target dataframe is empty. Exiting process...")
+            sys.exit()          
+
+        if configs["use_case"] == "prediction":
+            data_full = data_full_p
+            data_full[configs["target_var"]] = -999
+            
         else:
             data_full = pd.merge(data_full_p, data_full_t, how='outer', on='Timestamp')
         
@@ -428,11 +437,11 @@ def prep_for_rnn(configs, data):
     :return: train and val DataFrames
     """
 
-    if configs["run_train"]:
+    if configs["use_case"] == "train" or configs["use_case"] == "prediction":
         # split data into training/validation/testing sets
         train_df, val_df = input_data_split(data, configs)
 
-    elif not configs["run_train"] and configs["test_method"] == "external":
+    elif configs["use_case"] == "validation" and configs["test_method"] == "external":
 
         # split data into training/validation/testing sets
         val_df = data
@@ -440,7 +449,7 @@ def prep_for_rnn(configs, data):
         file = os.path.join(configs["data_dir"], configs["building"], "{}_external_test.h5".format(configs["target_var"]))
         val_df.to_hdf(file, key='df', mode='w')
 
-    elif not configs["run_train"] and configs["test_method"] == "internal":
+    elif configs["use_case"] == "validation" and configs["test_method"] == "internal":
         local_results_dir = get_exp_dir(configs)
         temp_config_file = os.path.join(local_results_dir, "configs.json")
         with open(temp_config_file, 'r') as f:
@@ -502,18 +511,18 @@ def prep_for_seq2seq(configs, data):
     :return: train and val DataFrames
     """
 
-    if configs["run_train"]:
+    if configs["use_case"] == "train" or configs["use_case"] == "prediction":
         # split data into training/validation/testing sets
         train_df, val_df = input_data_split(data, configs)
 
-    elif not configs["run_train"] and configs["test_method"] == "external":
+    elif configs["use_case"] == "validation" and configs["test_method"] == "external":
         # split data into training/validation/testing sets
         val_df = data
         train_df = pd.DataFrame()
         file = os.path.join(configs["data_dir"], configs["building"], "{}_external_test.h5".format(configs["target_var"]))
         val_df.to_hdf(file, key='df', mode='w')
 
-    elif not configs["run_train"] and configs["test_method"] == "internal":
+    elif configs["use_case"] == "validation" and configs["test_method"] == "internal":
         local_results_dir = get_exp_dir(configs)
         temp_config_file = os.path.join(local_results_dir, "configs.json")
         with open(temp_config_file, 'r') as f:
@@ -524,7 +533,7 @@ def prep_for_seq2seq(configs, data):
         val_df = data
 
     else:
-        raise ConfigsError("run_train and/or test_method not valid.")
+        raise ConfigsError("use_case and/or test_method not valid.")
 
 
     # # Determine input dimension. All unique features are added by this point.

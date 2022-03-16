@@ -35,7 +35,7 @@ V5_CONFIG_PATCH = { "arch_version": 5}
 )
 def test_validation(config_for_tests, tmpdir, config_patch, test_exp_dir):
     config_for_tests.update(config_patch)
-    config_for_tests["run_train"] = False
+    config_for_tests["use_case"] = "validation"
     
     config_for_tests["results_dir"] = str(tmpdir / "train_results")
     exp_dir = get_exp_dir(config_for_tests)

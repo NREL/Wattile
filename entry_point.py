@@ -59,15 +59,10 @@ def create_input_dataframe(configs):
         configs['target_feat_name'] = [configs['target_var']]
 
     # Get the dataset
-    if configs["run_train"] or configs["test_method"] == "external":
-        data = bp.get_full_data(configs)
-    
-    elif configs["test_method"] == "internal":
-        # temporarily assigning synthetic data for prediction testing
+    if configs["use_case"] == "validation" and configs["test_method"] == "internal":
         data = pd.read_hdf(os.path.join(local_results_dir, "internal_test.h5"))
-
     else:
-         raise ConfigsError("run_train is FALSE but test_method designated in configs.json is not understood")
+        data = bp.get_full_data(configs)
 
     # if certain predictor variables are pre-defined, then include only those.
     if configs['weather_include']:
@@ -78,7 +73,7 @@ def create_input_dataframe(configs):
         logger.info("all available predictor variables and target variable ({}) are included".format(configs['target_var']))
 
     # Do some preprocessing, but only if the dataset needs it (i.e. it is not an
-    if configs["run_train"]:
+    if configs["use_case"] == "training":
 
         # Clean
         data = bp.clean_data(data, configs)
@@ -102,7 +97,7 @@ def create_input_dataframe(configs):
         # removing columns with zero
         data = data.loc[:, (data != 0).any(axis=0)]
 
-    elif not configs['run_train']:
+    else:
 
         logger.info("performing data transformation for prediction")
 
@@ -145,7 +140,9 @@ def run_model(configs, data):
     """
     local_results_dir = util.get_exp_dir(configs)
 
-    if configs["run_train"]:
+    local_results_dir = util.get_exp_dir(configs)
+
+    if configs["use_case"] == "train":
         # Check the model training process
         torch_file = os.path.join(local_results_dir, 'torch_model')
         if os.path.exists(torch_file):
@@ -159,7 +156,7 @@ def run_model(configs, data):
             if configs["run_resume"]:
                 configs["run_resume"] = False
                 print("Model for {} doesnt exist yet. Resetting run_resume to False".format(configs["target_var"]))
-
+                
     # Choose what ML architecture to use and execute the corresponding script
     if configs['arch_type'] == 'RNN':
         # What RNN version you are implementing? Specified in configs.
@@ -171,24 +168,26 @@ def run_model(configs, data):
             train_df = pd.read_csv('./data/STM_Train_Data_processed.csv')
             val_df = pd.read_csv('./data/STM_Test_Data_processed.csv')
             print("read data from locally stored csvs")
-            rnn_mod.main(train_df, val_df, configs)
+            results = rnn_mod.main(train_df, val_df, configs)
 
         # Sequence to sequence model
         elif (configs["arch_version"] == 5) or (configs["arch_version"] == 6):
             # Prepare data for the RNN model type
             train_df, val_df = bp.prep_for_seq2seq(configs, data)
-            rnn_mod.main(train_df, val_df, configs)
+            results = rnn_mod.main(train_df, val_df, configs)
 
         # All other models (2-4)
         else:
             # Prepare data for the RNN model type
             train_df, val_df = bp.prep_for_rnn(configs, data)
-            rnn_mod.main(train_df, val_df, configs)
+            results = rnn_mod.main(train_df, val_df, configs)
 
     logger.info('Run with arch {}({}), on {}, with session ID {}, is done!'.format(configs['arch_type'],
                                                                                                      configs["arch_type_variant"],
                                                                                           configs["target_var"],
                                                                                           configs["exp_id"]))
+    return results
+
 
 def main(configs):
     """
@@ -199,8 +198,8 @@ def main(configs):
     """
     init_logging(local_results_dir=util.get_exp_dir(configs))
     data = create_input_dataframe(configs)
-    run_model(configs, data)
-
+    
+    return run_model(configs, data)
 
 # If the model is being run locally (i.e. a single model is being trained), read in configs.json and pass to main()
 if __name__ == "__main__":

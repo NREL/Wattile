@@ -628,7 +628,7 @@ def main(configs):
     train_end_date = configs['train_end_date']
     test_start_date = configs['test_start_date']
     test_end_date = configs['test_end_date']
-    run_train = configs['run_train']
+    run_train = configs["use_case"] == "train"
     fetch_n_parse = configs['fetch_n_parse']
 
     train_exp_id = configs['train_exp_id']
