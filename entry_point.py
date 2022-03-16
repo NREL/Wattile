@@ -95,21 +95,19 @@ def create_input_dataframe(configs):
     if configs["use_case"] == "training":
         data = data.loc[:, (data != 0).any(axis=0)]
 
-    return data
+    train_df, val_df = bp.prep_for_rnn(configs, data)
 
+    return train_df, val_df
 
-def run_model(configs, data):
+def run_model(configs, train_df, val_df):
     """train, validate, or predict using a model
 
     :param configs: dict of configs
     :type configs: dcit
-    :param data: input data
-    :type data: DataFrame
-
-    - reads raw data for prediction
-    - adds same features (time-based, statistics, time lag) that were added in the previous model training
-    - filters features based on down-selected features list from the previous model training
-    
+    :param train_df: input data for training
+    :type train_df: DataFrame
+    :param val_df: input data for validation
+    :type val_df: DataFrame
     """
     local_results_dir = util.get_exp_dir(configs)
 
@@ -135,7 +133,6 @@ def run_model(configs, data):
         logger.info("training with arch version {}".format(configs["arch_version"]))
 
         # Prepare data for the RNN model type
-        train_df, val_df = bp.prep_for_rnn(configs, data)
         results = rnn_mod.main(train_df, val_df, configs)
 
     logger.info('Run with arch {}({}), on {}, with session ID {}, is done!'.format(configs['arch_type'],
@@ -153,9 +150,9 @@ def main(configs):
     :return: None
     """
     init_logging(local_results_dir=util.get_exp_dir(configs))
-    data = create_input_dataframe(configs)
+    train_df, val_df = create_input_dataframe(configs)
     
-    return run_model(configs, data)
+    return run_model(configs, train_df, val_df)
 
 # If the model is being run locally (i.e. a single model is being trained), read in configs.json and pass to main()
 if __name__ == "__main__":
