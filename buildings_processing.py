@@ -321,7 +321,7 @@ def pad_full_data(data, configs):
     """
     Create lagged versions of exogenous variables in a DataFrame.
     Used specifically for RNN and LSTM deep learning methods.
-    Called by prep_for_rnn and prep_for_quantile
+
     :param data: (DataFrame)
     :param configs: (Dict)
     :return: (DataFrame)
@@ -463,44 +463,6 @@ def prep_for_rnn(configs, data):
         raise ConfigsError("run_train and/or test_method not valid.")
 
     return train_df, val_df
-
-
-def prep_for_quantile(configs, feature_df=pd.DataFrame()):
-    """
-    Prepare data for input to a quantile regression model.
-
-    :param configs: (Dict)
-    :return: train and val DataFrames, and fully processed (pre-split) dataset
-    """
-
-    if not configs["run_feature_selection"]:
-        # Get full data
-        data_full = get_full_data(configs)
-
-        # Remove all data columns that we don't care about from full dataset
-        important_vars = configs['weather_include'] + [configs['target_var']]
-        data = data_full[important_vars]
-
-        # Resample if requested
-        resample_bin_size = "{}T".format(configs['resample_freq'])
-        data = data.resample(resample_bin_size).mean()
-
-        # Clean data
-        data = clean_data(data, configs)
-
-        # Add weather lags
-        data = pad_full_data(data, configs)
-
-        # Add time-based dummy variables
-        data = time_dummies(data, configs)
-
-    if configs["run_feature_selection"]:
-        data = feature_df
-
-    # Split into training and val
-    train_df, val_df = input_data_split(data, configs)
-
-    return train_df, val_df, data
 
 
 def get_test_data(building, year, months, dir):
