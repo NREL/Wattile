@@ -140,8 +140,6 @@ def run_model(configs, data):
     """
     local_results_dir = util.get_exp_dir(configs)
 
-    local_results_dir = util.get_exp_dir(configs)
-
     if configs["use_case"] == "train":
         # Check the model training process
         torch_file = os.path.join(local_results_dir, 'torch_model')
@@ -163,24 +161,9 @@ def run_model(configs, data):
         rnn_mod = importlib.import_module("algo_main_rnn_v{}".format(configs["arch_version"]))
         logger.info("training with arch version {}".format(configs["arch_version"]))
 
-        if configs["arch_version"] == 1:
-            # read the preprocessed data from csvs
-            train_df = pd.read_csv('./data/STM_Train_Data_processed.csv')
-            val_df = pd.read_csv('./data/STM_Test_Data_processed.csv')
-            print("read data from locally stored csvs")
-            results = rnn_mod.main(train_df, val_df, configs)
-
-        # Sequence to sequence model
-        elif (configs["arch_version"] == 5) or (configs["arch_version"] == 6):
-            # Prepare data for the RNN model type
-            train_df, val_df = bp.prep_for_seq2seq(configs, data)
-            results = rnn_mod.main(train_df, val_df, configs)
-
-        # All other models (2-4)
-        else:
-            # Prepare data for the RNN model type
-            train_df, val_df = bp.prep_for_rnn(configs, data)
-            results = rnn_mod.main(train_df, val_df, configs)
+        # Prepare data for the RNN model type
+        train_df, val_df = bp.prep_for_rnn(configs, data)
+        results = rnn_mod.main(train_df, val_df, configs)
 
     logger.info('Run with arch {}({}), on {}, with session ID {}, is done!'.format(configs['arch_type'],
                                                                                                      configs["arch_type_variant"],
