@@ -72,55 +72,28 @@ def create_input_dataframe(configs):
     else:
         logger.info("all available predictor variables and target variable ({}) are included".format(configs['target_var']))
 
-    # Do some preprocessing, but only if the dataset needs it (i.e. it is not an
+    # Do some preprocessing, but only if the dataset needs it
     if configs["use_case"] == "training":
-
-        # Clean
         data = bp.clean_data(data, configs)
 
-        # Add time-based features 
-        data = bp.time_dummies(data, configs)
+    # Add time-based features 
+    data = bp.time_dummies(data, configs)
 
-        # Add statistics features 
-        if configs["rolling_window"]["active"]:
-            data = bp.rolling_stats(data, configs)
+    # Add statistics features 
+    if configs["rolling_window"]["active"]:
+        data = bp.rolling_stats(data, configs)
 
-        # Add lag features
-        configs['input_dim'] = data.shape[1] - 1
-        logger.info("Number of features: {}".format(configs['input_dim']))
-        logger.debug("Features: {}".format(data.columns.values))
-        if configs["arch_version"] == 4:
-            data = bp.pad_full_data(data, configs)
-        elif configs["arch_version"] == 5:
-            data = bp.pad_full_data_s2s(data, configs)
+    # Add lag features
+    configs['input_dim'] = data.shape[1] - 1
+    logger.info("Number of features: {}".format(configs['input_dim']))
+    logger.debug("Features: {}".format(data.columns.values))
+    if configs["arch_version"] == 4:
+        data = bp.pad_full_data(data, configs)
+    elif configs["arch_version"] == 5:
+        data = bp.pad_full_data_s2s(data, configs)
 
-        # removing columns with zero
+    if configs["use_case"] == "training":
         data = data.loc[:, (data != 0).any(axis=0)]
-
-    else:
-
-        logger.info("performing data transformation for prediction")
-
-        # add time-based features (based on configs file from previous model training)
-        logger.info("adding time-based features")
-        data = bp.time_dummies(data, configs)
-
-        # add statistics features (based on configs file from previous model training)
-        if configs["rolling_window"]["active"]:
-            logger.info("adding statistic features")
-            data = bp.rolling_stats(data, configs)
-
-        # add lag features (based on configs file from previous model training)
-        configs['input_dim'] = data.shape[1] - 1
-        logger.info("Number of features: {}".format(configs['input_dim']))
-        logger.debug("Features: {}".format(data.columns.values))
-        if configs["arch_version"] == 4:
-            data = bp.pad_full_data(data, configs)
-        elif configs["arch_version"] == 5:
-            data = bp.pad_full_data_s2s(data, configs)
-
-        # filtering features based on down-selected features resulted from feature selection
-        # place holder  
 
     return data
 
