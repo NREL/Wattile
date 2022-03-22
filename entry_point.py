@@ -72,74 +72,43 @@ def create_input_dataframe(configs):
     else:
         logger.info("all available predictor variables and target variable ({}) are included".format(configs['target_var']))
 
-    # Do some preprocessing, but only if the dataset needs it (i.e. it is not an
+    # Do some preprocessing, but only if the dataset needs it
     if configs["use_case"] == "training":
-
-        # Clean
         data = bp.clean_data(data, configs)
 
-        # Add time-based features 
-        data = bp.time_dummies(data, configs)
+    # Add time-based features 
+    data = bp.time_dummies(data, configs)
 
-        # Add statistics features 
-        if configs["rolling_window"]["active"]:
-            data = bp.rolling_stats(data, configs)
+    # Add statistics features 
+    if configs["rolling_window"]["active"]:
+        data = bp.rolling_stats(data, configs)
 
-        # Add lag features
-        configs['input_dim'] = data.shape[1] - 1
-        logger.info("Number of features: {}".format(configs['input_dim']))
-        logger.debug("Features: {}".format(data.columns.values))
-        if configs["arch_version"] == 4:
-            data, target = bp.pad_full_data(data, configs)
-        elif configs["arch_version"] == 5:
-            data, target = bp.pad_full_data_s2s(data, configs)
+    # Add lag features
+    configs['input_dim'] = data.shape[1] - 1
+    logger.info("Number of features: {}".format(configs['input_dim']))
+    logger.debug("Features: {}".format(data.columns.values))
+    if configs["arch_version"] == 4:
+        data = bp.pad_full_data(data, configs)
+    elif configs["arch_version"] == 5:
+        data = bp.pad_full_data_s2s(data, configs)
 
-        # removing columns with zero
+    if configs["use_case"] == "training":
         data = data.loc[:, (data != 0).any(axis=0)]
 
-    else:
+    train_df, val_df = bp.prep_for_rnn(configs, data)
 
-        logger.info("performing data transformation for prediction")
+    return train_df, val_df
 
-        # add time-based features (based on configs file from previous model training)
-        logger.info("adding time-based features")
-        data = bp.time_dummies(data, configs)
-
-        # add statistics features (based on configs file from previous model training)
-        if configs["rolling_window"]["active"]:
-            logger.info("adding statistic features")
-            data = bp.rolling_stats(data, configs)
-
-        # add lag features (based on configs file from previous model training)
-        configs['input_dim'] = data.shape[1] - 1
-        logger.info("Number of features: {}".format(configs['input_dim']))
-        logger.debug("Features: {}".format(data.columns.values))
-        if configs["arch_version"] == 4:
-            data, target = bp.pad_full_data(data, configs)
-        elif configs["arch_version"] == 5:
-            data, target = bp.pad_full_data_s2s(data, configs)
-
-        # filtering features based on down-selected features resulted from feature selection
-        # place holder  
-
-    return data
-
-
-def run_model(configs, data):
+def run_model(configs, train_df, val_df):
     """train, validate, or predict using a model
 
     :param configs: dict of configs
     :type configs: dcit
-    :param data: input data
-    :type data: DataFrame
-
-    - reads raw data for prediction
-    - adds same features (time-based, statistics, time lag) that were added in the previous model training
-    - filters features based on down-selected features list from the previous model training
-    
+    :param train_df: input data for training
+    :type train_df: DataFrame
+    :param val_df: input data for validation
+    :type val_df: DataFrame
     """
-    local_results_dir = util.get_exp_dir(configs)
-
     local_results_dir = util.get_exp_dir(configs)
 
     if configs["use_case"] == "train":
@@ -163,24 +132,8 @@ def run_model(configs, data):
         rnn_mod = importlib.import_module("algo_main_rnn_v{}".format(configs["arch_version"]))
         logger.info("training with arch version {}".format(configs["arch_version"]))
 
-        if configs["arch_version"] == 1:
-            # read the preprocessed data from csvs
-            train_df = pd.read_csv('./data/STM_Train_Data_processed.csv')
-            val_df = pd.read_csv('./data/STM_Test_Data_processed.csv')
-            print("read data from locally stored csvs")
-            results = rnn_mod.main(train_df, val_df, configs)
-
-        # Sequence to sequence model
-        elif (configs["arch_version"] == 5) or (configs["arch_version"] == 6):
-            # Prepare data for the RNN model type
-            train_df, val_df = bp.prep_for_seq2seq(configs, data)
-            results = rnn_mod.main(train_df, val_df, configs)
-
-        # All other models (2-4)
-        else:
-            # Prepare data for the RNN model type
-            train_df, val_df = bp.prep_for_rnn(configs, data)
-            results = rnn_mod.main(train_df, val_df, configs)
+        # Prepare data for the RNN model type
+        results = rnn_mod.main(train_df, val_df, configs)
 
     logger.info('Run with arch {}({}), on {}, with session ID {}, is done!'.format(configs['arch_type'],
                                                                                                      configs["arch_type_variant"],
@@ -197,9 +150,9 @@ def main(configs):
     :return: None
     """
     init_logging(local_results_dir=util.get_exp_dir(configs))
-    data = create_input_dataframe(configs)
+    train_df, val_df = create_input_dataframe(configs)
     
-    return run_model(configs, data)
+    return run_model(configs, train_df, val_df)
 
 # If the model is being run locally (i.e. a single model is being trained), read in configs.json and pass to main()
 if __name__ == "__main__":
