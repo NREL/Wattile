@@ -19,7 +19,7 @@
  "train_batch_size": 26,
  "val_batch_size": 1,
  "convert_csvs": false,
- "results_dir": "EnergyForecasting_Results",
+ "exp_dir": "exp_dir",
  "data_dir": "data",
  "resample_freq": 15,
  "sequence_freq_min": 15,

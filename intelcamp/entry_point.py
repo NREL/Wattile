@@ -1,14 +1,16 @@
 import sys
 import pandas as pd
 import importlib
-import data_preprocessing
+from  intelcamp import data_preprocessing
 import json
-import buildings_processing as bp
+import intelcamp.buildings_processing as bp
 import logging
 import os
 import pathlib
-import util
+from  intelcamp import util
 
+PACKAGE_PATH = pathlib.Path(__file__).parent
+CONFIGS_PATH = PACKAGE_PATH / "configs.json"
 
 logger = logging.getLogger(str(os.getpid()))
 class ConfigsError(Exception):
@@ -45,7 +47,7 @@ def create_input_dataframe(configs):
     :return: data
     :rtype: DataFrame
     """
-    local_results_dir = util.get_exp_dir(configs)
+    local_results_dir = util.Path(configs["exp_dir"])
 
     # Preprocess if needed
     if configs['preprocess']:
@@ -109,7 +111,7 @@ def run_model(configs, train_df, val_df):
     :param val_df: input data for validation
     :type val_df: DataFrame
     """
-    local_results_dir = util.get_exp_dir(configs)
+    local_results_dir = util.Path(configs["exp_dir"])
 
     if configs["use_case"] == "train":
         # Check the model training process
@@ -129,7 +131,7 @@ def run_model(configs, train_df, val_df):
     # Choose what ML architecture to use and execute the corresponding script
     if configs['arch_type'] == 'RNN':
         # What RNN version you are implementing? Specified in configs.
-        rnn_mod = importlib.import_module("algo_main_rnn_v{}".format(configs["arch_version"]))
+        rnn_mod = importlib.import_module("intelcamp.algo_main_rnn_v{}".format(configs["arch_version"]))
         logger.info("training with arch version {}".format(configs["arch_version"]))
 
         # Prepare data for the RNN model type
@@ -149,13 +151,13 @@ def main(configs):
     :param configs: Dictionary
     :return: None
     """
-    init_logging(local_results_dir=util.get_exp_dir(configs))
+    init_logging(local_results_dir=util.Path(configs["exp_dir"]))
     train_df, val_df = create_input_dataframe(configs)
     
     return run_model(configs, train_df, val_df)
 
 # If the model is being run locally (i.e. a single model is being trained), read in configs.json and pass to main()
 if __name__ == "__main__":
-    with open("configs.json", "r") as read_file:
+    with open(CONFIGS_PATH, "r") as read_file:
         configs = json.load(read_file)
     main(configs)
