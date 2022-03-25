@@ -2,9 +2,9 @@ import os
 import numpy as np
 import pandas as pd
 import json
-from util import prtime, factors, tile, get_exp_dir
-import rnn
-import lstm
+from intelcamp.util import prtime, factors, tile
+from intelcamp import rnn
+from intelcamp import lstm
 
 import torch
 from torch.utils.data.dataloader import DataLoader
@@ -20,7 +20,7 @@ import csv
 import pathlib
 import psutil
 from psutil import virtual_memory
-import buildings_processing as bp
+import intelcamp.buildings_processing as bp
 import logging
 
 
@@ -719,12 +719,13 @@ def run_validation(val_loader, val_df, writer, transformation_method, configs, v
         json.dump(errors, fp, indent=1)
 
     # If a training history csv file does not exist, make one
-    if not pathlib.Path("Testing_history.csv").exists():
-        with open(r'Testing_history.csv', 'a') as f:
+    train_history_path = file_prefix / "Testing_history.csv"
+    if not train_history_path.exists():
+        with open(train_history_path, 'a') as f:
             writer = csv.writer(f, lineterminator='\n')
             writer.writerow(["File Path", "RMSE", "CV(RMSE)", "NMBE", "GOF", "QS", "ACE", "IS"])
     # Save the errors statistics to a central results csv once everything is done
-    with open(r'Testing_history.csv', 'a') as f:
+    with open(train_history_path, 'a') as f:
         writer = csv.writer(f, lineterminator='\n')
         writer.writerow([file_prefix,
                             errors["rmse"],
@@ -1125,7 +1126,7 @@ def main(train_df, val_df, configs):
 
     # Make results directory
     global file_prefix
-    file_prefix = get_exp_dir(configs)
+    file_prefix = pathlib.Path(configs["exp_dir"])
     file_prefix.mkdir(parents=True, exist_ok=True)
 
     # Create writer object for TensorBoard

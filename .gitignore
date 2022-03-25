@@ -4,10 +4,11 @@
 __pycache__/
 Deep_Learning_Prediction_Intervals/
 algorithm_implement.py
-EnergyForecasting_Results/
+exp_dir/
 data/
 !./tests/data/Synthetic Site
 nsrd_auth.json
 Training_history.csv
 .DS_Store
 .coverage
+dist

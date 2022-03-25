@@ -12,7 +12,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import logging
 import torch
-from util import get_exp_dir
+from pathlib import Path
+
 
 PROJECT_DIRECTORY = pathlib.Path(__file__).resolve().parent
 
@@ -47,15 +48,10 @@ def get_full_data(configs):
 
     # assuming there is only one json file in the folder summerizing input data
     # read json file
-    configs_file_inputdata = PROJECT_DIRECTORY / configs['data_dir'] / configs['building'] / f"{configs['building']} Config.json"
+    configs_file_inputdata = Path(configs['data_dir']) / configs['building'] / f"{configs['building']} Config.json"
     logger.info("Pre-process: reading input data summary json file from {}".format(configs_file_inputdata))
     with open(configs_file_inputdata, "r") as read_file:
         configs_input = json.load(read_file)
-
-    # creating paths to each file based on file list in json 
-    list_paths = []
-    for entry in configs_input['files']:
-        list_paths.append(configs['data_dir'] + "/" + configs['building'] + "/" + entry['filename'])
 
     # converting json into dataframe 
     df_inputdata = pd.DataFrame(configs_input['files'])
@@ -241,7 +237,7 @@ def input_data_split(data, configs):
     val_ratio = int(configs["data_split"].split(":")[1])/100
     test_ratio = int(configs["data_split"].split(":")[2])/100
 
-    file_prefix = get_exp_dir(configs)
+    file_prefix = Path(configs["exp_dir"])
 
     if configs['train_val_split'] == 'Random':
         pathlib.Path(configs["data_dir"]).mkdir(parents=True, exist_ok=True)
@@ -446,11 +442,11 @@ def prep_for_rnn(configs, data):
         # split data into training/validation/testing sets
         val_df = data
         train_df = pd.DataFrame()
-        file = os.path.join(configs["data_dir"], configs["building"], "{}_external_test.h5".format(configs["target_var"]))
-        val_df.to_hdf(file, key='df', mode='w')
+        filepath = filepath = pathlib.Path(configs["data_dir"]) / f"{configs['target_var']}_external_test.h5"
+        val_df.to_hdf(filepath, key='df', mode='w')
 
     elif configs["use_case"] == "validation" and configs["test_method"] == "internal":
-        local_results_dir = get_exp_dir(configs)
+        local_results_dir = Path(configs["exp_dir"])
         temp_config_file = os.path.join(local_results_dir, "configs.json")
         with open(temp_config_file, 'r') as f:
             temp_configs = json.load(f)

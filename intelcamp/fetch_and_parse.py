@@ -8,7 +8,7 @@ import re
 from scipy import stats
 from dateutil.parser import parse
 from functools import reduce
-from util import prtime
+from intelcamp.util import prtime
 import time
 import json
 import glob
