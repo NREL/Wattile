@@ -13,15 +13,12 @@ import matplotlib.pyplot as plt
 import logging
 import torch
 from pathlib import Path
+from intelcamp.error import ConfigsError
 
 
 PROJECT_DIRECTORY = pathlib.Path(__file__).resolve().parent
 
 logger = logging.getLogger(str(os.getpid()))
-
-class ConfigsError(Exception):
-    """Base class for exceptions in this module."""
-    pass
 
 
 def check_complete(torch_file, des_epochs):
@@ -73,7 +70,8 @@ def get_full_data(configs):
     
     if df_inputdata.empty:
         logger.info("Pre-process: measurements during the specified time period ({} to {}) are empty.".format(timestamp_start, timestamp_end))
-        sys.exit()
+        
+        raise ConfigsError("No datapoints found in dataset for specified timeframe.")
 
     else:
         data_full_p = pd.DataFrame()
@@ -103,11 +101,13 @@ def get_full_data(configs):
 
         if data_full_p.empty:
             logger.info("Pre-process: predictor dataframe is empty. Exiting process...")
-            sys.exit()
+
+            raise ConfigsError("No datapoints found in dataset for specified timeframe.")
 
         elif data_full_t.empty and configs["use_case"] != "prediction":
             logger.info("Pre-process: target dataframe is empty. Exiting process...")
-            sys.exit()          
+
+            raise ConfigsError("No datapoints found in dataset for specified timeframe.")          
 
         if configs["use_case"] == "prediction":
             data_full = data_full_p

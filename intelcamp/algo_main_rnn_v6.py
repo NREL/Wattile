@@ -24,13 +24,10 @@ import intelcamp.buildings_processing as bp
 import logging
 import matplotlib.dates as mdates
 import random
+from intelcamp.error import ConfigsError
 
 file_prefix = '/default'
 logger = logging.getLogger(str(os.getpid()))
-
-class ConfigsError(Exception):
-    """Base class for exceptions in this module."""
-    pass
 
 
 def size_the_batches(train_data, val_data, tr_desired_batch_size, te_desired_batch_size, configs):
