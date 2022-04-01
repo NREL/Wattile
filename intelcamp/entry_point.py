@@ -13,10 +13,6 @@ PACKAGE_PATH = pathlib.Path(__file__).parent
 CONFIGS_PATH = PACKAGE_PATH / "configs.json"
 
 logger = logging.getLogger(str(os.getpid()))
-class ConfigsError(Exception):
-    """Base class for exceptions in this module."""
-    pass
-
 
 def init_logging(local_results_dir):
     """init logger
