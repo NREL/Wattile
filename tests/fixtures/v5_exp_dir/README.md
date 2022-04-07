@@ -1,4 +1,4 @@
-# Expirment directory
+# Experiment directory
 
 Location described by configs["exp_dir"] as an absolute path.
 
