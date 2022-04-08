@@ -9,8 +9,7 @@ Set Up
 Requirements:
 - [Python](https://www.python.org/downloads/) >= 3.7.0
 - [Poetry](https://python-poetry.org/docs/#installation)
-- [Microsoft Visual C++ 14.0](https://visualstudio.microsoft.com/visual-cpp-build-tools/), if your on Windows
-
+- [Microsoft Visual C++ 14.0](https://visualstudio.microsoft.com/visual-cpp-build-tools/), if you're on Windows
 
 If using conda for python management, use `environment.yml` to make an environment and configure poetry to not create a vitural enviroment.
 ```
@@ -34,7 +33,7 @@ Docs for the configs [here](./tests/fixtures/README.md).
 
 Docs for the format of the raw data is [here](./tests/data/README.md).
 
-Docs for the fortmat of the output is [here](./tests/fixtures/v5_exp_dir/README.md).
+Docs for the format of the output is [here](./tests/fixtures/v5_exp_dir/README.md).
 
 ```py
 import json 
