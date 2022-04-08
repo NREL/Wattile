@@ -1,7 +1,7 @@
 Intelligent Campus
 ====
 
-A deep learning model that forecasts energy consumption using time series data of weather and past energy consumption. 
+Deep learning algorithms for probabilistic forecasting of time series building performance data.
 
 Set Up
 ----
