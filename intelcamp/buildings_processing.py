@@ -56,7 +56,7 @@ def get_full_data(configs):
     # collecting datapoint information for deployment purpose
     df_datapoints = pd.DataFrame(configs_input['predictors']).append(pd.DataFrame(configs_input['targets']), ignore_index=True)
     dict_datapoints = dict(zip(df_datapoints.column, df_datapoints.id))
-    configs['raw_datapoints'] = dict_datapoints
+    configs['skyspark_datapoint_info'] = dict_datapoints
 
     # converting date time column into pandas datetime (raw format based on ISO 8601)
     df_inputdata['start'] = pd.to_datetime(df_inputdata.start, format="t:%Y-%m-%dT%H:%M:%S%z", exact=False, utc=True)
