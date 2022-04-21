@@ -209,7 +209,7 @@ def time_dummies(data, configs):
         data['sin_MOY'] = np.sin(2 * np.pi * (data.index.dayofyear).values / (365))
         data['cos_MOY'] = np.cos(2 * np.pi * (data.index.dayofyear).values / (365))
 
-    if configs['Holidays']:
+    if 'Holidays' in configs and configs["Holidays"]:
         # -----Automatic (fetches federal holidays based on dates in imported data
         # cal = USFederalHolidayCalendar()
         # holidays = cal.holidays(start=data.index[0].strftime("%Y-%m-%d"), end=data.index[-1].strftime("%Y-%m-%d"))
@@ -432,31 +432,61 @@ def prep_for_rnn(configs, data):
     :param configs: (Dict)
     :return: train and val DataFrames
     """
+    # if certain predictor variables are pre-defined, then include only those.
+    if 'weather_include' in configs:
+        keep_cols = configs['weather_include'] + [configs['target_var']]
+        data = data[keep_cols]
+        logger.info("columns specified in the configs.json are only included")
+    else:
+        logger.info("all available predictor variables and target variable ({}) are included".format(
+            configs['target_var']))
 
-    if configs["use_case"] == "train" or configs["use_case"] == "prediction":
+    # Do some preprocessing, but only if the dataset needs it
+    if configs["use_case"] == "training":
+        data = clean_data(data, configs)
+
+    # Add time-based features
+    data = time_dummies(data, configs)
+
+    # Add statistics features
+    if configs["rolling_window"]["active"]:
+        data = rolling_stats(data, configs)
+
+    # Add lag features
+    configs['input_dim'] = data.shape[1] - 1
+    logger.info("Number of features: {}".format(configs['input_dim']))
+    logger.debug("Features: {}".format(data.columns.values))
+    if configs["arch_version"] == 4:
+        data = pad_full_data(data, configs)
+    elif configs["arch_version"] == 5:
+        data = pad_full_data_s2s(data, configs)
+
+    if configs["use_case"] == "train":
         # split data into training/validation/testing sets
         train_df, val_df = input_data_split(data, configs)
 
-    elif configs["use_case"] == "validation" and configs["test_method"] == "external":
-
-        # split data into training/validation/testing sets
+    elif configs["use_case"] == "validation" or configs["use_case"] == "prediction":
         val_df = data
         train_df = pd.DataFrame()
-        filepath = filepath = pathlib.Path(configs["data_dir"]) / f"{configs['target_var']}_external_test.h5"
-        val_df.to_hdf(filepath, key='df', mode='w')
 
-    elif configs["use_case"] == "validation" and configs["test_method"] == "internal":
-        local_results_dir = Path(configs["exp_dir"])
-        temp_config_file = os.path.join(local_results_dir, "configs.json")
-        with open(temp_config_file, 'r') as f:
-            temp_configs = json.load(f)
-        configs["input_dim"] = temp_configs["input_dim"]
+        if configs["use_case"] == "validation":
+            if configs["test_method"] == "external":
+                filepath = filepath = pathlib.Path(
+                    configs["data_dir"]) / f"{configs['target_var']}_external_test.h5"
+                val_df.to_hdf(filepath, key='df', mode='w')
 
-        train_df = pd.DataFrame()
-        val_df = data
+            elif configs["test_method"] == "internal":
+                local_results_dir = Path(configs["exp_dir"])
+                temp_config_file = os.path.join(
+                    local_results_dir, "configs.json")
+                with open(temp_config_file, 'r') as f:
+                    temp_configs = json.load(f)
+                configs["input_dim"] = temp_configs["input_dim"]
 
+            else:
+                ConfigsError("test_method not valid.")
     else:
-        raise ConfigsError("run_train and/or test_method not valid.")
+        raise ConfigsError("use_case not valid.")
 
     return train_df, val_df
 

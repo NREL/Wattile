@@ -62,37 +62,6 @@ def create_input_dataframe(configs):
     else:
         data = bp.get_full_data(configs)
 
-    # if certain predictor variables are pre-defined, then include only those.
-    if configs['weather_include']:
-        keep_cols = configs['weather_include'] + [configs['target_var']]
-        data = data[keep_cols]
-        logger.info("columns specified in the configs.json are only included")
-    else:
-        logger.info("all available predictor variables and target variable ({}) are included".format(configs['target_var']))
-
-    # Do some preprocessing, but only if the dataset needs it
-    if configs["use_case"] == "training":
-        data = bp.clean_data(data, configs)
-
-    # Add time-based features 
-    data = bp.time_dummies(data, configs)
-
-    # Add statistics features 
-    if configs["rolling_window"]["active"]:
-        data = bp.rolling_stats(data, configs)
-
-    # Add lag features
-    configs['input_dim'] = data.shape[1] - 1
-    logger.info("Number of features: {}".format(configs['input_dim']))
-    logger.debug("Features: {}".format(data.columns.values))
-    if configs["arch_version"] == 4:
-        data = bp.pad_full_data(data, configs)
-    elif configs["arch_version"] == 5:
-        data = bp.pad_full_data_s2s(data, configs)
-
-    if configs["use_case"] == "training":
-        data = data.loc[:, (data != 0).any(axis=0)]
-
     train_df, val_df = bp.prep_for_rnn(configs, data)
 
     return train_df, val_df
