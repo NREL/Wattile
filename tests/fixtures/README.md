@@ -1,74 +1,218 @@
 # Config Options
-- `building`: str
-- `target_var`: str
-- `start_year`: int
-- `start_month`: int
-- `start_day`: int
-- `end_year`: int
-- `end_month`: int
-- `end_day`: int
-- `data_time_interval_mins`: int
-- `weather_include`: List[str]
-- `arch_version`: int
-- `exp_id`: str
-- `arch_type`: str
-- `arch_type_variant`: str
-- `preprocess`: boolean
-- `fetch_n_parse`: boolean 
-- `transformation_method`: str
-- `train_batch_size`: int
-- `val_batch_size`: int
-- `convert_csvs`: boolean
-- `exp_dir`: str
-- `data_dir`: str
-- `resample_freq`: int
-- `sequence_freq_min`: int
-- `splicer`: dict
-    - `active`: boolean
-    - `time`: str
-- `rolling_window`: dict
-    - `active`: boolean
+- `building`: *str*
+
+    Target building name or experiment ID in the prediction task. It log this parameter in the training_history.csv file for feature selection testing
+
+- `target_var`: *str*
+
+    Column name and target variable in the input data that model will predict
+
+- `start_year`: *int*
+
+    Starting year of selected data for model training/validation/prediction
+
+- `start_month`: *int (1-12)*
+
+    Starting month of selected data for model training/validation/prediction
+
+- `start_day`: *int (1-31)*
+
+    Starting day of selected data for model training/validation/prediction
+
+- `end_year`: *int*
+
+    Last year of selected data for model training/validation/prediction
+
+- `end_month`: *int (1-12)*
+
+    Last month of selected data for model training/validation/prediction
+
+- `end_day`: int *(1-31)*
+
+    Last day of selected data for model training/validation/prediction
+
+- `data_time_interval_mins`: *int*
+
+    Timestep or frequency of data in the unit of minute in the raw data
+
+- `weather_include`: *List[str]*
+
+    Pre-defined predictor variables
+
+- `arch_version`: *int (4 or 5)*
+
+    Architecture version
+
+- `exp_id`: *str*
+
+    A string to define unique experiments
+
+- `arch_type`: *str ("quantile" or "RNN")*
+
+    Architecture type
+
+- `arch_type_variant`: *str ("vanilla or "lstm")*
+
+    RNN architecture type
+
+- `preprocess`: *boolean*
+
+    Indicator to run data_preprocessing.py
+
+- `fetch_n_parse`: *boolean*
+
+    Indicator to fetch data from the API, get it and put it in a JSON
+
+- `transformation_method`: *str ("minmaxscale" or "standard")*
+
+    Data normalization methods
+
+- `train_batch_size`: *int*
+
+    Size of batch in the training data. It is used to calculate number of batches in the training data
+
+- `val_batch_size`: *int*
+
+    Size of batch in the validation data. It is used to calculate number of batches in the validation data
+
+- `exp_dir`: *str*
+
+    Directory  where model output
+
+- `data_dir`: *str*
+
+    The directory containing the data config and csv
+- `resample_freq`: *int*
+
+    Used to (1) plot, (2) adjust the datetime index so it is in line with the Energy Consumption data
+
+- `sequence_freq_min`: *int*
+
+    The frequency in the unit of minutes to create lagged variables
+
+- `splicer`: *dict*
+
+    Group datasets together into sequential chunks just for data split
+
+    - `active`: *boolean*
+
+        defines whether splicer is applied
+
+    - `time`: *[pandas.Timedelta](pandas.Timedelta) str*
+
+        defines the window size of splicer
+
+- `rolling_window`: *dict*
+    - `active`: *boolean*
 
          specify whether or not to use rolling window statistics
-    - `type`: Literal["binned", "rolling"]
+
+    - `type`: *str ("binned", "rolling")*
 
         **binned** - This method creates min, max, and mean features for each original feature, computed by calculating the statistic over that last N minutes, separated into 
         stationary bins. This has the same effect as downsampling the data to a lower frequency.
         
         **rolling** - This method creates min, max, and mean features for each original feature, computed by calculating the statistic over that last N minutes in a rolling fashion. The time frequency of the original data is preserved.
 
-    - `mintues`: int
+    - `mintues`: *int*
 
         Specifies the number of minutes to use for the window. For type binned, this is the size of the downsampling. This should be higher than configs["resample_freq"], since the rolling windows are calculated after this step. For type rolling, this is the size of the rolling window.
-- `window`: int
-- `EC_future_gap_min`: int
-- `DOW`: list[str]
-- `MOY`: list[str]
-- `HOD`: list[str]
-- `Holidays`: boolean
-- `S2S_stagger`: dict
-    - `initial_num`: int
-    - `decay`: int
-    - `secondary_num`: int
-- `train_size_factor`: int
-- `train_val_split`: str
-- `data_split`: str
-- `random_seed`: int
-- `qs`: list[floats]
-- `use_case`: str
-- `run_resume`: boolean
-- `num_epochs`: int
-- `weight_decay`: float
-- `hidden_nodes`: int
-- `layer_dim`: int
-- `eval_frequency`: int
-- `lr_config`: dict
-    - `base`: float
-    - `schedule`: boolean
-    - `type`: str
-    - `factor`: float
-    - `min`: float
-    - `patience`: int
-    - `step_size`: int
-- `smoothing_alpha`: float
-- `test_method`: str
+
+- `window`: *int*
+
+    Defines numbers of lagged versions of variables. It is also termed as Sequential length
+
+- `EC_future_gap_min`: *int*
+
+    Shift the output variable in the unit of minutes, which defines the first forecasting horizon
+
+- `DOW`: *list[str] ("binary_reg", "binary_fuzzy")*
+
+    Day of week methodology
+
+- `MOY`: *list[str] ("sincos")*
+
+    Month of year methodology
+
+- `HOD`: *list[str] ("sincos", "binary_reg", "binary_fuzzy")*
+
+    Hour of day methodology
+
+- `Holidays`: *boolean*
+
+    Indicator of whether holidays are taken into consideration in the modeling
+
+- `S2S_stagger`: *dict*
+
+    Defines number of timestamps to predict in the future. It is also used for padding in building processing
+
+    - `initial_num`: *int*
+    - `decay`: *int*
+    - `secondary_num`: *int*
+
+- `train_size_factor`: *int*
+
+    Ensure to pick a training set size that we can then later split into mini batches that have some desired number of samples in each batch. Purely for computational efficiency
+
+- `train_val_split`: *str*
+
+    Method to split training and validation data including random
+
+- `data_split`: *str ("a:b:c" where a + b + c = 100)*
+
+    Training, validation, and testing data ratio, respectively
+
+- `random_seed`: *int*
+
+    Random seed to group data into sequential chunks and also the seed number to fix the randomness in torch package
+
+- `qs`: *list[floats]* (floats must be 0-1)
+
+    Quantile list
+
+- `use_case`: *str ("train", "prediction", "validation")*
+
+    what you are looking to run
+
+- `run_resume`: *boolean*
+
+    Indicator to resume from a previous training session
+
+- `num_epochs`: *int*
+
+    Number of epochs
+
+- `weight_decay`: *float*
+
+    Parameter for optimizer
+
+- `hidden_nodes`: *int*
+
+    Hidden nodes
+
+- `layer_dim`: *int*
+
+    Layer dimension
+
+- `eval_frequency`: *int*
+
+    Frequency (every n iterations) to save the model
+
+- `lr_config`: *dict*
+
+    Learning rate configuration
+
+    - `base`: *float*
+    - `schedule`: *boolean*
+    - `type`: *str*
+    - `factor`: *float*
+    - `min`: *float*
+    - `patience`: *int*
+    - `step_size`: *int*
+- `smoothing_alpha`: *float*
+
+    Smoothing alpha for pinball loss and quantile loss function
+
+- `test_method`: *str ("external", "internal")*
+
+    Defines the source of testing data, including internal (using training data) or external (using h5 file) 
