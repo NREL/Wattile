@@ -98,7 +98,7 @@
 
         defines whether splicer is applied
 
-    - `time`: *[pandas.Timedelta](pandas.Timedelta) str*
+    - `time`: *[pandas.Timedelta](https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html) str*
 
         defines the window size of splicer
 
@@ -158,7 +158,7 @@
 
     Method to split training and validation data including random
 
-- `data_split`: *str ("a:b:c" where a + b + c = 100)*
+- `data_split`: *str ("x:y:z" where x + y + z = 100)*
 
     Training, validation, and testing data ratio, respectively
 
@@ -172,7 +172,11 @@
 
 - `use_case`: *str ("train", "prediction", "validation")*
 
-    what you are looking to run
+    **train** - use case for training a model
+
+    **validation** - use case for validating an existing (previously trained) model
+
+    **prediction** - use case for applying data on a trained model for deployment purpose
 
 - `run_resume`: *boolean*
 
