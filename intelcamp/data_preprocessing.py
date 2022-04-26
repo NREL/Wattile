@@ -633,7 +633,6 @@ def main(configs):
 
     train_exp_id = configs['train_exp_id']
     exp_id = configs['exp_id']
-    arch_type = configs['arch_type']
 
     # Define the Directories to save the trained model and results.
     # Create the dir if it does not exist using pathlib

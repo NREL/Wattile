@@ -47,10 +47,6 @@
 
     A string to define unique experiments
 
-- `arch_type`: *str ("quantile" or "RNN")*
-
-    Architecture type
-
 - `arch_type_variant`: *str ("vanilla or "lstm")*
 
     RNN architecture type

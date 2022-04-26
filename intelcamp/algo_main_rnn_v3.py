@@ -710,7 +710,6 @@ def main(train_df, val_df, configs):
 
     building_ID = configs["building"]
     exp_id = configs['exp_id']
-    arch_type = configs['arch_type']
 
     global file_prefix
     file_prefix = pathlib.Path(configs["exp_dir"])
