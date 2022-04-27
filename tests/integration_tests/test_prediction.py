@@ -4,9 +4,8 @@ import pathlib
 import shutil
 import pytest
 import json
-from util import get_exp_dir 
 
-import entry_point as epb
+import intelcamp.entry_point as epb
 
 TESTS_PATH = pathlib.Path(__file__).parents[1]
 TESTS_FIXTURES_PATH = TESTS_PATH / "fixtures"
@@ -52,8 +51,8 @@ def test_prediction_v4(config_for_tests, tmpdir):
     config_for_tests["use_case"] = "prediction"
     
     # use a temp result dir
-    config_for_tests["results_dir"] = str(tmpdir / "train_results")
-    exp_dir = get_exp_dir(config_for_tests)
+    exp_dir = tmpdir / "train_results"
+    config_for_tests["exp_dir"] = str(exp_dir)
     shutil.copytree(TESTS_FIXTURES_PATH / "v4_exp_dir", exp_dir)
 
     # create a temp data dir
@@ -73,8 +72,8 @@ def test_prediction_v5(config_for_tests, tmpdir):
     config_for_tests["use_case"] = "prediction"
     
     # use a temp result dir
-    config_for_tests["results_dir"] = str(tmpdir / "train_results")
-    exp_dir = get_exp_dir(config_for_tests)
+    exp_dir = pathlib.Path(tmpdir) / "train_results"
+    config_for_tests["exp_dir"] = str(exp_dir)
     shutil.copytree(TESTS_FIXTURES_PATH / "v5_exp_dir", exp_dir)
 
     # create a temp data dir

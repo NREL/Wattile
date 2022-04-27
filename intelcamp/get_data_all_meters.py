@@ -1,7 +1,7 @@
 import json
 import sys
 import importlib
-import buildings_processing as bp
+import intelcamp.buildings_processing as bp
 
 meters = [
     ["Cafe", "Cafe Main Power (kW)"],

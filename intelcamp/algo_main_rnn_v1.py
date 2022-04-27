@@ -2,9 +2,9 @@ import os
 import numpy as np
 import pandas as pd
 import json
-from util import prtime, factors, tile
-import rnn
-import lstm
+from intelcamp.util import prtime, factors, tile
+from intelcamp import rnn
+from intelcamp import lstm
 
 import torch
 from torch.utils.data.dataloader import DataLoader

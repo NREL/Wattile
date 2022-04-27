@@ -12,15 +12,13 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import logging
 import torch
-from util import get_exp_dir
+from pathlib import Path
+from intelcamp.error import ConfigsError
+
 
 PROJECT_DIRECTORY = pathlib.Path(__file__).resolve().parent
 
 logger = logging.getLogger(str(os.getpid()))
-
-class ConfigsError(Exception):
-    """Base class for exceptions in this module."""
-    pass
 
 
 def check_complete(torch_file, des_epochs):
@@ -47,15 +45,10 @@ def get_full_data(configs):
 
     # assuming there is only one json file in the folder summerizing input data
     # read json file
-    configs_file_inputdata = PROJECT_DIRECTORY / configs['data_dir'] / configs['building'] / f"{configs['building']} Config.json"
+    configs_file_inputdata = Path(configs['data_dir']) / configs['building'] / f"{configs['building']} Config.json"
     logger.info("Pre-process: reading input data summary json file from {}".format(configs_file_inputdata))
     with open(configs_file_inputdata, "r") as read_file:
         configs_input = json.load(read_file)
-
-    # creating paths to each file based on file list in json 
-    list_paths = []
-    for entry in configs_input['files']:
-        list_paths.append(configs['data_dir'] + "/" + configs['building'] + "/" + entry['filename'])
 
     # converting json into dataframe 
     df_inputdata = pd.DataFrame(configs_input['files'])
@@ -77,7 +70,8 @@ def get_full_data(configs):
     
     if df_inputdata.empty:
         logger.info("Pre-process: measurements during the specified time period ({} to {}) are empty.".format(timestamp_start, timestamp_end))
-        sys.exit()
+        
+        raise ConfigsError("No datapoints found in dataset for specified timeframe.")
 
     else:
         data_full_p = pd.DataFrame()
@@ -107,11 +101,13 @@ def get_full_data(configs):
 
         if data_full_p.empty:
             logger.info("Pre-process: predictor dataframe is empty. Exiting process...")
-            sys.exit()
+
+            raise ConfigsError("No datapoints found in dataset for specified timeframe.")
 
         elif data_full_t.empty and configs["use_case"] != "prediction":
             logger.info("Pre-process: target dataframe is empty. Exiting process...")
-            sys.exit()          
+
+            raise ConfigsError("No datapoints found in dataset for specified timeframe.")          
 
         if configs["use_case"] == "prediction":
             data_full = data_full_p
@@ -241,7 +237,7 @@ def input_data_split(data, configs):
     val_ratio = int(configs["data_split"].split(":")[1])/100
     test_ratio = int(configs["data_split"].split(":")[2])/100
 
-    file_prefix = get_exp_dir(configs)
+    file_prefix = Path(configs["exp_dir"])
 
     if configs['train_val_split'] == 'Random':
         pathlib.Path(configs["data_dir"]).mkdir(parents=True, exist_ok=True)
@@ -324,7 +320,7 @@ def pad_full_data(data, configs):
     """
     Create lagged versions of exogenous variables in a DataFrame.
     Used specifically for RNN and LSTM deep learning methods.
-    Called by prep_for_rnn and prep_for_quantile
+
     :param data: (DataFrame)
     :param configs: (Dict)
     :return: (DataFrame)
@@ -375,7 +371,7 @@ def pad_full_data(data, configs):
         # Adjust time index to match the EC values
         data.index = data.index + pd.DateOffset(minutes=(configs["EC_future_gap_min"]))
 
-    return data, target
+    return data
 
 
 def pad_full_data_s2s(data, configs):
@@ -417,7 +413,7 @@ def pad_full_data_s2s(data, configs):
     # Drop all nans
     data = data.dropna(how='any')
 
-    return data, target
+    return data
 
 
 def corr_heatmap(data):
@@ -449,11 +445,11 @@ def prep_for_rnn(configs, data):
         # split data into training/validation/testing sets
         val_df = data
         train_df = pd.DataFrame()
-        file = os.path.join(configs["data_dir"], configs["building"], "{}_external_test.h5".format(configs["target_var"]))
-        val_df.to_hdf(file, key='df', mode='w')
+        filepath = filepath = pathlib.Path(configs["data_dir"]) / f"{configs['target_var']}_external_test.h5"
+        val_df.to_hdf(filepath, key='df', mode='w')
 
     elif configs["use_case"] == "validation" and configs["test_method"] == "internal":
-        local_results_dir = get_exp_dir(configs)
+        local_results_dir = Path(configs["exp_dir"])
         temp_config_file = os.path.join(local_results_dir, "configs.json")
         with open(temp_config_file, 'r') as f:
             temp_configs = json.load(f)
@@ -464,110 +460,6 @@ def prep_for_rnn(configs, data):
 
     else:
         raise ConfigsError("run_train and/or test_method not valid.")
-
-    return train_df, val_df
-
-
-def prep_for_quantile(configs, feature_df=pd.DataFrame()):
-    """
-    Prepare data for input to a quantile regression model.
-
-    :param configs: (Dict)
-    :return: train and val DataFrames, and fully processed (pre-split) dataset
-    """
-
-    if not configs["run_feature_selection"]:
-        # Get full data
-        data_full = get_full_data(configs)
-
-        # Remove all data columns that we don't care about from full dataset
-        important_vars = configs['weather_include'] + [configs['target_var']]
-        data = data_full[important_vars]
-
-        # Resample if requested
-        resample_bin_size = "{}T".format(configs['resample_freq'])
-        data = data.resample(resample_bin_size).mean()
-
-        # Clean data
-        data = clean_data(data, configs)
-
-        # Add weather lags
-        data = pad_full_data(data, configs)
-
-        # Add time-based dummy variables
-        data = time_dummies(data, configs)
-
-    if configs["run_feature_selection"]:
-        data = feature_df
-
-    # Split into training and val
-    train_df, val_df = input_data_split(data, configs)
-
-    return train_df, val_df, data
-
-
-def prep_for_seq2seq(configs, data):
-    """
-    Prepare data for input to a RNN model.
-
-    :param configs: (Dict)
-    :return: train and val DataFrames
-    """
-
-    if configs["use_case"] == "train" or configs["use_case"] == "prediction":
-        # split data into training/validation/testing sets
-        train_df, val_df = input_data_split(data, configs)
-
-    elif configs["use_case"] == "validation" and configs["test_method"] == "external":
-        # split data into training/validation/testing sets
-        val_df = data
-        train_df = pd.DataFrame()
-        file = os.path.join(configs["data_dir"], configs["building"], "{}_external_test.h5".format(configs["target_var"]))
-        val_df.to_hdf(file, key='df', mode='w')
-
-    elif configs["use_case"] == "validation" and configs["test_method"] == "internal":
-        local_results_dir = get_exp_dir(configs)
-        temp_config_file = os.path.join(local_results_dir, "configs.json")
-        with open(temp_config_file, 'r') as f:
-            temp_configs = json.load(f)
-        configs["input_dim"] = temp_configs["input_dim"]
-
-        train_df = pd.DataFrame()
-        val_df = data
-
-    else:
-        raise ConfigsError("use_case and/or test_method not valid.")
-
-
-    # # Determine input dimension. All unique features are added by this point.
-    # # Subtract 1 bc target variable is still present
-    # configs['input_dim'] = data.shape[1] - 1
-    # logger.info("Number of features: {}".format(configs['input_dim']))
-    #
-    #
-    # # Change data types to save memory, if needed
-    # for column in data:
-    #     if data[column].dtype == int:
-    #         data[column] = data[column].astype("int8")
-    #     elif data[column].dtype == float:
-    #         data[column] = data[column].astype("float32")
-    #
-    # # Do sequential padding now if we are doing random train/val splitting
-    # if configs["train_val_split"] == 'Random':
-    #     # Do padding
-    #     data, target = pad_full_data_s2s(data, configs)
-    #
-    # # Split into training and val dataframes
-    # if configs["run_train"]:
-    #     train_df, val_df = input_data_split(data, configs)
-    # else:
-    #     val_df = data
-    #     train_df = pd.DataFrame()
-    #     building = configs["building"]
-    #     year = configs["external_test"]["year"]
-    #     month = configs["external_test"]["month"]
-    #     file = os.path.join(configs["data_dir"], "{}_external_test.h5".format(configs["target_var"]))
-    #     val_df.to_hdf(file, key='df', mode='w')
 
     return train_df, val_df
 

@@ -9,7 +9,7 @@ import re
 from scipy import stats
 from dateutil.parser import parse
 from functools import reduce
-from util import prtime, get_exp_dir
+from intelcamp.util import prtime
 import time
 import json
 import glob
@@ -637,7 +637,7 @@ def main(configs):
 
     # Define the Directories to save the trained model and results.
     # Create the dir if it does not exist using pathlib
-    RESULTS_DIR = get_exp_dir(configs)
+    RESULTS_DIR = pathlib.Path(configs["exp_dir"])
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
     log_file = RESULTS_DIR + '/' + 'console.log'

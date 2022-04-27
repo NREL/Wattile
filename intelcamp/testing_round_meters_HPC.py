@@ -1,5 +1,5 @@
 import json
-import entry_point as epb
+import intelcamp.entry_point as epb
 import os
 import sys
 from multiprocessing import Process

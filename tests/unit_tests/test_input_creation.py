@@ -1,11 +1,14 @@
 import pytest
 import json
 import pathlib
-import entry_point as epb
+import pandas as pd
+
+import intelcamp.entry_point as epb
 
 
 TESTS_PATH = pathlib.Path(__file__).parents[1]
 TESTS_FIXTURES_PATH = TESTS_PATH / "fixtures"
+TESTS_DATA_PATH = TESTS_PATH / "data"
 
 @pytest.fixture
 def config_for_tests():
@@ -15,15 +18,19 @@ def config_for_tests():
     with open(TESTS_FIXTURES_PATH / "test_configs.json", "r") as read_file:
         configs = json.load(read_file)
 
+    configs["data_dir"] = str(TESTS_DATA_PATH)
+
     return configs
     
     
 def test_create_input_dataframe(config_for_tests, tmpdir):
     # patch configs and create temporary, unquie output file
-    config_for_tests["results_dir"] = tmpdir / "train_results"
+    exp_dir = pathlib.Path(tmpdir) / "train_results"
+    config_for_tests["exp_dir"] = str(exp_dir)
+    exp_dir.mkdir(parents=True, exist_ok=True)
 
     # creat data frame
-    data = epb.create_input_dataframe(config_for_tests)
+    train_df, val_df = epb.create_input_dataframe(config_for_tests)
 
     excepted_data_columns = []
     # add weather columns
@@ -62,5 +69,12 @@ def test_create_input_dataframe(config_for_tests, tmpdir):
     # add target var
     excepted_data_columns.append(config_for_tests["target_var"])
 
-    assert set(data.columns) == set(excepted_data_columns)
-    assert data.shape == (660, len(excepted_data_columns))
+    assert set(train_df.columns) == set(excepted_data_columns)
+    assert train_df.shape == (480, len(excepted_data_columns))
+
+    assert set(val_df.columns) == set(excepted_data_columns)
+    assert val_df.shape == (84, len(excepted_data_columns))
+
+    test_df = pd.read_hdf(exp_dir / "internal_test.h5", key='df')
+    assert set(test_df.columns) == set(excepted_data_columns)
+    assert test_df.shape == (96, len(excepted_data_columns))

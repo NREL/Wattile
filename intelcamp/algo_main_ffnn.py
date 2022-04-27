@@ -2,7 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 import json
-from util import prtime, factors
+from intelcamp.util import prtime, factors
 import ffnn
 
 import torch
