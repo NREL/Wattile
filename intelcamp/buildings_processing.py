@@ -252,8 +252,8 @@ def input_data_split(data, configs):
             num_chunks = splicer[-1]
             num_train_chunks = (train_ratio * num_chunks) - ((train_ratio * num_chunks) % configs["train_size_factor"])
             if num_train_chunks == 0:
-                logger.info("Total number of data chunks is zero. train_size_factor value might be too large compared to the data size. Exiting..")
-                sys.exit()
+                raise Exception("Total number of data chunks is zero. train_size_factor value might be too large compared to the data size. Exiting..")
+
             msk = np.zeros(data.shape[0]) + 2
             train_chunks = np.random.choice(np.arange(num_chunks), replace=False, size=int(num_train_chunks))
             for chunk in train_chunks:
