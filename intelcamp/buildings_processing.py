@@ -442,7 +442,7 @@ def prep_for_rnn(configs, data):
             configs['target_var']))
 
     # Do some preprocessing, but only if the dataset needs it
-    if configs["use_case"] == "training":
+    if configs["use_case"] == "train":
         data = clean_data(data, configs)
 
     # Add time-based features
