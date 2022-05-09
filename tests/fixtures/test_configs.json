@@ -21,8 +21,6 @@
  "exp_id": "Debugging_for_rolling_stats",
  "arch_type": "RNN",
  "arch_type_variant": "lstm",
- "preprocess": false,
- "fetch_n_parse": false,
  "transformation_method": "minmaxscale",
  "train_batch_size": 5,
  "val_batch_size": 1,
