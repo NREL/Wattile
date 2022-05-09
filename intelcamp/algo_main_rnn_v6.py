@@ -1090,10 +1090,6 @@ def predict(data, file_prefix):
     with open(os.path.join(file_prefix, "configs.json"), "r") as read_file:
         configs = json.load(read_file)
 
-    # Get rid of this eventually
-    # data = pd.read_hdf("sample_predict.h5", key='df').drop([configs["target_var"]], axis=1)
-    # data = data.drop('SRRL BMS Snow Depth (in)', axis=1)
-
     # Check if the supplied data matches the sequence length that the model was trained on
     if not data.shape[0] == configs["window"]+1:
         raise ConfigsError("Input data has sequence length {}. Expected sequence length of {}".format(data.shape[0],

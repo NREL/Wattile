@@ -8,7 +8,7 @@
  "end_month": 12,
  "end_day": 31,
  "data_time_interval_mins":1,   
- "weather_include": [
+ "predictor_columns": [
     "SRRL BMS Dew Point Temperature",
     "SRRL BMS Diffuse Horizontal Irradiance",
     "SRRL BMS Direct Normal Irradiance",

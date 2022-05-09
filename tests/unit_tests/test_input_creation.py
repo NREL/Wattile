@@ -34,7 +34,7 @@ def test_create_input_dataframe(config_for_tests, tmpdir):
 
     excepted_data_columns = []
     # add weather columns
-    for pred in config_for_tests["weather_include"]:
+    for pred in config_for_tests["predictor_columns"]:
         excepted_data_columns += [f"{pred}_{m}" for m in ["max", "min", "mean"]]
         excepted_data_columns += [f"{pred}_{m}_lag{l + 1}" for m in ["max", "min", "mean"] for l in range(config_for_tests["window"])]
 
