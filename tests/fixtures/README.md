@@ -8,7 +8,7 @@
 - `end_month`: int
 - `end_day`: int
 - `data_time_interval_mins`: int
-- `weather_include`: List[str]
+- `predictor_columns`: List[str]
 - `arch_version`: int
 - `exp_id`: str
 - `arch_type`: str

@@ -8,7 +8,7 @@
  "end_month": 12,
  "end_day": 31,
  "data_time_interval_mins":1,
- "weather_include": [],
+ "predictor_columns": [],
  "arch_version": 4,
  "exp_id": "7-9-21",
  "arch_type": "RNN",

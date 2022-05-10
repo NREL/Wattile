@@ -18,11 +18,10 @@ rnn_mod = importlib.import_module("algo_main_rnn_v{}".format(configs["arch_versi
 # This section will be replaced by the output of Kristens code. This is just here to get a df to work with.
 # "data
 data_full = bp.get_full_data(configs)
-important_vars = configs['weather_include'] + [configs['target_var']]
+important_vars = configs['predictor_columns'] + [configs['target_var']]
 data = data_full[important_vars]
 resample_bin_size = "{}T".format(configs['resample_freq'])
 data = data.resample(resample_bin_size).mean()
-data = bp.clean_data(data, configs)
 data = bp.time_dummies(data, configs)
 
 # Do sequential padding and test/validation split, and test/train split

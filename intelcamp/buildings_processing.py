@@ -122,46 +122,6 @@ def get_full_data(configs):
     return data_full
 
 
-def clean_data(data, configs):
-    """
-    Clean data that is passed in a DataFrame. Certain columns will be cleaned with pre-defined criteria.
-
-    :param data: (DataFrame)
-    :param configs: (Dictionary)
-    :return: (DataFrame)
-    """
-
-    # Clean data: Set negative GHI values to 0
-    var_ref = 'SRRL BMS Global Horizontal Irradiance (W/m²_irr)'
-    if var_ref in data.columns:
-        data[var_ref][data[var_ref] < 0] = 0
-
-    # Clean data: Total cloud cover: Set -1's to 0 and interpolate negative false values
-    var_ref = 'SRRL BMS Total Cloud Cover (%)'
-    if var_ref in data.columns:
-        data[var_ref][data[var_ref] == -1] = 0
-        data[var_ref][data[var_ref] < 0] = float("NaN")
-        data[var_ref].interpolate(inplace=True)
-
-    # Clean data: Opaque cloud cover: Set -1's to 0 and interpolate negative false values
-    var_ref = 'SRRL BMS Opaque Cloud Cover (%)'
-    if var_ref in data.columns:
-        data[var_ref][data[var_ref] == -1] = 0
-        data[var_ref][data[var_ref] < 0] = float("NaN")
-        data[var_ref].interpolate(inplace=True)
-
-    # Clean data: Snow Depth: Set small and negative values to 0 to remove noise, and convolve to remove sharp/incorrect gradients
-    var_ref = "SRRL BMS Snow Depth (in)"
-    if var_ref in data.columns:
-        data[var_ref][data[var_ref] < 0.3] = 0
-        data[var_ref].interpolate(inplace=True)
-        box_pts = 20
-        box = np.ones(box_pts) / box_pts
-        data[var_ref] = np.convolve(data[var_ref], box, mode="same")
-
-    return data
-
-
 def time_dummies(data, configs):
     """
     Adds time-based indicator variables. Elements in configs describe what method to use.
@@ -436,17 +396,13 @@ def prep_for_rnn(configs, data):
     :return: train and val DataFrames
     """
     # if certain predictor variables are pre-defined, then include only those.
-    if 'weather_include' in configs:
-        keep_cols = configs['weather_include'] + [configs['target_var']]
+    if 'predictor_columns' in configs:
+        keep_cols = configs['predictor_columns'] + [configs['target_var']]
         data = data[keep_cols]
         logger.info("columns specified in the configs.json are only included")
     else:
         logger.info("all available predictor variables and target variable ({}) are included".format(
             configs['target_var']))
-
-    # Do some preprocessing, but only if the dataset needs it
-    if configs["use_case"] == "train":
-        data = clean_data(data, configs)
 
     # Add time-based features
     data = time_dummies(data, configs)
@@ -492,52 +448,6 @@ def prep_for_rnn(configs, data):
         raise ConfigsError("use_case not valid.")
 
     return train_df, val_df
-
-
-def get_test_data(building, year, months, dir):
-    data_e = pd.DataFrame()
-    data_w = pd.DataFrame()
-
-    test_set_dir = dir
-    pathlib.Path(test_set_dir).mkdir(parents=True, exist_ok=True)
-
-    dataset = pd.DataFrame()
-    for month in months:
-        file = os.path.join(test_set_dir, "{}-{}-{}.h5".format(building, "{:02d}".format(month), year))
-        if pathlib.Path(file).exists():
-            sub_dataset = pd.read_hdf(file, key='df')
-
-        else:
-            # Get energy data
-            network_path = "Z:\\Data"
-            sub_dir = "Building Load Data"
-            suffix = " Meter Trends"
-            energy_data_dir = os.path.join(network_path, sub_dir)
-            energy_file = "{} {}-{}{}.csv".format(building, year, "{:02d}".format(month), suffix)
-            dateparse = lambda date: dt.datetime.strptime(date[:-13], '%Y-%m-%dT%H:%M:%S')
-            csv_path = os.path.join(energy_data_dir, energy_file)
-            df_e = pd.read_csv(csv_path,
-                               parse_dates=['Timestamp'],
-                               date_parser=dateparse,
-                               index_col='Timestamp')
-            data_e = pd.concat([data_e, df_e])
-
-            site = 'STM'
-            weather_data_dir = os.path.join(network_path, "Weather")
-            weather_file = '{} Site Weather {}-{}.csv'.format(site, year, "{:02d}".format(month))
-            csv_path = os.path.join(weather_data_dir, weather_file)
-            df_w = pd.read_csv(csv_path,
-                               parse_dates=['Timestamp'],
-                               date_parser=dateparse,
-                               index_col='Timestamp')
-            data_w = pd.concat([data_w, df_w])
-            dataset = pd.concat([data_e, data_w], axis=1)
-            sub_dataset.to_hdf(file, key='df', mode='w')
-
-        dataset = pd.concat([dataset, sub_dataset])
-
-    return dataset
-
 
 def rolling_stats(data, configs):
     # Convert data to rolling average (except output) and create min, mean, and max columns
