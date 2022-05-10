@@ -124,17 +124,14 @@ def run_model(configs, train_df, val_df):
                 configs["run_resume"] = False
                 print("Model for {} doesnt exist yet. Resetting run_resume to False".format(configs["target_var"]))
                 
-    # Choose what ML architecture to use and execute the corresponding script
-    if configs['arch_type'] == 'RNN':
-        # What RNN version you are implementing? Specified in configs.
-        rnn_mod = importlib.import_module("intelcamp.algo_main_rnn_v{}".format(configs["arch_version"]))
-        logger.info("training with arch version {}".format(configs["arch_version"]))
+    # What RNN version you are implementing? Specified in configs.
+    rnn_mod = importlib.import_module("intelcamp.algo_main_rnn_v{}".format(configs["arch_version"]))
+    logger.info("training with arch version {}".format(configs["arch_version"]))
 
-        # Prepare data for the RNN model type
-        results = rnn_mod.main(train_df, val_df, configs)
+    # Prepare data for the RNN model type
+    results = rnn_mod.main(train_df, val_df, configs)
 
-    logger.info('Run with arch {}({}), on {}, with session ID {}, is done!'.format(configs['arch_type'],
-                                                                                                     configs["arch_type_variant"],
+    logger.info('Run with arch {}, on {}, with session ID {}, is done!'.format(configs["arch_type_variant"],
                                                                                           configs["target_var"],
                                                                                           configs["exp_id"]))
     return results

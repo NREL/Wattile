@@ -11,7 +11,6 @@
  "weather_include": [],
  "arch_version": 4,
  "exp_id": "7-9-21",
- "arch_type": "RNN",
  "arch_type_variant": "lstm",
  "preprocess": false,
  "fetch_n_parse": false,

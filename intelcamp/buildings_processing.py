@@ -335,38 +335,14 @@ def pad_full_data(data, configs):
     temp_holder.reverse()
     data = pd.concat(temp_holder, axis=1)
 
-    # If this is a linear quantile regression model (iterative)
-    if configs["arch_type"] == "quantile" and configs["iterative"] == True:
-        for i in range(0, configs["EC_future_gap_min"]):
-            if i == 0:
-                data[configs["target_var"]] = target
-            else:
-                data["{}_lag_{}".format(configs["target_var"], i)] = target.shift(-i)
+    # Re-append the shifted target column to the dataframe
+    data[configs["target_var"]] = target.shift(-configs['EC_future_gap_min'])
 
-        # Drop all nans
-        data = data.dropna(how='any')
+    # Drop all nans
+    data = data.dropna(how='any')
 
-    # If this is a linear quantile regression model (point)
-    elif configs["arch_type"] == "quantile" and configs["iterative"] == False:
-        # Re-append the shifted target column to the dataframe
-        data[configs["target_var"]] = target.shift(-configs['EC_future_gap_min'])
-
-        # Drop all nans
-        data = data.dropna(how='any')
-
-        # Adjust time index to match the EC values
-        data.index = data.index + pd.DateOffset(minutes=(configs["EC_future_gap_min"]))
-
-    # If this is an RNN model
-    elif configs["arch_type"] == "RNN":
-        # Re-append the shifted target column to the dataframe
-        data[configs["target_var"]] = target.shift(-configs['EC_future_gap_min'])
-
-        # Drop all nans
-        data = data.dropna(how='any')
-
-        # Adjust time index to match the EC values
-        data.index = data.index + pd.DateOffset(minutes=(configs["EC_future_gap_min"]))
+    # Adjust time index to match the EC values
+    data.index = data.index + pd.DateOffset(minutes=(configs["EC_future_gap_min"]))
 
     return data
 

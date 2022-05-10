@@ -438,8 +438,7 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
             #     raise ConfigsError(
             #         "{} is not a supported architecture variant".format(configs["arch_type_variant"]))
             epoch_range = np.arange(num_epochs)
-            logger.info("A new {} {} model instantiated, with run_train=True".format(configs["arch_type_variant"],
-                                                                               configs["arch_type"]))
+            logger.info("A new {} model instantiated, with run_train=True".format(configs["arch_type_variant"]))
 
         # Instantiate Optimizer Class
         optimizer = torch.optim.Adam(model.parameters(), lr=configs['lr_config']['base'], weight_decay=weight_decay)
@@ -1215,14 +1214,13 @@ def main(train_df, val_df, configs):
     te_desired_batch_size = configs['val_batch_size']
     building_ID = configs["building"]
     exp_id = configs['exp_id']
-    arch_type = configs['arch_type']
     results_dir = configs["results_dir"]
 
     # Make results directory
     if not os.path.exists(results_dir):
         os.mkdir(results_dir)
     global file_prefix
-    file_prefix = os.path.join(results_dir, arch_type + '_M' + str(configs["target_var"].replace(" ", "")) + '_T' + str(
+    file_prefix = os.path.join(results_dir, '_M' + str(configs["target_var"].replace(" ", "")) + '_T' + str(
         exp_id))
 
     # Create writer object for TensorBoard

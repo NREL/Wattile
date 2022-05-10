@@ -429,7 +429,7 @@ def run_training(train_loader, val_loader, val_df, num_epochs, run_resume, write
             raise ConfigsError(
                 "{} is not a supported architecture variant".format(configs["arch_type_variant"]))
         epoch_range = np.arange(num_epochs)
-        logger.info("A new {} {} model instantiated, with run_train=True".format(configs["arch_type"], configs["arch_type_variant"]))
+        logger.info("A new {} model instantiated, with run_train=True".format(configs["arch_type_variant"]))
 
     # Instantiate Optimizer Class
     optimizer = torch.optim.Adam(model.parameters(), lr=configs['lr_config']['base'], weight_decay=weight_decay)

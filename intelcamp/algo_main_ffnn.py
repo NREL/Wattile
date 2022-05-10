@@ -296,14 +296,13 @@ def main(train_df, test_df, configs):
 
     train_exp_id = configs['train_exp_id']
     exp_id = configs['exp_id']
-    arch_type = configs['arch_type']
     target_feat_name = configs['target_feat_name']
 
     results_dir = "EnergyForecasting_Results"
     if not os.path.exists(results_dir):
         os.mkdir(results_dir)
     global file_prefix
-    file_prefix = os.path.join(results_dir, arch_type + '_M' + str(train_exp_id) + '_T' + str(
+    file_prefix = os.path.join(results_dir, '_M' + str(train_exp_id) + '_T' + str(
         exp_id))
 
     writer_path = file_prefix

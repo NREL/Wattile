@@ -242,7 +242,7 @@ def process(train_loader, val_loader, val_df, num_epochs, run_train, run_resume,
             elif configs["arch_type_variant"] == "lstm":
                 model = lstm.LSTM_Model(input_dim, hidden_dim, layer_dim, output_dim)
             epoch_range = np.arange(num_epochs)
-            prtime("A new {} {} model instantiated, with run_train=True".format(configs["arch_type_variant"], configs["arch_type"]))
+            prtime("A new {} model instantiated, with run_train=True".format(configs["arch_type_variant"]))
 
         # Check if gpu support is available
         cuda_avail = torch.cuda.is_available()
@@ -397,13 +397,12 @@ def main(train_df, val_df, configs):
 
     train_exp_id = configs['train_exp_id']
     exp_id = configs['exp_id']
-    arch_type = configs['arch_type']
 
     results_dir = "EnergyForecasting_Results"
     if not os.path.exists(results_dir):
         os.mkdir(results_dir)
     global file_prefix
-    file_prefix = os.path.join(results_dir, arch_type + '_M' + str(train_exp_id) + '_T' + str(
+    file_prefix = os.path.join(results_dir, '_M' + str(train_exp_id) + '_T' + str(
         exp_id))
 
     writer_path = file_prefix
