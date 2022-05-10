@@ -1,9 +1,20 @@
 import pandas as pd
+from pandas.testing import assert_frame_equal
 import pytest
+import datetime as dt
 
 from intelcamp.error import ConfigsError
-from intelcamp.buildings_processing import correct_predictor_columns
+from intelcamp.buildings_processing import correct_predictor_columns, correct_timestamps
 
+JULY_14_CONFIG = {
+    "start_year": 1997,
+    "start_month": 7,
+    "start_day": 14,
+    "end_year": 1997,
+    "end_month": 7,
+    "end_day": 14,
+}
+JULY_14_MIDNIGHT = pd.Timestamp(year=1997, month=7, day=14, tz=dt.timezone.utc)
 
 def test_correct_columns_too_few_columns():
     configs = {
@@ -37,3 +48,41 @@ def test_correct_columns_reorder_columns():
     data = correct_predictor_columns(configs, data)
     assert list(data.columns) == ["a", "b", "target_var"]
 
+
+def test_correct_timestamps_trim():
+    configs = JULY_14_CONFIG
+    data = pd.DataFrame({}, index=[
+        JULY_14_MIDNIGHT,
+        JULY_14_MIDNIGHT + pd.Timedelta(days=1),
+    ])
+
+    data = correct_timestamps(configs, data)
+    assert_frame_equal(data, data.eq(pd.DataFrame({}, index=[
+        JULY_14_MIDNIGHT,
+    ])))
+
+
+def test_correct_timestamps_no_data():
+    configs = JULY_14_CONFIG
+    data = pd.DataFrame({}, index=[
+        JULY_14_MIDNIGHT + pd.Timedelta(days=1),
+    ])
+
+    with pytest.raises(ConfigsError):
+        data = correct_timestamps(configs, data)
+
+
+def test_correct_timestamps_reorder():
+    configs = JULY_14_CONFIG
+    data = pd.DataFrame({}, index=[
+        JULY_14_MIDNIGHT + pd.Timedelta(hours=2),
+        JULY_14_MIDNIGHT + pd.Timedelta(hours=3),
+        JULY_14_MIDNIGHT + pd.Timedelta(hours=1),
+    ])
+
+    data = correct_timestamps(configs, data)
+    assert_frame_equal(data, data.eq(pd.DataFrame({}, index=[
+        JULY_14_MIDNIGHT + pd.Timedelta(hours=1),
+        JULY_14_MIDNIGHT + pd.Timedelta(hours=2),
+        JULY_14_MIDNIGHT + pd.Timedelta(hours=3),
+    ])))

@@ -418,6 +418,45 @@ def correct_predictor_columns(configs, data):
     # sort columns
     return data.reindex(keep_cols, axis="columns")
 
+
+def correct_timestamps(configs, data):
+    """sort and trim data specified time period
+
+    :param configs: configs
+    :type configs: dict
+    :param data: data
+    :type data: pandas.DataFrame
+    :raises ConfigsError: no data within specified time period
+    :return: sorted data for time period
+    :rtype: pandas.DataFrame
+    """
+    data = data.sort_index()
+
+    # TODO: think about timezones.
+    start_time = dt.datetime(
+        day=configs['start_day'],
+        month=configs["start_month"],
+        year=configs["start_year"],
+        tzinfo=dt.timezone.utc,
+    )
+    end_time = dt.datetime(
+        day=configs['end_day'],
+        month=configs["end_month"],
+        year=configs["end_year"],
+        tzinfo=dt.timezone.utc,
+    ) 
+    # add a day to endtime so it's inclusive
+    data = data[(data.index >= start_time) & (data.index < end_time + pd.Timedelta(days=1))]
+
+    if data.shape[0] == 0:
+        raise ConfigsError(
+            "data has no data within specified time period:" \
+            f"{start_time.year}-{start_time.month}-{start_time.day} to " \
+            f"{end_time.year}-{end_time.month}-{end_time.day}"
+        )
+
+    return data
+
 def prep_for_rnn(configs, data):
     """
     Prepare data for input to a RNN model.
@@ -427,6 +466,9 @@ def prep_for_rnn(configs, data):
     """
     # assert we have the correct columns and order them
     data = correct_predictor_columns(configs, data)
+
+    # sort and trim data specified time period
+    data = correct_timestamps(configs, data)
 
     # Add time-based features
     data = time_dummies(data, configs)
