@@ -13,8 +13,6 @@
 - `exp_id`: str
 - `arch_type`: str
 - `arch_type_variant`: str
-- `preprocess`: boolean
-- `fetch_n_parse`: boolean 
 - `transformation_method`: str
 - `train_batch_size`: int
 - `val_batch_size`: int

@@ -1,7 +1,6 @@
 import sys
 import pandas as pd
 import importlib
-from  intelcamp import data_preprocessing
 import json
 import intelcamp.buildings_processing as bp
 import logging
@@ -45,16 +44,7 @@ def create_input_dataframe(configs):
     """
     local_results_dir = util.Path(configs["exp_dir"])
 
-    # Preprocess if needed
-    if configs['preprocess']:
-        train_df, val_df, configs = data_preprocessing.main(configs)
-
-        # save the data fetch_n_parseed from API and piped through data_preprocessing (i.e. train_df and val_df)
-        train_df.to_csv('./data/STM_Train_Data.csv')
-        val_df.to_csv('./data/STM_Test_Data.csv')
-    else:
-        # preprocessing module defines target_feat_name list and sends it back.
-        configs['target_feat_name'] = [configs['target_var']]
+    configs['target_feat_name'] = [configs['target_var']]
 
     # Get the dataset
     if configs["use_case"] == "validation" and configs["test_method"] == "internal":

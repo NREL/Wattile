@@ -28,10 +28,6 @@ def get_arguments():
                         help="train batch size")
     parser.add_argument('--resume',
                         help='True or False, To resume from the previous model. If False, a new model will be instantiated and trained')
-    parser.add_argument('--pp',
-                        help='True or False, To read the jsons and pre-process. saved json files will be used')
-    parser.add_argument('--fetch-n-parse',
-                        help='True or False, To fetch_n_parse data from API, parse and save as json files, which will be used for preprocessing')
     parser.add_argument('--arch-type',
                         help='pick architecture type from \'FFNN\', \'RNN\',\'LSTM\',\'GRU\'')
     parser.add_argument('--tr-exp-num',
@@ -102,26 +98,6 @@ def get_arguments():
         parser.print_help()
         exit()
 
-    # args.pp
-    if args.pp in ["True", "true"]:
-        preprocess = True
-    elif args.pp in ["False", "false"]:
-        preprocess = False
-    else:
-        print("Preprocessing flag is invalid. It should be True or false. Exiting...")
-        parser.print_help()
-        exit()
-
-    # args.fetch_n_parse
-    if args.fetch_n_parse in ["True", "true"]:
-        fetch_n_parse = True
-    elif args.fetch_n_parse in ["False", "false"]:
-        fetch_n_parse = False
-    else:
-        print("Fetch_and_Parse flag is invalid. It should be True or false. Exiting...")
-        parser.print_help()
-        exit()
-
     # args.arch_type
     if args.arch_type.lower() in ['ffnn', 'rnn','lstm','gru']:
         arch_type = args.arch_type.upper()
@@ -140,10 +116,9 @@ def get_arguments():
                "test_end_date": dates['test_end_date'],
                "transformation_method": transformation_method, "run_train": run_train,
                "num_epochs": num_epochs, "train_batch_size":train_batch_size,"val_batch_size":val_batch_size,"run_resume": run_resume,
-               "preprocess": preprocess, "arch_type": arch_type,
+               "arch_type": arch_type,
                "train_exp_id": train_exp_id, "exp_id": exp_id,
                "hidden_nodes": hidden_nodes, 'weight_decay': weight_decay,
-               "fetch_n_parse": fetch_n_parse
                }
 
     return configs

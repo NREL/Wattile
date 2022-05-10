@@ -13,8 +13,6 @@
  "exp_id": "7-9-21",
  "arch_type": "RNN",
  "arch_type_variant": "lstm",
- "preprocess": false,
- "fetch_n_parse": false,
  "transformation_method": "minmaxscale",
  "train_batch_size": 26,
  "val_batch_size": 1,
