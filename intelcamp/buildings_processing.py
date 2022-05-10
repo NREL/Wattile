@@ -388,6 +388,36 @@ def corr_heatmap(data):
     sns.heatmap(data.corr(), mask=mask, cmap='coolwarm', linewidths=1, linecolor='white')
 
 
+def correct_predictor_columns(configs, data):
+    """assert we have the correct columns and order them
+
+    :param configs: configs
+    :type configs: dict
+    :param data: data
+    :type data: pandas.DataFrame
+    :raises ConfigsError:if data doesn't contain needed columns
+    :return: data with correct columns
+    :rtype: pandas.DataFrame
+    """
+    keep_cols = configs['predictor_columns'] + [configs['target_var']]
+
+    # raise error if missing columns
+    missing_colums = set(keep_cols).difference(set(data.columns))
+    if len(missing_colums) > 0:
+        raise ConfigsError(f"data is missing predictor_columns: {missing_colums}")
+
+    # remove extra columns
+    extra_colums = set(data.columns).difference(set(keep_cols))
+    if len(extra_colums) > 0:
+        data = data[keep_cols]
+        logger.info(
+            f"Remove columns from data that are specified in \
+            configs['predictor_columns']: {extra_colums}"
+        )
+
+    # sort columns
+    return data.reindex(keep_cols, axis="columns")
+
 def prep_for_rnn(configs, data):
     """
     Prepare data for input to a RNN model.
@@ -395,14 +425,8 @@ def prep_for_rnn(configs, data):
     :param configs: (Dict)
     :return: train and val DataFrames
     """
-    # if certain predictor variables are pre-defined, then include only those.
-    if 'predictor_columns' in configs:
-        keep_cols = configs['predictor_columns'] + [configs['target_var']]
-        data = data[keep_cols]
-        logger.info("columns specified in the configs.json are only included")
-    else:
-        logger.info("all available predictor variables and target variable ({}) are included".format(
-            configs['target_var']))
+    # assert we have the correct columns and order them
+    data = correct_predictor_columns(configs, data)
 
     # Add time-based features
     data = time_dummies(data, configs)
