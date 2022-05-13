@@ -411,7 +411,7 @@ def correct_predictor_columns(configs, data):
     if len(extra_colums) > 0:
         data = data[keep_cols]
         logger.info(
-            f"Remove columns from data that are specified in \
+            f"Removed columns from data that are not specified in \
             configs['predictor_columns']: {extra_colums}"
         )
 
