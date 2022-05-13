@@ -1,12 +1,8 @@
 {
  "building": "Synthetic Site",
  "target_var": "Synthetic Site Electricity Main Total Power",
- "start_year": 2018,
- "start_month": 1,
- "start_day": 1,
- "end_year": 2021,
- "end_month": 12,
- "end_day": 31,
+ "start_time": "2018-01-01T00:00:00-07:00",
+ "end_time": "2022-01-01T00:00:00-07:00",
  "data_time_interval_mins":1,   
  "predictor_columns": [
     "SRRL BMS Dew Point Temperature",

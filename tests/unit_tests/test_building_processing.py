@@ -7,12 +7,8 @@ from intelcamp.error import ConfigsError
 from intelcamp.buildings_processing import correct_predictor_columns, correct_timestamps
 
 JULY_14_CONFIG = {
-    "start_year": 1997,
-    "start_month": 7,
-    "start_day": 14,
-    "end_year": 1997,
-    "end_month": 7,
-    "end_day": 14,
+    "start_time": "1997-07-14T00:00:00-00:00",
+    "end_time": "1997-07-15T00:00:00-00:00",
 }
 JULY_14_MIDNIGHT = pd.Timestamp(year=1997, month=7, day=14, tz=dt.timezone.utc)
 
@@ -53,7 +49,7 @@ def test_correct_timestamps_trim():
     configs = JULY_14_CONFIG
     data = pd.DataFrame({}, index=[
         JULY_14_MIDNIGHT,
-        JULY_14_MIDNIGHT + pd.Timedelta(days=1),
+        JULY_14_MIDNIGHT + pd.Timedelta(days=1, microseconds=1),
     ])
 
     data = correct_timestamps(configs, data)
@@ -65,7 +61,7 @@ def test_correct_timestamps_trim():
 def test_correct_timestamps_no_data():
     configs = JULY_14_CONFIG
     data = pd.DataFrame({}, index=[
-        JULY_14_MIDNIGHT + pd.Timedelta(days=1),
+        JULY_14_MIDNIGHT + pd.Timedelta(days=1, microseconds=1),
     ])
 
     with pytest.raises(ConfigsError):

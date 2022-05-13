@@ -57,15 +57,17 @@ def get_full_data(configs):
     df_inputdata['start'] = pd.to_datetime(df_inputdata.start, format="t:%Y-%m-%dT%H:%M:%S%z", exact=False, utc=True)
     df_inputdata['end'] = pd.to_datetime(df_inputdata.end, format="t:%Y-%m-%dT%H:%M:%S%z", exact=False, utc=True)
 
-    # creating thresholds dates from configs json file
-    timestamp_start = pd.Timestamp(configs['start_year'], configs['start_month'], configs['start_day'], 0)
-    if (configs['end_month']==12) & (configs['end_day']==31):
-        timestamp_end = pd.Timestamp(configs['end_year']+1, 1, 1, 0)
-    else:
-        timestamp_end = pd.Timestamp(configs['end_year'], configs['end_month']+1, configs['end_day'], 0)
+    timestamp_start = dt.datetime.fromisoformat(configs["start_time"])
+    timestamp_end =  dt.datetime.fromisoformat(configs["end_time"])
 
-    # filtering input data based on user specified date period
-    df_inputdata = df_inputdata.loc[ (df_inputdata.start.dt.date>=timestamp_start) & (df_inputdata.end.dt.date<=timestamp_end) , :]
+    # only read from files that's timespan intersects with the configs
+    # the extra will be removed in `prep_for_rnn`
+    df_inputdata = df_inputdata.loc[
+        (df_inputdata.start <= timestamp_end) &
+        (df_inputdata.end >= timestamp_start),
+        :
+    ]
+
     df_inputdata['path'] = configs['data_dir'] + "/" + configs['building'] + "/" + df_inputdata['filename']
     
     if df_inputdata.empty:
@@ -433,20 +435,9 @@ def correct_timestamps(configs, data):
     data = data.sort_index()
 
     # TODO: think about timezones.
-    start_time = dt.datetime(
-        day=configs['start_day'],
-        month=configs["start_month"],
-        year=configs["start_year"],
-        tzinfo=dt.timezone.utc,
-    )
-    end_time = dt.datetime(
-        day=configs['end_day'],
-        month=configs["end_month"],
-        year=configs["end_year"],
-        tzinfo=dt.timezone.utc,
-    ) 
-    # add a day to endtime so it's inclusive
-    data = data[(data.index >= start_time) & (data.index < end_time + pd.Timedelta(days=1))]
+    start_time = dt.datetime.fromisoformat((configs["start_time"]))
+    end_time =  dt.datetime.fromisoformat(configs["end_time"])
+    data = data[start_time:end_time]
 
     if data.shape[0] == 0:
         raise ConfigsError(
