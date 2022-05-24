@@ -1,0 +1,36 @@
+05/24/2022 04:05:10 - INFO     - PID: 86813
+05/24/2022 04:05:10 - INFO     - Pre-process: reading input data summary json file from tests/data/Synthetic Site/Synthetic Site Config.json
+05/24/2022 04:05:10 - INFO     - Pre-process: reading target file = /Synthetic Site/Synthetic Site Targets 2021-12-01.csv
+05/24/2022 04:05:10 - INFO     - Pre-process: reading target file = /Synthetic Site/Synthetic Site Targets 2021-12-02.csv
+05/24/2022 04:05:10 - INFO     - Pre-process: reading target file = /Synthetic Site/Synthetic Site Targets 2021-12-03.csv
+05/24/2022 04:05:10 - INFO     - Pre-process: reading target file = /Synthetic Site/Synthetic Site Targets 2021-12-04.csv
+05/24/2022 04:05:10 - INFO     - Pre-process: reading target file = /Synthetic Site/Synthetic Site Targets 2021-12-05.csv
+05/24/2022 04:05:10 - INFO     - Pre-process: reading target file = /Synthetic Site/Synthetic Site Targets 2021-12-06.csv
+05/24/2022 04:05:11 - INFO     - Pre-process: reading target file = /Synthetic Site/Synthetic Site Targets 2021-12-07.csv
+05/24/2022 04:05:11 - INFO     - Pre-process: reading predictor file = /Synthetic Site/Synthetic Site Predictors 2021-12-01.csv
+05/24/2022 04:05:11 - INFO     - Pre-process: reading predictor file = /Synthetic Site/Synthetic Site Predictors 2021-12-02.csv
+05/24/2022 04:05:11 - INFO     - Pre-process: reading predictor file = /Synthetic Site/Synthetic Site Predictors 2021-12-03.csv
+05/24/2022 04:05:11 - INFO     - Pre-process: reading predictor file = /Synthetic Site/Synthetic Site Predictors 2021-12-04.csv
+05/24/2022 04:05:11 - INFO     - Pre-process: reading predictor file = /Synthetic Site/Synthetic Site Predictors 2021-12-05.csv
+05/24/2022 04:05:11 - INFO     - Pre-process: reading predictor file = /Synthetic Site/Synthetic Site Predictors 2021-12-06.csv
+05/24/2022 04:05:11 - INFO     - Pre-process: reading predictor file = /Synthetic Site/Synthetic Site Predictors 2021-12-07.csv
+05/24/2022 04:05:11 - INFO     - Number of features: 54
+05/24/2022 04:05:11 - INFO     - Creating random training mask and writing to file
+05/24/2022 04:05:11 - INFO     - Train: 0.733446519524618, validation: 0.12224108658743633, test: 0.14431239388794567
+05/24/2022 04:05:11 - INFO     - training with arch version 5
+05/24/2022 04:05:11 - INFO     - Writer path: tests/fixtures/v5_exp_dir
+05/24/2022 04:05:12 - INFO     - Data transformed using minmaxscale as transformation method
+05/24/2022 04:05:12 - INFO     - Available train batch factors: [1, 2, 3, 4, 6, 8, 9, 12, 16, 18, 24, 27, 36, 48, 54, 72, 108, 144, 216, 432]
+05/24/2022 04:05:12 - INFO     - Requested number of batches per epoch - Train: 5, val: 1
+05/24/2022 04:05:12 - INFO     - Actual number of batches per epoch - Train: 4, val: 1
+05/24/2022 04:05:12 - INFO     - Number of data samples in each batch - Train: 108, val: 72
+05/24/2022 04:05:12 - INFO     - Training on cpu
+05/24/2022 04:05:12 - INFO     - Data converted to iterable dataset
+05/24/2022 04:05:12 - INFO     - A new lstm RNN model instantiated, with run_train=True
+05/24/2022 04:05:12 - INFO     - Number of cores available: 8
+05/24/2022 04:05:12 - INFO     - Number of logical processors available: 16
+05/24/2022 04:05:12 - INFO     - Initial memory statistics (GB): {'total': 34.359738368, 'available': 16.144781312, 'percent': 53.0, 'used': 18.210594816, 'free': 1.093500928}
+05/24/2022 04:05:12 - INFO     - Starting to train the model for 1 epochs!
+05/24/2022 04:05:12 - INFO     - Epoch: 1 Iteration: 2. Train_loss: 0.23967081308364868. val_loss: 0.21246575617786623, LR: 0.001
+05/24/2022 04:05:13 - INFO     - Epoch: 1 Iteration: 4. Train_loss: 0.21292264759540558. val_loss: 0.19703279768276102, LR: 0.001
+05/24/2022 04:05:13 - INFO     - Run with arch RNN(lstm), on Synthetic Site Electricity Main Total Power, with session ID Debugging_for_rolling_stats, is done!

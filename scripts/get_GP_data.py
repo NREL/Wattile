@@ -10,13 +10,72 @@ Script for retrieving data for: Building Data Genome Project
        'precipDepth6HR', 'seaLvlPressure', 'windDirection', 'windSpeed'
 
 """
-
+import json
 import os
 import pathlib
 
 import numpy as np
 import pandas as pd
-from historical_weather import get_nsrdb
+
+
+def get_nsrdb(year, target_lat, target_lon):
+    # ---------------- Get data from NSRDB ----------------
+    with open("nsrd_auth.json", "r") as read_file:
+        auth = json.load(read_file)
+    attributes = [
+        "ghi",
+        "dhi",
+        "dni",
+        "air_temperature",
+        "relative_humidity",
+        "total_precipitable_water",
+        "surface_albedo",
+    ]
+    year = str(year)
+    if year == "2020" or year == "2016":
+        leap_year = "true"
+    else:
+        leap_year = "false"
+    interval = "30"
+    utc = "false"
+
+    # Get metadata
+    url = (
+        "https://developer.nrel.gov/api/solar/nsrdb_psm3_download.csv?"
+        f"wkt=POINT({target_lon}%20{target_lat})&"
+        f"names={year}&"
+        f"leap_day={leap_year}&"
+        f"interval={interval}&"
+        f"utc={utc}&"
+        f"full_name={auth['your_name']}&"
+        f"email={auth['your_email']}&"
+        f"affiliation={auth['your_affiliation']}&"
+        f"mailing_list={auth['mailing_list']}&"
+        f"reason={auth['reason_for_use']}"
+        f"api_key={auth['api_key']}&"
+        f"attributes={','.join(attributes)}"
+    )
+
+    # Get actual data
+    df = pd.read_csv(url, skiprows=2)
+
+    # Set the time index in the pandas dataframe:
+    concat = (
+        df["Year"].astype(str)
+        + "-"
+        + df["Month"].astype(str)
+        + "-"
+        + df["Day"].astype(str)
+        + " "
+        + df["Hour"].astype(str)
+        + ":"
+        + df["Minute"].astype(str)
+        + ":00"
+    )
+    df = df.set_index(pd.to_datetime(concat))
+    df = df.drop(["Year", "Month", "Day", "Hour", "Minute"], axis=1)
+    return df
+
 
 # Inputs
 data_dir = "/projects/intelcamp/data/GP_new"
