@@ -1,6 +1,7 @@
 import json
-import intelcamp.entry_point as epb
 import os
+
+import intelcamp.entry_point as epb
 
 # User inputs
 meters = [
@@ -16,7 +17,7 @@ meters = [
     ["RSF", "RSF Main Power (kW)"],
     ["RSF", "RSF Data Center Power (kW)"],
     ["S&TF", "S&TF Main Power (kW)"],
-    ["EC", "EC Main Power (kW)"]
+    ["EC", "EC Main Power (kW)"],
 ]
 test_ID = "test_set"
 
@@ -27,7 +28,9 @@ for meter_ID in meters:
         configs = json.load(read_file)
 
     # Make a sub-directory in the main results directory specific to this test study
-    configs["results_dir"] = os.path.join(configs["results_dir"], "all_meters_T{}".format(test_ID))
+    configs["results_dir"] = os.path.join(
+        configs["results_dir"], "all_meters_T{}".format(test_ID)
+    )
 
     # Test the model
     configs["building"] = meter_ID[0]

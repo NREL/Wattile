@@ -22,6 +22,11 @@ Then install dependencies.
 poetry install
 ```
 
+Finally, install pre-commit.
+```
+poetry run pre-commit install
+```
+
 Quick Start
 ----
 
@@ -75,8 +80,13 @@ algo_main_rnn_v5.py
 Development
 ----
 
-To test, run
+### Testing
 ```
 $ poetry run pytest tests
 ```
 To see test coverage, add args `--cov-report html --cov=$PROJECT_DIR` and open `./htmlcov/index.html`
+
+### Styleing
+```sh
+$ make format
+```

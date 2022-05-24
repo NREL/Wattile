@@ -1,20 +1,17 @@
-import numpy as np
-import pathlib
-import glob
-import sys
-import pandas as pd
 import datetime as dt
-# import tables
-from pandas.tseries.holiday import USFederalHolidayCalendar, get_calendar
 import json
-import os
-import seaborn as sns
-import matplotlib.pyplot as plt
 import logging
-import torch
+import os
+import pathlib
 from pathlib import Path
-from intelcamp.error import ConfigsError
 
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import torch
+
+# import tables
+from intelcamp.error import ConfigsError
 
 PROJECT_DIRECTORY = pathlib.Path(__file__).resolve().parent
 
@@ -30,14 +27,14 @@ def check_complete(torch_file, des_epochs):
     """
 
     torch_model = torch.load(torch_file)
-    model = torch_model['torch_model']
-    check = des_epochs == torch_model['epoch_num']+1
+    check = des_epochs == torch_model["epoch_num"] + 1
     return check
 
 
-def get_full_data(configs):
+def get_full_data(configs):  # noqa: C901 TODO: remove no qa
     """
-    Fetches all data for a requested building based on the information reflected in the input data summary json file.
+    Fetches all data for a requested building based on the information reflected in the input data
+     summary json file.
 
     :param configs: (Dictionary)
     :return: (DataFrame)
@@ -45,86 +42,131 @@ def get_full_data(configs):
 
     # assuming there is only one json file in the folder summerizing input data
     # read json file
-    configs_file_inputdata = Path(configs['data_dir']) / configs['building'] / f"{configs['building']} Config.json"
-    logger.info("Pre-process: reading input data summary json file from {}".format(configs_file_inputdata))
+    configs_file_inputdata = (
+        Path(configs["data_dir"])
+        / configs["building"]
+        / f"{configs['building']} Config.json"
+    )
+    logger.info(
+        "Pre-process: reading input data summary json file from {}".format(
+            configs_file_inputdata
+        )
+    )
     with open(configs_file_inputdata, "r") as read_file:
         configs_input = json.load(read_file)
 
-    # converting json into dataframe 
-    df_inputdata = pd.DataFrame(configs_input['files'])
+    # converting json into dataframe
+    df_inputdata = pd.DataFrame(configs_input["files"])
 
     # converting date time column into pandas datetime (raw format based on ISO 8601)
-    df_inputdata['start'] = pd.to_datetime(df_inputdata.start, format="t:%Y-%m-%dT%H:%M:%S%z", exact=False, utc=True)
-    df_inputdata['end'] = pd.to_datetime(df_inputdata.end, format="t:%Y-%m-%dT%H:%M:%S%z", exact=False, utc=True)
+    df_inputdata["start"] = pd.to_datetime(
+        df_inputdata.start, format="t:%Y-%m-%dT%H:%M:%S%z", exact=False, utc=True
+    )
+    df_inputdata["end"] = pd.to_datetime(
+        df_inputdata.end, format="t:%Y-%m-%dT%H:%M:%S%z", exact=False, utc=True
+    )
 
     timestamp_start = dt.datetime.fromisoformat(configs["start_time"])
-    timestamp_end =  dt.datetime.fromisoformat(configs["end_time"])
+    timestamp_end = dt.datetime.fromisoformat(configs["end_time"])
 
     # only read from files that's timespan intersects with the configs
     # the extra will be removed in `prep_for_rnn`
     df_inputdata = df_inputdata.loc[
-        (df_inputdata.start <= timestamp_end) &
-        (df_inputdata.end >= timestamp_start),
-        :
+        (df_inputdata.start <= timestamp_end) & (df_inputdata.end >= timestamp_start), :
     ]
 
-    df_inputdata['path'] = configs['data_dir'] + "/" + configs['building'] + "/" + df_inputdata['filename']
-    
+    df_inputdata["path"] = (
+        configs["data_dir"] + "/" + configs["building"] + "/" + df_inputdata["filename"]
+    )
+
     if df_inputdata.empty:
-        logger.info("Pre-process: measurements during the specified time period ({} to {}) are empty.".format(timestamp_start, timestamp_end))
-        
+        logger.info(
+            "Pre-process: measurements during the specified time period "
+            f"({timestamp_start} to {timestamp_end}) are empty."
+        )
+
         raise ConfigsError("No datapoints found in dataset for specified timeframe.")
 
     else:
         data_full_p = pd.DataFrame()
         data_full_t = pd.DataFrame()
         for datatype in df_inputdata.contentType.unique():
-            
-            df_list_datatype = df_inputdata.loc[df_inputdata.contentType==datatype,:]
-            
+
+            df_list_datatype = df_inputdata.loc[df_inputdata.contentType == datatype, :]
+
             for filepath in df_list_datatype.path:
-                
-                if datatype=="predictors":
-                    logger.info("Pre-process: reading predictor file = {}".format(filepath.split(configs['data_dir'])[1]))
+
+                if datatype == "predictors":
+                    logger.info(
+                        "Pre-process: reading predictor file = {}".format(
+                            filepath.split(configs["data_dir"])[1]
+                        )
+                    )
                     try:
                         data_full_p = pd.concat([data_full_p, pd.read_csv(filepath)])
-                    except:
-                        logger.info("Pre-process: error in read_csv with predictor file {}. not reading..".format(filepath.split(configs['data_dir'])[1]))
+                    except Exception:
+                        logger.info(
+                            "Pre-process: error in read_csv with predictor file "
+                            f"{filepath.split(configs['data_dir'])[1]}. not reading.."
+                        )
                         continue
-                elif datatype=="targets":
-                    logger.info("Pre-process: reading target file = {}".format(filepath.split(configs['data_dir'])[1]))
+                elif datatype == "targets":
+                    logger.info(
+                        "Pre-process: reading target file = {}".format(
+                            filepath.split(configs["data_dir"])[1]
+                        )
+                    )
                     try:
-                        data_full_t = pd.concat([data_full_t, pd.read_csv(filepath)[['Timestamp', configs["target_var"]]]])
-                    except:
-                        logger.info("Pre-process: error in read_csv with target file {}. not reading..".format(filepath.split(configs['data_dir'])[1]))
+                        data_full_t = pd.concat(
+                            [
+                                data_full_t,
+                                pd.read_csv(filepath)[
+                                    ["Timestamp", configs["target_var"]]
+                                ],
+                            ]
+                        )
+                    except Exception:
+                        logger.info(
+                            "Pre-process: error in read_csv with target file "
+                            f"{filepath.split(configs['data_dir'])[1]}. not reading.."
+                        )
                         continue
                 else:
-                    logger.info("Pre-process: input file not properly differentiated between Predictors and Targets")
+                    logger.info(
+                        "Pre-process: input file not properly differentiated between Predictors "
+                        "and Targets"
+                    )
 
         if data_full_p.empty:
             logger.info("Pre-process: predictor dataframe is empty. Exiting process...")
 
-            raise ConfigsError("No datapoints found in dataset for specified timeframe.")
+            raise ConfigsError(
+                "No datapoints found in dataset for specified timeframe."
+            )
 
         elif data_full_t.empty and configs["use_case"] != "prediction":
             logger.info("Pre-process: target dataframe is empty. Exiting process...")
 
-            raise ConfigsError("No datapoints found in dataset for specified timeframe.")          
+            raise ConfigsError(
+                "No datapoints found in dataset for specified timeframe."
+            )
 
         if configs["use_case"] == "prediction":
             data_full = data_full_p
             data_full[configs["target_var"]] = -999
-            
+
         else:
-            data_full = pd.merge(data_full_p, data_full_t, how='outer', on='Timestamp')
-        
-    data_full['Timestamp'] = pd.to_datetime(data_full['Timestamp'], format="%Y-%m-%dT%H:%M:%S%z", exact=False, utc=True)
-    data_full = data_full.set_index('Timestamp')
+            data_full = pd.merge(data_full_p, data_full_t, how="outer", on="Timestamp")
+
+    data_full["Timestamp"] = pd.to_datetime(
+        data_full["Timestamp"], format="%Y-%m-%dT%H:%M:%S%z", exact=False, utc=True
+    )
+    data_full = data_full.set_index("Timestamp")
 
     return data_full
 
 
-def time_dummies(data, configs):
+def time_dummies(data, configs):  # noqa: C901 TODO: remove noqa
     """
     Adds time-based indicator variables. Elements in configs describe what method to use.
     regDummy: Binary indicator variables, one column for each entry.
@@ -138,50 +180,85 @@ def time_dummies(data, configs):
 
     # HOD
     if "sincos" in configs["HOD"]:
-        data['sin_HOD'] = np.sin(
-            2 * np.pi * (data.index.hour * 3600 + data.index.minute * 60 + data.index.second).values / (
-                    24 * 60 * 60))
-        data['cos_HOD'] = np.cos(
-            2 * np.pi * (data.index.hour * 3600 + data.index.minute * 60 + data.index.second).values / (
-                    24 * 60 * 60))
+        data["sin_HOD"] = np.sin(
+            2
+            * np.pi
+            * (
+                data.index.hour * 3600 + data.index.minute * 60 + data.index.second
+            ).values
+            / (24 * 60 * 60)
+        )
+        data["cos_HOD"] = np.cos(
+            2
+            * np.pi
+            * (
+                data.index.hour * 3600 + data.index.minute * 60 + data.index.second
+            ).values
+            / (24 * 60 * 60)
+        )
     if "binary_reg" in configs["HOD"]:
         for i in range(0, 24):
             data["HOD_binary_reg_{}".format(i)] = (data.index.hour == i).astype(int)
 
-        #data = data.join(pd.get_dummies(data.index.hour, prefix='HOD_binary_reg', drop_first=True).set_index(data.index))
+        # data = data.join(
+        #     pd.get_dummies(
+        #         data.index.hour, prefix="HOD_binary_reg", drop_first=True
+        #     ).set_index(data.index)
+        # )
 
     if "binary_fuzzy" in configs["HOD"]:
         for HOD in range(0, 24):
-            data["HOD_binary_fuzzy_{}".format(HOD)] = np.maximum(1 - abs((data.index.hour + data.index.minute / 60) - HOD) / 1, 0)
+            data["HOD_binary_fuzzy_{}".format(HOD)] = np.maximum(
+                1 - abs((data.index.hour + data.index.minute / 60) - HOD) / 1, 0
+            )
 
     # DOW
     if "binary_reg" in configs["DOW"]:
         for i in range(0, 7):
             data["DOW_binary_reg_{}".format(i)] = (data.index.weekday == i).astype(int)
-        #data = data.join(pd.get_dummies(data.index.weekday, prefix='DOW_binary_reg', drop_first=True).set_index(data.index))
+        # data = data.join(
+        #     pd.get_dummies(
+        #         data.index.weekday, prefix="DOW_binary_reg", drop_first=True
+        #     ).set_index(data.index)
+        # )
     if "binary_fuzzy" in configs["DOW"]:
         for i in range(0, 7):
-            data["DOW_binary_fuzzy_{}".format(i)] = (data.index.weekday == i).astype(int)
-        #data = data.join(pd.get_dummies(data.index.weekday, prefix='DOW_binary_fuzzy', drop_first=True).set_index(data.index))
+            data["DOW_binary_fuzzy_{}".format(i)] = (data.index.weekday == i).astype(
+                int
+            )
+        # data = data.join(
+        #     pd.get_dummies(
+        #         data.index.weekday, prefix="DOW_binary_fuzzy", drop_first=True
+        #     ).set_index(data.index)
+        # )
         for DOW in range(0, 7):
-            data["DOW_binary_fuzzy_{}".format(DOW)] = np.maximum(1 - abs((data.index.weekday + data.index.hour / 24) - DOW) / 1, 0)
+            data["DOW_binary_fuzzy_{}".format(DOW)] = np.maximum(
+                1 - abs((data.index.weekday + data.index.hour / 24) - DOW) / 1, 0
+            )
 
     # MOY
-    if "sincos" in configs['MOY']:
-        data['sin_MOY'] = np.sin(2 * np.pi * (data.index.dayofyear).values / (365))
-        data['cos_MOY'] = np.cos(2 * np.pi * (data.index.dayofyear).values / (365))
+    if "sincos" in configs["MOY"]:
+        data["sin_MOY"] = np.sin(2 * np.pi * (data.index.dayofyear).values / (365))
+        data["cos_MOY"] = np.cos(2 * np.pi * (data.index.dayofyear).values / (365))
 
-    if 'Holidays' in configs and configs["Holidays"]:
+    if "Holidays" in configs and configs["Holidays"]:
         # -----Automatic (fetches federal holidays based on dates in imported data
         # cal = USFederalHolidayCalendar()
-        # holidays = cal.holidays(start=data.index[0].strftime("%Y-%m-%d"), end=data.index[-1].strftime("%Y-%m-%d"))
+        # holidays = cal.holidays(
+        #     start=data.index[0].strftime("%Y-%m-%d"),
+        #     end=data.index[-1].strftime("%Y-%m-%d"),
+        # )
         # data['Holiday'] = pd.to_datetime(data.index.date).isin(holidays).astype(int)
 
         # -----Read from JSON file
         with open("holidays.json", "r") as read_file:
             holidays = json.load(read_file)
-        data['Holiday'] = pd.to_datetime(data.index.date).isin(holidays).astype(int)
-        data['Holiday_forward'] = pd.to_datetime(data.index.date + dt.timedelta(days=1)).isin(holidays).astype(int)
+        data["Holiday"] = pd.to_datetime(data.index.date).isin(holidays).astype(int)
+        data["Holiday_forward"] = (
+            pd.to_datetime(data.index.date + dt.timedelta(days=1))
+            .isin(holidays)
+            .astype(int)
+        )
 
     return data
 
@@ -195,13 +272,13 @@ def input_data_split(data, configs):
     :param configs: (Dict)
     :return:
     """
-    train_ratio = int(configs["data_split"].split(":")[0])/100
-    val_ratio = int(configs["data_split"].split(":")[1])/100
-    test_ratio = int(configs["data_split"].split(":")[2])/100
+    train_ratio = int(configs["data_split"].split(":")[0]) / 100
+    val_ratio = int(configs["data_split"].split(":")[1]) / 100
+    test_ratio = int(configs["data_split"].split(":")[2]) / 100
 
     file_prefix = Path(configs["exp_dir"])
 
-    if configs['train_val_split'] == 'Random':
+    if configs["train_val_split"] == "Random":
         pathlib.Path(configs["data_dir"]).mkdir(parents=True, exist_ok=True)
         mask_file = os.path.join(file_prefix, "mask.h5")
         logger.info("Creating random training mask and writing to file")
@@ -210,14 +287,23 @@ def input_data_split(data, configs):
         if configs["splicer"]["active"]:
             # Set indices for training set
             np.random.seed(seed=configs["random_seed"])
-            splicer = ((data.index - data.index[0]) // pd.Timedelta(configs["splicer"]["time"])).values
+            splicer = (
+                (data.index - data.index[0]) // pd.Timedelta(configs["splicer"]["time"])
+            ).values
             num_chunks = splicer[-1]
-            num_train_chunks = (train_ratio * num_chunks) - ((train_ratio * num_chunks) % configs["train_size_factor"])
+            num_train_chunks = (train_ratio * num_chunks) - (
+                (train_ratio * num_chunks) % configs["train_size_factor"]
+            )
             if num_train_chunks == 0:
-                raise Exception("Total number of data chunks is zero. train_size_factor value might be too large compared to the data size. Exiting..")
+                raise Exception(
+                    "Total number of data chunks is zero. train_size_factor value might be too "
+                    "large compared to the data size. Exiting.."
+                )
 
             msk = np.zeros(data.shape[0]) + 2
-            train_chunks = np.random.choice(np.arange(num_chunks), replace=False, size=int(num_train_chunks))
+            train_chunks = np.random.choice(
+                np.arange(num_chunks), replace=False, size=int(num_train_chunks)
+            )
             for chunk in train_chunks:
                 indices = np.where(splicer == chunk)
                 msk[indices] = 0
@@ -227,8 +313,12 @@ def input_data_split(data, configs):
             if test_ratio == 0:
                 msk[msk != 0] = 1
             else:
-                num_val_chunks = int((val_ratio / (1-train_ratio)) * remaining_chunks.shape[0])
-                val_chunks = np.random.choice(remaining_chunks, replace=False, size=num_val_chunks)
+                num_val_chunks = int(
+                    (val_ratio / (1 - train_ratio)) * remaining_chunks.shape[0]
+                )
+                val_chunks = np.random.choice(
+                    remaining_chunks, replace=False, size=num_val_chunks
+                )
                 for chunk in val_chunks:
                     indices = np.where(splicer == chunk)
                     msk[indices] = 1
@@ -238,9 +328,13 @@ def input_data_split(data, configs):
             # Set indices for training set
             np.random.seed(seed=configs["random_seed"])
             data_size = data.shape[0]
-            num_ones = (train_ratio * data_size) - ((train_ratio * data_size) % configs["train_size_factor"])
+            num_ones = (train_ratio * data_size) - (
+                (train_ratio * data_size) % configs["train_size_factor"]
+            )
             msk = np.zeros(data_size) + 2
-            indices = np.random.choice(np.arange(data_size), replace=False, size=int(num_ones))
+            indices = np.random.choice(
+                np.arange(data_size), replace=False, size=int(num_ones)
+            )
             msk[indices] = 0
 
             # Set indices for validation and test set
@@ -248,32 +342,47 @@ def input_data_split(data, configs):
             if test_ratio == 0:
                 msk[remaining_indices] = 1
             else:
-                num_val = int((val_ratio / (1-train_ratio)) * remaining_indices.shape[0])
-                val_indices = np.random.choice(remaining_indices, replace=False, size=num_val)
+                num_val = int(
+                    (val_ratio / (1 - train_ratio)) * remaining_indices.shape[0]
+                )
+                val_indices = np.random.choice(
+                    remaining_indices, replace=False, size=num_val
+                )
                 msk[val_indices] = 1
 
-
-        logger.info("Train: {}, validation: {}, test: {}".format((msk == 0).sum()/msk.shape[0], (msk == 1).sum()/msk.shape[0], (msk == 2).sum()/msk.shape[0]))
+        logger.info(
+            "Train: {}, validation: {}, test: {}".format(
+                (msk == 0).sum() / msk.shape[0],
+                (msk == 1).sum() / msk.shape[0],
+                (msk == 2).sum() / msk.shape[0],
+            )
+        )
         # Assign dataframes
         train_df = data[msk == 0]
         val_df = data[msk == 1]
         test_df = data[msk == 2]
 
         # Save test_df to file for later use
-        test_df.to_hdf(os.path.join(file_prefix, "internal_test.h5"), key='df', mode='w')
+        test_df.to_hdf(
+            os.path.join(file_prefix, "internal_test.h5"), key="df", mode="w"
+        )
 
         # Still save dataframe to file to preserve timeseries index
         mask = pd.DataFrame()
-        mask['msk'] = msk
+        mask["msk"] = msk
         mask.index = data.index
-        mask.to_hdf(mask_file, key='df', mode='w')
+        mask.to_hdf(mask_file, key="df", mode="w")
 
         # Get rid of datetime index
         train_df.reset_index(drop=True, inplace=True)
         val_df.reset_index(drop=True, inplace=True)
 
     else:
-        raise ConfigsError("{} is not a supported form of data splitting".format(configs['train_val_split']))
+        raise ConfigsError(
+            "{} is not a supported form of data splitting".format(
+                configs["train_val_split"]
+            )
+        )
 
     return train_df, val_df
 
@@ -288,20 +397,24 @@ def pad_full_data(data, configs):
     :return: (DataFrame)
     """
     target = data[configs["target_var"]]
-    data = data.drop(configs['target_var'], axis=1)
+    data = data.drop(configs["target_var"], axis=1)
     data_orig = data
 
     # Pad the exogenous variables
     temp_holder = list()
     temp_holder.append(data_orig)
-    for i in range(1, configs['window']+1):
-        shifted = data_orig.shift(i * int(configs["sequence_freq_min"]), freq='min').astype("float32").add_suffix("_lag{}".format(i))
+    for i in range(1, configs["window"] + 1):
+        shifted = (
+            data_orig.shift(i * int(configs["sequence_freq_min"]), freq="min")
+            .astype("float32")
+            .add_suffix("_lag{}".format(i))
+        )
         temp_holder.append(shifted)
     temp_holder.reverse()
     data = pd.concat(temp_holder, axis=1)
 
     # If this is a linear quantile regression model (iterative)
-    if configs["arch_type"] == "quantile" and configs["iterative"] == True:
+    if configs["arch_type"] == "quantile" and configs["iterative"]:
         for i in range(0, configs["EC_future_gap_min"]):
             if i == 0:
                 data[configs["target_var"]] = target
@@ -309,15 +422,15 @@ def pad_full_data(data, configs):
                 data["{}_lag_{}".format(configs["target_var"], i)] = target.shift(-i)
 
         # Drop all nans
-        data = data.dropna(how='any')
+        data = data.dropna(how="any")
 
     # If this is a linear quantile regression model (point)
-    elif configs["arch_type"] == "quantile" and configs["iterative"] == False:
+    elif configs["arch_type"] == "quantile" and not configs["iterative"]:
         # Re-append the shifted target column to the dataframe
-        data[configs["target_var"]] = target.shift(-configs['EC_future_gap_min'])
+        data[configs["target_var"]] = target.shift(-configs["EC_future_gap_min"])
 
         # Drop all nans
-        data = data.dropna(how='any')
+        data = data.dropna(how="any")
 
         # Adjust time index to match the EC values
         data.index = data.index + pd.DateOffset(minutes=(configs["EC_future_gap_min"]))
@@ -325,10 +438,10 @@ def pad_full_data(data, configs):
     # If this is an RNN model
     elif configs["arch_type"] == "RNN":
         # Re-append the shifted target column to the dataframe
-        data[configs["target_var"]] = target.shift(-configs['EC_future_gap_min'])
+        data[configs["target_var"]] = target.shift(-configs["EC_future_gap_min"])
 
         # Drop all nans
-        data = data.dropna(how='any')
+        data = data.dropna(how="any")
 
         # Adjust time index to match the EC values
         data.index = data.index + pd.DateOffset(minutes=(configs["EC_future_gap_min"]))
@@ -347,14 +460,17 @@ def pad_full_data_s2s(data, configs):
     """
 
     target = data[configs["target_var"]]
-    data = data.drop(configs['target_var'], axis=1)
+    data = data.drop(configs["target_var"], axis=1)
     data_orig = data
     # Pad the exogenous variables
     temp_holder = list()
     temp_holder.append(data_orig)
-    for i in range(1, configs['window']+1):
-        shifted = data_orig.shift(i * int(configs["sequence_freq_min"]), freq='min').astype(
-            "float32").add_suffix("_lag{}".format(i))
+    for i in range(1, configs["window"] + 1):
+        shifted = (
+            data_orig.shift(i * int(configs["sequence_freq_min"]), freq="min")
+            .astype("float32")
+            .add_suffix("_lag{}".format(i))
+        )
         temp_holder.append(shifted)
     temp_holder.reverse()
     data = pd.concat(temp_holder, axis=1)
@@ -362,18 +478,22 @@ def pad_full_data_s2s(data, configs):
     # Do fine padding for future predictions. Create a new df to preserve memory usage.
     local = pd.DataFrame()
     for i in range(0, configs["S2S_stagger"]["initial_num"]):
-        local["{}_lag_{}".format(configs["target_var"], i)] = target.shift(-i * int(configs["sequence_freq_min"]), freq='min')
+        local["{}_lag_{}".format(configs["target_var"], i)] = target.shift(
+            -i * int(configs["sequence_freq_min"]), freq="min"
+        )
 
     # Do additional coarse padding for future predictions
     for i in range(1, configs["S2S_stagger"]["secondary_num"] + 1):
         base = configs["S2S_stagger"]["initial_num"]
         new = base + configs["S2S_stagger"]["decay"] * i
-        local["{}_lag_{}".format(configs["target_var"], base+i)] = target.shift(-new * int(configs["sequence_freq_min"], freq='min'))
+        local["{}_lag_{}".format(configs["target_var"], base + i)] = target.shift(
+            -new * int(configs["sequence_freq_min"], freq="min")
+        )
 
     data = pd.concat([data, local], axis=1)
 
     # Drop all nans
-    data = data.dropna(how='any')
+    data = data.dropna(how="any")
 
     return data
 
@@ -387,7 +507,9 @@ def corr_heatmap(data):
     """
     corr = data.corr()
     mask = np.triu(np.ones_like(corr, dtype=np.bool))
-    sns.heatmap(data.corr(), mask=mask, cmap='coolwarm', linewidths=1, linecolor='white')
+    sns.heatmap(
+        data.corr(), mask=mask, cmap="coolwarm", linewidths=1, linecolor="white"
+    )
 
 
 def correct_predictor_columns(configs, data):
@@ -401,7 +523,7 @@ def correct_predictor_columns(configs, data):
     :return: data with correct columns
     :rtype: pandas.DataFrame
     """
-    keep_cols = configs['predictor_columns'] + [configs['target_var']]
+    keep_cols = configs["predictor_columns"] + [configs["target_var"]]
 
     # raise error if missing columns
     missing_colums = set(keep_cols).difference(set(data.columns))
@@ -436,17 +558,18 @@ def correct_timestamps(configs, data):
 
     # TODO: think about timezones.
     start_time = dt.datetime.fromisoformat((configs["start_time"]))
-    end_time =  dt.datetime.fromisoformat(configs["end_time"])
+    end_time = dt.datetime.fromisoformat(configs["end_time"])
     data = data[start_time:end_time]
 
     if data.shape[0] == 0:
         raise ConfigsError(
-            "data has no data within specified time period:" \
-            f"{start_time.year}-{start_time.month}-{start_time.day} to " \
+            "data has no data within specified time period:"
+            f"{start_time.year}-{start_time.month}-{start_time.day} to "
             f"{end_time.year}-{end_time.month}-{end_time.day}"
         )
 
     return data
+
 
 def prep_for_rnn(configs, data):
     """
@@ -469,8 +592,8 @@ def prep_for_rnn(configs, data):
         data = rolling_stats(data, configs)
 
     # Add lag features
-    configs['input_dim'] = data.shape[1] - 1
-    logger.info("Number of features: {}".format(configs['input_dim']))
+    configs["input_dim"] = data.shape[1] - 1
+    logger.info("Number of features: {}".format(configs["input_dim"]))
     logger.debug("Features: {}".format(data.columns.values))
     if configs["arch_version"] == 4:
         data = pad_full_data(data, configs)
@@ -487,15 +610,16 @@ def prep_for_rnn(configs, data):
 
         if configs["use_case"] == "validation":
             if configs["test_method"] == "external":
-                filepath = filepath = pathlib.Path(
-                    configs["data_dir"]) / f"{configs['target_var']}_external_test.h5"
-                val_df.to_hdf(filepath, key='df', mode='w')
+                filepath = filepath = (
+                    pathlib.Path(configs["data_dir"])
+                    / f"{configs['target_var']}_external_test.h5"
+                )
+                val_df.to_hdf(filepath, key="df", mode="w")
 
             elif configs["test_method"] == "internal":
                 local_results_dir = Path(configs["exp_dir"])
-                temp_config_file = os.path.join(
-                    local_results_dir, "configs.json")
-                with open(temp_config_file, 'r') as f:
+                temp_config_file = os.path.join(local_results_dir, "configs.json")
+                with open(temp_config_file, "r") as f:
                     temp_configs = json.load(f)
                 configs["input_dim"] = temp_configs["input_dim"]
 
@@ -506,6 +630,7 @@ def prep_for_rnn(configs, data):
 
     return train_df, val_df
 
+
 def rolling_stats(data, configs):
     # Convert data to rolling average (except output) and create min, mean, and max columns
     target = data[configs["target_var"]]
@@ -514,20 +639,40 @@ def rolling_stats(data, configs):
     # inferring timestep (frequency) from the dataframe
     dt = configs["data_time_interval_mins"]
     windowsize = int(configs["rolling_window"]["minutes"] / dt) + 1
-    logging.debug("Feature extraction: rolling window size = {} rows".format(windowsize))
+    logging.debug(
+        "Feature extraction: rolling window size = {} rows".format(windowsize)
+    )
 
     if configs["rolling_window"]["type"] == "rolling":
         mins = X_data.rolling(window=windowsize, min_periods=1).min().add_suffix("_min")
-        means = X_data.rolling(window=windowsize, min_periods=1).mean().add_suffix("_mean")
+        means = (
+            X_data.rolling(window=windowsize, min_periods=1).mean().add_suffix("_mean")
+        )
         maxs = X_data.rolling(window=windowsize, min_periods=1).max().add_suffix("_max")
         data = pd.concat([mins, means, maxs], axis=1)
         data[configs["target_var"]] = target
 
     elif configs["rolling_window"]["type"] == "binned":
-        mins = X_data.resample(str(configs["rolling_window"]["minutes"]) + "T").min().add_suffix("_min")
-        means = X_data.resample(str(configs["rolling_window"]["minutes"]) + "T").mean().add_suffix("_mean")
-        maxs = X_data.resample(str(configs["rolling_window"]["minutes"]) + "T").max().add_suffix("_max")
+        mins = (
+            X_data.resample(str(configs["rolling_window"]["minutes"]) + "T")
+            .min()
+            .add_suffix("_min")
+        )
+        means = (
+            X_data.resample(str(configs["rolling_window"]["minutes"]) + "T")
+            .mean()
+            .add_suffix("_mean")
+        )
+        maxs = (
+            X_data.resample(str(configs["rolling_window"]["minutes"]) + "T")
+            .max()
+            .add_suffix("_max")
+        )
         data = pd.concat([mins, means, maxs], axis=1)
-        data[configs["target_var"]] = pd.DataFrame(target).resample(str(configs["rolling_window"]["minutes"]) + "T").mean()
+        data[configs["target_var"]] = (
+            pd.DataFrame(target)
+            .resample(str(configs["rolling_window"]["minutes"]) + "T")
+            .mean()
+        )
 
     return data

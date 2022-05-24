@@ -1,15 +1,15 @@
 import json
-import intelcamp.entry_point as epb
 import os
-import pandas as pd
-from multiprocessing import Process
-from multiprocessing import Pool
-from multiprocessing import set_start_method
-import matplotlib.pyplot as plt
-from matplotlib import rc
-import numpy as np
+from multiprocessing import Pool, set_start_method
 
-if __name__ == '__main__':
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from matplotlib import rc
+
+import intelcamp.entry_point as epb
+
+if __name__ == "__main__":  # noqa: C901 TODO: remove noqa
     set_start_method("spawn")
     print("starting file")
     # Read in base configurations from json file
@@ -27,7 +27,9 @@ if __name__ == '__main__':
     states = ["plot_results"]  # Train, Test, plot_results
     resume = True
 
-    testing_round_dir = os.path.join(base_configs["results_dir"], "BGP_{}".format(test_ID))
+    testing_round_dir = os.path.join(
+        base_configs["results_dir"], "BGP_{}".format(test_ID)
+    )
 
     # Run tests
     if "Train" in states:
@@ -52,17 +54,22 @@ if __name__ == '__main__':
             configs["target_var"] = meter_ID
             configs["run_resume"] = resume
 
-
             if hpc_processes > 1:
                 inputs.append(configs)
             else:
                 try:
                     epb.main(configs)
-                except:
-                    print("Error in training for {}. Terminating training process".format(configs["target_var"]))
+                except Exception:
+                    print(
+                        "Error in training for {}. Terminating training process".format(
+                            configs["target_var"]
+                        )
+                    )
 
             i = i + 1
-            print("Just started process for {} ({}/{})".format(meter_ID, i, len(meters)))
+            print(
+                "Just started process for {} ({}/{})".format(meter_ID, i, len(meters))
+            )
             if i == stop_num:
                 break
 
@@ -71,7 +78,8 @@ if __name__ == '__main__':
         print("Done")
 
     elif "Test" in states:
-        # Find the models that were trained and are currently in the folder with the name "test_dir_path"
+        # Find the models that were trained and are currently in the folder with the name
+        # "test_dir_path"
         meter_models = os.listdir(testing_round_dir)
 
         # Iterate through those results directories, run a test set on each
@@ -90,17 +98,22 @@ if __name__ == '__main__':
             epb.main(configs)
 
             i = i + 1
-            print("Just finished testing for {} ({}/{})".format(meter, i, len(meter_models)))
+            print(
+                "Just finished testing for {} ({}/{})".format(
+                    meter, i, len(meter_models)
+                )
+            )
             if i == stop_num:
                 break
 
     elif "plot_results" in states:
         # rc('text', usetex=True)
-        rc('xtick', labelsize=6)
-        rc('ytick', labelsize=6)
-        plt.rc('font', family='serif')
+        rc("xtick", labelsize=6)
+        rc("ytick", labelsize=6)
+        plt.rc("font", family="serif")
 
-        # Find the models that were trained and are currently in the folder with the name "test_dir_path"
+        # Find the models that were trained and are currently in the folder with the name
+        # "test_dir_path"
         meter_models = os.listdir(testing_round_dir)
 
         # Get building metadata
@@ -117,13 +130,17 @@ if __name__ == '__main__':
         for meter in meter_models:
             # Get QQ data
             results_dir = os.path.join(testing_round_dir, meter)
-            QQ_data = pd.read_hdf(os.path.join(results_dir, "QQ_data_test.h5"), key='df')
+            QQ_data = pd.read_hdf(
+                os.path.join(results_dir, "QQ_data_test.h5"), key="df"
+            )
             if max(abs(QQ_data["q_actual"] - QQ_data["q_requested"])) > 0.7:
                 print("Dropping {}".format(meter))
                 continue
 
             # Store data
-            usage = meta[meta["building_id"] == meter[5:-5]]["primaryspaceusage"].values[0]
+            usage = meta[meta["building_id"] == meter[5:-5]][
+                "primaryspaceusage"
+            ].values[0]
             if usage not in data:
                 data[usage] = pd.DataFrame()
             data[usage] = pd.concat([data[usage], QQ_data["q_actual"]], axis=1)
@@ -139,38 +156,82 @@ if __name__ == '__main__':
         num_meters = 0
         for usage in data:
             usage_data = np.array(data[usage]).T
-            ax[plt_ind % 4, int(plt_ind / 4)].boxplot(usage_data, whis=(5,95), flierprops=flierprops, showfliers=True, positions=requested, widths=0.08, manage_xticks=False)
-            ax[plt_ind % 4, int(plt_ind / 4)].text(.5, 1, usage, ha='center', va="bottom",
-                                                         transform=ax[plt_ind % 4, int(plt_ind / 4)].transAxes, fontsize=8)
-            ax[plt_ind % 4, int(plt_ind / 4)].text(0.02, 0.975, "n={}".format(usage_data.shape[0]), ha='left', va="top",
-                                                         transform=ax[plt_ind % 4, int(plt_ind / 4)].transAxes, fontsize=8)
-            ax[plt_ind % 4, int(plt_ind / 4)].plot([0, 1], [0, 1], c='k', alpha=0.5, linewidth=1.0)
+            ax[plt_ind % 4, int(plt_ind / 4)].boxplot(
+                usage_data,
+                whis=(5, 95),
+                flierprops=flierprops,
+                showfliers=True,
+                positions=requested,
+                widths=0.08,
+                manage_xticks=False,
+            )
+            ax[plt_ind % 4, int(plt_ind / 4)].text(
+                0.5,
+                1,
+                usage,
+                ha="center",
+                va="bottom",
+                transform=ax[plt_ind % 4, int(plt_ind / 4)].transAxes,
+                fontsize=8,
+            )
+            ax[plt_ind % 4, int(plt_ind / 4)].text(
+                0.02,
+                0.975,
+                "n={}".format(usage_data.shape[0]),
+                ha="left",
+                va="top",
+                transform=ax[plt_ind % 4, int(plt_ind / 4)].transAxes,
+                fontsize=8,
+            )
+            ax[plt_ind % 4, int(plt_ind / 4)].plot(
+                [0, 1], [0, 1], c="k", alpha=0.5, linewidth=1.0
+            )
             ax[plt_ind % 4, int(plt_ind / 4)].set_xlim(left=0, right=1)
             ax[plt_ind % 4, int(plt_ind / 4)].set_ylim(bottom=0, top=1)
             num_meters = num_meters + usage_data.shape[0]
             plt_ind = plt_ind + 1
 
         print(num_meters)
-        fig.text(0.5, 0.04, r'$\tau_{Requested}$', ha='center', va='center', fontsize=10)
-        fig.text(0.06, 0.5, r'$\tau_{Evaluated}$', ha='center', va='center', rotation='vertical', fontsize=10)
+        fig.text(
+            0.5, 0.04, r"$\tau_{Requested}$", ha="center", va="center", fontsize=10
+        )
+        fig.text(
+            0.06,
+            0.5,
+            r"$\tau_{Evaluated}$",
+            ha="center",
+            va="center",
+            rotation="vertical",
+            fontsize=10,
+        )
         plt.show()
 
-        #     ax[plot_index % 4, int(plot_index/ 4)].scatter(QQ_data["q_requested"], QQ_data["q_actual"], s=5, c="black")
+        # ax[plot_index % 4, int(plot_index / 4)].scatter(
+        #     QQ_data["q_requested"], QQ_data["q_actual"], s=5, c="black"
+        # )
         #
         #     i = i + 1
-        #     # print("Just finished plotting for target variable {} ({}/{})".format(meter, i, len(meter_models)))
+        #     print(f"Just finished plotting for target variable {meter} ({i}/{len(meter_models)})")
         #     if i == stop_num:
         #         break
         #
         # for usage in usages:
         #     index = usages[usage]
-        #     ax[index % 4, int(index / 4)].text(.5, 1, usage, ha='center', va="bottom",
-        #                                                  transform=ax[index % 4, int(index / 4)].transAxes, fontsize=8)
-        #     ax[index % 4, int(index / 4)].plot([0, 1], [0, 1], c='k', alpha=0.5, linewidth=1.0)
+        #     ax[index % 4, int(index / 4)].text(
+        #         0.5,
+        #         1,
+        #         usage,
+        #         ha="center",
+        #         va="bottom",
+        #         transform=ax[index % 4, int(index / 4)].transAxes,
+        #         fontsize=8,
+        #     )
+        #     ax[index % 4, int(index / 4)].plot(
+        #         [0, 1], [0, 1], c="k", alpha=0.5, linewidth=1.0
+        #     )
         #     ax[index % 4, int(index / 4)].set_xlim(left=0, right=1)
         #     ax[index % 4, int(index / 4)].set_ylim(bottom=0, top=1)
         #
-
 
     else:
         print("Command not understood")

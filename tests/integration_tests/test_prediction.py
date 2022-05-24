@@ -1,15 +1,15 @@
-from genericpath import exists
-from operator import rshift
+import json
 import pathlib
 import shutil
+
 import pytest
-import json
 
 import intelcamp.entry_point as epb
 
 TESTS_PATH = pathlib.Path(__file__).parents[1]
 TESTS_FIXTURES_PATH = TESTS_PATH / "fixtures"
 TEST_DATA_PATH = TESTS_PATH / "data" / "Synthetic Site"
+
 
 @pytest.fixture
 def config_for_tests():
@@ -39,17 +39,17 @@ def popluate_test_data_dir_with_prediction_data(data_dir):
 
 
 V4_EXP_DIR = TESTS_FIXTURES_PATH / "v4_exp_dir"
-V4_CONFIG_PATCH = { "arch_version": 4}
+V4_CONFIG_PATCH = {"arch_version": 4}
 
 V5_EXP_DIR = TESTS_FIXTURES_PATH / "v5_exp_dir"
-V5_CONFIG_PATCH = { "arch_version": 5}
+V5_CONFIG_PATCH = {"arch_version": 5}
 
 
 def test_prediction_v4(config_for_tests, tmpdir):
     # don't run training
     config_for_tests["arch_version"] = 4
     config_for_tests["use_case"] = "prediction"
-    
+
     # use a temp result dir
     exp_dir = tmpdir / "train_results"
     config_for_tests["exp_dir"] = str(exp_dir)
@@ -62,7 +62,7 @@ def test_prediction_v4(config_for_tests, tmpdir):
 
     results = epb.main(config_for_tests)
 
-    assert results.shape[1:] == (len(config_for_tests["qs"]), )
+    assert results.shape[1:] == (len(config_for_tests["qs"]),)
     assert (exp_dir / "output.out").exists()
 
 
@@ -70,7 +70,7 @@ def test_prediction_v5(config_for_tests, tmpdir):
     # don't run training
     config_for_tests["arch_version"] = 5
     config_for_tests["use_case"] = "prediction"
-    
+
     # use a temp result dir
     exp_dir = pathlib.Path(tmpdir) / "train_results"
     config_for_tests["exp_dir"] = str(exp_dir)
@@ -83,8 +83,10 @@ def test_prediction_v5(config_for_tests, tmpdir):
 
     results = epb.main(config_for_tests)
 
-    num_timestamps = config_for_tests["S2S_stagger"]["initial_num"] + config_for_tests["S2S_stagger"]["secondary_num"]
+    num_timestamps = (
+        config_for_tests["S2S_stagger"]["initial_num"]
+        + config_for_tests["S2S_stagger"]["secondary_num"]
+    )
     assert results.shape[1:] == (len(config_for_tests["qs"]), num_timestamps)
 
     assert (exp_dir / "output.out").exists()
-    

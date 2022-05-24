@@ -1,13 +1,15 @@
+import json
 import pathlib
 import shutil
+
 import pytest
-import json
 
 import intelcamp.entry_point as epb
 
 TESTS_PATH = pathlib.Path(__file__).parents[1]
 TESTS_FIXTURES_PATH = TESTS_PATH / "fixtures"
 TESTS_DATA_PATH = TESTS_PATH / "data"
+
 
 @pytest.fixture
 def config_for_tests():
@@ -21,11 +23,12 @@ def config_for_tests():
 
     return configs
 
+
 V4_EXP_DIR = TESTS_FIXTURES_PATH / "v4_exp_dir"
-V4_CONFIG_PATCH = { "arch_version": 4}
+V4_CONFIG_PATCH = {"arch_version": 4}
 
 V5_EXP_DIR = TESTS_FIXTURES_PATH / "v5_exp_dir"
-V5_CONFIG_PATCH = { "arch_version": 5}
+V5_CONFIG_PATCH = {"arch_version": 5}
 
 
 @pytest.mark.parametrize(
@@ -38,7 +41,7 @@ V5_CONFIG_PATCH = { "arch_version": 5}
 def test_validation(config_for_tests, tmpdir, config_patch, test_exp_dir):
     config_for_tests.update(config_patch)
     config_for_tests["use_case"] = "validation"
-    
+
     exp_dir = pathlib.Path(tmpdir) / "train_results"
     config_for_tests["exp_dir"] = str(exp_dir)
     shutil.copytree(test_exp_dir, exp_dir)

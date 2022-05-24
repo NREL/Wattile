@@ -11,19 +11,21 @@ Script for retrieving data for: Building Data Genome Project
 
 """
 
-import pandas as pd
-import numpy as np
 import os
-from historical_weather import get_nsrdb
-import tables
 import pathlib
-import json
+
+import numpy as np
+import pandas as pd
+from historical_weather import get_nsrdb
 
 # Inputs
 data_dir = "/projects/intelcamp/data/GP_new"
-weather_url = "https://github.com/buds-lab/building-data-genome-project-2/blob/master/data/weather/weather.csv"
-meta_url = "https://github.com/buds-lab/building-data-genome-project-2/blob/master/data/metadata/metadata.csv"
-loads_url = "https://github.com/buds-lab/building-data-genome-project-2/blob/master/data/meters/cleaned/electricity_cleaned.csv"
+building_data_genome_project_url = (
+    "https://github.com/buds-lab/building-data-genome-project-2/blob/master/data"
+)
+weather_url = f"{building_data_genome_project_url}/weather/weather.csv"
+meta_url = f"{building_data_genome_project_url}/metadata/metadata.csv"
+loads_url = f"{building_data_genome_project_url}/meters/cleaned/electricity_cleaned.csv"
 
 # Get data
 pathlib.Path(data_dir).mkdir(parents=True, exist_ok=True)
@@ -87,7 +89,6 @@ for id in filtered["ids"]:
     # Put load and weather data together
     # id_data = pd.concat([id_weather, id_load], axis=1)
 
-
     site_id = meta[meta["building_id"] == id]["site_id"].values[0]
 
     # Iterate through years
@@ -110,10 +111,16 @@ for id in filtered["ids"]:
                 sites_weather[str(year)][site_id] = df
 
             # Combine site data together
-            site_data = pd.concat([id_load[id_load.index.year == year], df[['GHI', 'Temperature', 'Relative Humidity']]], axis=1)
+            site_data = pd.concat(
+                [
+                    id_load[id_load.index.year == year],
+                    df[["GHI", "Temperature", "Relative Humidity"]],
+                ],
+                axis=1,
+            )
 
             # Save dataset
-            site_data.to_hdf(output_string, key='df', mode='w')
+            site_data.to_hdf(output_string, key="df", mode="w")
 
     print("Done with {}: {}/{} sites".format(id, i, len(filtered["ids"])))
     i = i + 1
