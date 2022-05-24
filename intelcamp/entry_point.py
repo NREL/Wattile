@@ -7,7 +7,6 @@ import pathlib
 import pandas as pd
 
 import intelcamp.buildings_processing as bp
-from intelcamp import util
 
 PACKAGE_PATH = pathlib.Path(__file__).parent
 CONFIGS_PATH = PACKAGE_PATH / "configs.json"
@@ -46,7 +45,7 @@ def create_input_dataframe(configs):
     :return: data
     :rtype: DataFrame
     """
-    local_results_dir = util.Path(configs["exp_dir"])
+    local_results_dir = pathlib.Path(configs["exp_dir"])
 
     configs["target_feat_name"] = [configs["target_var"]]
 
@@ -71,7 +70,7 @@ def run_model(configs, train_df, val_df):
     :param val_df: input data for validation
     :type val_df: DataFrame
     """
-    local_results_dir = util.Path(configs["exp_dir"])
+    local_results_dir = pathlib.Path(configs["exp_dir"])
 
     if configs["use_case"] == "train":
         # Check the model training process
@@ -125,7 +124,7 @@ def main(configs):
     :param configs: Dictionary
     :return: None
     """
-    init_logging(local_results_dir=util.Path(configs["exp_dir"]))
+    init_logging(local_results_dir=pathlib.Path(configs["exp_dir"]))
     train_df, val_df = create_input_dataframe(configs)
 
     return run_model(configs, train_df, val_df)
