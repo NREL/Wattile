@@ -35,12 +35,12 @@ def test_create_input_dataframe(config_for_tests, tmpdir):
 
     excepted_data_columns = []
     # add weather columns
-    for pred in config_for_tests["predictor_columns"]:
+    for pred in config_for_tests["weather_include"]:
         excepted_data_columns += [f"{pred}_{m}" for m in ["max", "min", "mean"]]
         excepted_data_columns += [
-            f"{pred}_{m}_lag{l + 1}"
+            f"{pred}_{m}_lag{lag + 1}"
             for m in ["max", "min", "mean"]
-            for l in range(config_for_tests["window"])
+            for lag in range(config_for_tests["window"])
         ]
 
     # add year and hour columns
@@ -51,11 +51,11 @@ def test_create_input_dataframe(config_for_tests, tmpdir):
         for m in ["max", "min", "mean"]
     ]
     excepted_data_columns += [
-        f"{f}_{t}_{m}_lag{l + 1}"
+        f"{f}_{t}_{m}_lag{lag + 1}"
         for t in ["MOY", "HOD"]
         for f in ["cos", "sin"]
         for m in ["max", "min", "mean"]
-        for l in range(config_for_tests["window"])
+        for lag in range(config_for_tests["window"])
     ]
 
     # add week columns
@@ -63,10 +63,10 @@ def test_create_input_dataframe(config_for_tests, tmpdir):
         f"DOW_binary_reg_{i}_{m}" for i in range(0, 7) for m in ["max", "min", "mean"]
     ]
     excepted_data_columns += [
-        f"DOW_binary_reg_{i}_{m}_lag{l + 1}"
+        f"DOW_binary_reg_{i}_{m}_lag{lag + 1}"
         for i in range(0, 7)
         for m in ["max", "min", "mean"]
-        for l in range(config_for_tests["window"])
+        for lag in range(config_for_tests["window"])
     ]
 
     # add target var

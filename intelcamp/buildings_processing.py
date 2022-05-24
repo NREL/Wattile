@@ -1,21 +1,16 @@
 import datetime as dt
-import glob
 import json
 import logging
 import os
 import pathlib
-import sys
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import torch
 
 # import tables
-from pandas.tseries.holiday import USFederalHolidayCalendar, get_calendar
-
 from intelcamp.error import ConfigsError
 
 PROJECT_DIRECTORY = pathlib.Path(__file__).resolve().parent
@@ -32,14 +27,14 @@ def check_complete(torch_file, des_epochs):
     """
 
     torch_model = torch.load(torch_file)
-    model = torch_model["torch_model"]
     check = des_epochs == torch_model["epoch_num"] + 1
     return check
 
 
-def get_full_data(configs):
+def get_full_data(configs):  # noqa: C901 TODO: remove no qa
     """
-    Fetches all data for a requested building based on the information reflected in the input data summary json file.
+    Fetches all data for a requested building based on the information reflected in the input data
+     summary json file.
 
     :param configs: (Dictionary)
     :return: (DataFrame)
@@ -86,9 +81,8 @@ def get_full_data(configs):
 
     if df_inputdata.empty:
         logger.info(
-            "Pre-process: measurements during the specified time period ({} to {}) are empty.".format(
-                timestamp_start, timestamp_end
-            )
+            "Pre-process: measurements during the specified time period "
+            f"({timestamp_start} to {timestamp_end}) are empty."
         )
 
         raise ConfigsError("No datapoints found in dataset for specified timeframe.")
@@ -110,11 +104,10 @@ def get_full_data(configs):
                     )
                     try:
                         data_full_p = pd.concat([data_full_p, pd.read_csv(filepath)])
-                    except:
+                    except Exception:
                         logger.info(
-                            "Pre-process: error in read_csv with predictor file {}. not reading..".format(
-                                filepath.split(configs["data_dir"])[1]
-                            )
+                            "Pre-process: error in read_csv with predictor file "
+                            f"{filepath.split(configs['data_dir'])[1]}. not reading.."
                         )
                         continue
                 elif datatype == "targets":
@@ -132,16 +125,16 @@ def get_full_data(configs):
                                 ],
                             ]
                         )
-                    except:
+                    except Exception:
                         logger.info(
-                            "Pre-process: error in read_csv with target file {}. not reading..".format(
-                                filepath.split(configs["data_dir"])[1]
-                            )
+                            "Pre-process: error in read_csv with target file "
+                            f"{filepath.split(configs['data_dir'])[1]}. not reading.."
                         )
                         continue
                 else:
                     logger.info(
-                        "Pre-process: input file not properly differentiated between Predictors and Targets"
+                        "Pre-process: input file not properly differentiated between Predictors "
+                        "and Targets"
                     )
 
         if data_full_p.empty:
@@ -173,7 +166,7 @@ def get_full_data(configs):
     return data_full
 
 
-def time_dummies(data, configs):
+def time_dummies(data, configs):  # noqa: C901 TODO: remove noqa
     """
     Adds time-based indicator variables. Elements in configs describe what method to use.
     regDummy: Binary indicator variables, one column for each entry.
@@ -207,7 +200,11 @@ def time_dummies(data, configs):
         for i in range(0, 24):
             data["HOD_binary_reg_{}".format(i)] = (data.index.hour == i).astype(int)
 
-        # data = data.join(pd.get_dummies(data.index.hour, prefix='HOD_binary_reg', drop_first=True).set_index(data.index))
+        # data = data.join(
+        #     pd.get_dummies(
+        #         data.index.hour, prefix="HOD_binary_reg", drop_first=True
+        #     ).set_index(data.index)
+        # )
 
     if "binary_fuzzy" in configs["HOD"]:
         for HOD in range(0, 24):
@@ -219,13 +216,21 @@ def time_dummies(data, configs):
     if "binary_reg" in configs["DOW"]:
         for i in range(0, 7):
             data["DOW_binary_reg_{}".format(i)] = (data.index.weekday == i).astype(int)
-        # data = data.join(pd.get_dummies(data.index.weekday, prefix='DOW_binary_reg', drop_first=True).set_index(data.index))
+        # data = data.join(
+        #     pd.get_dummies(
+        #         data.index.weekday, prefix="DOW_binary_reg", drop_first=True
+        #     ).set_index(data.index)
+        # )
     if "binary_fuzzy" in configs["DOW"]:
         for i in range(0, 7):
             data["DOW_binary_fuzzy_{}".format(i)] = (data.index.weekday == i).astype(
                 int
             )
-        # data = data.join(pd.get_dummies(data.index.weekday, prefix='DOW_binary_fuzzy', drop_first=True).set_index(data.index))
+        # data = data.join(
+        #     pd.get_dummies(
+        #         data.index.weekday, prefix="DOW_binary_fuzzy", drop_first=True
+        #     ).set_index(data.index)
+        # )
         for DOW in range(0, 7):
             data["DOW_binary_fuzzy_{}".format(DOW)] = np.maximum(
                 1 - abs((data.index.weekday + data.index.hour / 24) - DOW) / 1, 0
@@ -239,7 +244,10 @@ def time_dummies(data, configs):
     if "Holidays" in configs and configs["Holidays"]:
         # -----Automatic (fetches federal holidays based on dates in imported data
         # cal = USFederalHolidayCalendar()
-        # holidays = cal.holidays(start=data.index[0].strftime("%Y-%m-%d"), end=data.index[-1].strftime("%Y-%m-%d"))
+        # holidays = cal.holidays(
+        #     start=data.index[0].strftime("%Y-%m-%d"),
+        #     end=data.index[-1].strftime("%Y-%m-%d"),
+        # )
         # data['Holiday'] = pd.to_datetime(data.index.date).isin(holidays).astype(int)
 
         # -----Read from JSON file
@@ -288,7 +296,8 @@ def input_data_split(data, configs):
             )
             if num_train_chunks == 0:
                 raise Exception(
-                    "Total number of data chunks is zero. train_size_factor value might be too large compared to the data size. Exiting.."
+                    "Total number of data chunks is zero. train_size_factor value might be too "
+                    "large compared to the data size. Exiting.."
                 )
 
             msk = np.zeros(data.shape[0]) + 2
@@ -405,7 +414,7 @@ def pad_full_data(data, configs):
     data = pd.concat(temp_holder, axis=1)
 
     # If this is a linear quantile regression model (iterative)
-    if configs["arch_type"] == "quantile" and configs["iterative"] == True:
+    if configs["arch_type"] == "quantile" and configs["iterative"]:
         for i in range(0, configs["EC_future_gap_min"]):
             if i == 0:
                 data[configs["target_var"]] = target
@@ -416,7 +425,7 @@ def pad_full_data(data, configs):
         data = data.dropna(how="any")
 
     # If this is a linear quantile regression model (point)
-    elif configs["arch_type"] == "quantile" and configs["iterative"] == False:
+    elif configs["arch_type"] == "quantile" and not configs["iterative"]:
         # Re-append the shifted target column to the dataframe
         data[configs["target_var"]] = target.shift(-configs["EC_future_gap_min"])
 

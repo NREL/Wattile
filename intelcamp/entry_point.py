@@ -3,7 +3,6 @@ import json
 import logging
 import os
 import pathlib
-import sys
 
 import pandas as pd
 
@@ -85,7 +84,8 @@ def run_model(configs, train_df, val_df):
                     "{} already completed. Moving on...".format(configs["target_var"])
                 )
                 return
-        # If the torch file doesnt exist yet, and run_resume=True, then reset it to false so it can start from scratch
+        # If the torch file doesnt exist yet, and run_resume=True, then reset it to false so it can
+        # start from scratch
         else:
             if configs["run_resume"]:
                 configs["run_resume"] = False
@@ -120,7 +120,8 @@ def run_model(configs, train_df, val_df):
 def main(configs):
     """
     Main function for processing and structuring data.
-    Feeds training and valing data to the requested model by calling the script where the model architecture is defined
+    Feeds training and valing data to the requested model by calling the script where the model
+     architecture is defined
     :param configs: Dictionary
     :return: None
     """
@@ -130,7 +131,8 @@ def main(configs):
     return run_model(configs, train_df, val_df)
 
 
-# If the model is being run locally (i.e. a single model is being trained), read in configs.json and pass to main()
+# If the model is being run locally (i.e. a single model is being trained), read in configs.json and
+# pass to main()
 if __name__ == "__main__":
     with open(CONFIGS_PATH, "r") as read_file:
         configs = json.load(read_file)

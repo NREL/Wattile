@@ -14,7 +14,8 @@ class RNNModel(nn.Module):
 
         # Building the RNN, specifying type of activation function
         # nonlinearity: relu or tanh
-        #  batch_first: If True, then the input and output tensors are provided as (batch, seq, feature). Default: False
+        # batch_first: If True, then the input and output tensors are provided as
+        # (batch, seq, feature). Default: False
         self.rnn = nn.RNN(
             input_dim, hidden_dim, layer_dim, batch_first=True, nonlinearity="relu"
         )

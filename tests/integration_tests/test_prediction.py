@@ -1,10 +1,8 @@
 import json
 import pathlib
 import shutil
-from operator import rshift
 
 import pytest
-from genericpath import exists
 
 import intelcamp.entry_point as epb
 

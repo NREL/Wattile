@@ -4,7 +4,6 @@ import logging
 import os
 import pathlib
 import timeit
-from cProfile import run
 
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
@@ -12,11 +11,10 @@ import numpy as np
 import pandas as pd
 import psutil
 import torch
-import torch.nn as nn
 import torch.utils.data as data_utils
 from psutil import virtual_memory
 from torch.autograd import Variable
-from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data.dataloader import DataLoader
 
 # from tensorboardX import SummaryWriter
@@ -25,7 +23,7 @@ from torch.utils.tensorboard import SummaryWriter
 import intelcamp.buildings_processing as bp
 from intelcamp import lstm, rnn
 from intelcamp.error import ConfigsError
-from intelcamp.util import factors, prtime, tile
+from intelcamp.util import factors
 
 file_prefix = "/default"
 logger = logging.getLogger(str(os.getpid()))
@@ -45,7 +43,8 @@ def size_the_batches(
     """
 
     if configs["use_case"] == "train":
-        # Find factors of the length of train and val df's and pick the closest one to the requested batch sizes
+        # Find factors of the length of train and val df's and pick the closest one to the requested
+        #  batch sizes
         train_bth = factors(train_data.shape[0])
         train_num_batches = min(train_bth, key=lambda x: abs(x - tr_desired_batch_size))
         train_bt_size = int(train_data.shape[0] / train_num_batches)
@@ -54,14 +53,13 @@ def size_the_batches(
         val_num_batches = min(val_bth, key=lambda x: abs(x - te_desired_batch_size))
         val_bt_size = int(val_data.shape[0] / val_num_batches)
 
-        train_ratio = round(
-            train_data.shape[0] * 100 / (train_data.shape[0] + val_data.shape[0]), 1
-        )
-        val_ratio = 100 - train_ratio
         num_train_data = train_data.shape[0]
 
-        # logger.info("Train size: {}, val size: {}, split {}%:{}%".format(train_data.shape[0], val_data.shape[0],
-        #                                                             train_ratio, val_ratio))
+        # logger.info(
+        #     "Train size: {}, val size: {}, split {}%:{}%".format(
+        #         train_data.shape[0], val_data.shape[0], train_ratio, val_ratio
+        #     )
+        # )
         logger.info("Available train batch factors: {}".format(sorted(train_bth)))
         logger.info(
             "Requested number of batches per epoch - Train: {}, val: {}".format(
@@ -97,7 +95,8 @@ def data_transform(train_data, val_data, transformation_method, run_train):
     :return:
     """
     if run_train:
-        # For the result de-normalization purpose, saving the max and min values of the STM_Xcel_Meter columns
+        # For the result de-normalization purpose, saving the max and min values of the
+        # STM_Xcel_Meter columns
         train_stats = {}
         train_stats["train_max"] = train_data.max().to_dict()
         train_stats["train_min"] = train_data.min().to_dict()
@@ -150,7 +149,8 @@ def data_iterable_random(
     train_data, val_data, run_train, train_batch_size, val_batch_size, configs
 ):
     """
-    Converts train and val data to torch data types (used only if splitting training and val set randomly)
+    Converts train and val data to torch data types (used only if splitting training and val set
+     randomly)
 
     :param train_data: (DataFrame)
     :param val_data: (DataFrame)
@@ -282,12 +282,14 @@ def quantile_loss(output, target, configs, device):
     # stats = [resid.data.numpy().min(), resid.data.numpy().max()]
 
     # See histogram of residuals
-    # graph = pd.DataFrame(resid.data.numpy()).plot(kind="hist", alpha=0.5, bins=50, ec='black', stacked=True)
+    # graph = pd.DataFrame(resid.data.numpy()).plot(
+    #     kind="hist", alpha=0.5, bins=50, ec="black", stacked=True
+    # )
 
     return loss
 
 
-def test_processing(
+def test_processing(  # noqa: C901 TODO: remove noqa
     val_df,
     val_loader,
     model,
@@ -469,7 +471,8 @@ def test_processing(
         )
         gof = (np.sqrt(2) / 2) * np.sqrt(cvrmse**2 + nmbe**2)
 
-        # If this is the last val run of training, get histogram data of residuals for each quantile (use normalized data)
+        # If this is the last val run of training, get histogram data of residuals for each quantile
+        #  (use normalized data)
         if last_run:
             resid = semifinal_targs - semifinal_preds
             split_arrays = np.split(resid, len(configs["qs"]), axis=1)
@@ -498,7 +501,7 @@ def test_processing(
     return final_preds, errors, target, Q_vals
 
 
-def run_training(
+def run_training(  # noqa: C901 TODO: remove noqa
     train_loader,
     val_loader,
     val_df,
@@ -573,7 +576,8 @@ def run_training(
         # RNN layer
         # input_dim: The number of expected features in the input x
         # hidden_dim: the number of features in the hidden state h
-        # layer_dim: Number of recurrent layers. i.e. if 2, it is stacking two RNNs together to form a stacked RNN
+        # layer_dim: Number of recurrent layers. i.e. if 2, it is stacking two RNNs together to form
+        #  a stacked RNN
         # Initialize the model
         if configs["arch_type_variant"] == "vanilla":
             model = rnn.RNNModel(input_dim, hidden_dim, layer_dim, output_dim)
@@ -610,7 +614,8 @@ def run_training(
         configs["lr_config"]["schedule"]
         and configs["lr_config"]["type"] == "performance"
     ):
-        # Patience (for our case) is # of iterations, not epochs, but configs specification is num epochs
+        # Patience (for our case) is # of iterations, not epochs, but configs specification is num
+        # epochs
         scheduler = ReduceLROnPlateau(
             optimizer,
             mode="min",
@@ -624,9 +629,13 @@ def run_training(
     elif (
         configs["lr_config"]["schedule"] and configs["lr_config"]["type"] == "absolute"
     ):
-        # scheduler = StepLR(optimizer,
-        #                    step_size=int(configs['lr_config']["step_size"]*(num_train_data/train_batch_size)),
-        #                    gamma=configs['lr_config']['factor'])
+        # scheduler = StepLR(
+        #     optimizer,
+        #     step_size=int(
+        #         configs["lr_config"]["step_size"] * (num_train_data / train_batch_size)
+        #     ),
+        #     gamma=configs["lr_config"]["factor"],
+        # )
         pass
     else:
         raise ConfigsError(
@@ -655,9 +664,8 @@ def run_training(
     if len(epoch_range) == 0:
         epoch = resume_num_epoch + 1
         logger.info(
-            "the previously saved model was at epoch= {}, which is same as num_epochs. So, not training".format(
-                resume_num_epoch
-            )
+            f"the previously saved model was at epoch= {resume_num_epoch}, which is same as "
+            "num_epochs. So, not training"
         )
 
     if run_resume:
@@ -669,9 +677,6 @@ def run_training(
 
     # Start training timer
     train_start_time = timeit.default_timer()
-
-    # Residual diagnostics
-    resid_stats = []
 
     # Initialize re-trainable matrix
     # train_y_at_t = torch.zeros(train_batch_size, seq_dim, 1)  # 960 x 5 x 1
@@ -736,7 +741,8 @@ def run_training(
             writer.add_scalars("Loss", {"Train": loss}, n_iter)
             time4 = timeit.default_timer()
 
-            # Does backpropogation and gets gradients, (the weights and bias). Create computational graph
+            # Does backpropogation and gets gradients, (the weights and bias).
+            # Create computational graph
             loss.backward()
 
             time5 = timeit.default_timer()
@@ -799,24 +805,33 @@ def run_training(
                 writer.add_scalars("Loss", {"val": errors["pinball_loss"]}, n_iter)
 
                 # Save the final predictions to a file
-                # pd.DataFrame(predictions).to_hdf(os.path.join(file_prefix, "predictions.h5"), key='df', mode='w')
-                # pd.DataFrame(measured).to_hdf(os.path.join(file_prefix, "measured.h5"), key='df', mode='w')
+                # pd.DataFrame(predictions).to_hdf(
+                #     os.path.join(file_prefix, "predictions.h5"), key="df", mode="w"
+                # )
+                # pd.DataFrame(measured).to_hdf(
+                #     os.path.join(file_prefix, "measured.h5"), key="df", mode="w"
+                # )
 
                 # Save the QQ information to a file
-                # Q_vals.to_hdf(os.path.join(file_prefix, "QQ_data.h5"), key='df', mode='w')
+                # Q_vals.to_hdf(
+                #     os.path.join(file_prefix, "QQ_data.h5"), key="df", mode="w"
+                # )
 
-                # # Add parody plot to TensorBoard
+                # Add parody plot to TensorBoard
                 # fig2, ax2 = plt.subplots()
-                # ax2.scatter(predictions, val_df[configs['target_var']], s=5, alpha=0.3)
-                # strait_line = np.linspace(min(min(predictions), min(val_df[configs['target_var']])),
-                #                           max(max(predictions), max(val_df[configs['target_var']])), 5)
-                # ax2.plot(strait_line, strait_line, c='k')
-                # ax2.set_xlabel('Predicted')
-                # ax2.set_ylabel('Observed')
-                # ax2.axhline(y=0, color='k')
-                # ax2.axvline(x=0, color='k')
-                # ax2.axis('equal')
-                # writer.add_figure('Parody', fig2, n_iter)
+                # ax2.scatter(predictions, val_df[configs["target_var"]], s=5, alpha=0.3)
+                # strait_line = np.linspace(
+                #     min(min(predictions), min(val_df[configs["target_var"]])),
+                #     max(max(predictions), max(val_df[configs["target_var"]])),
+                #     5,
+                # )
+                # ax2.plot(strait_line, strait_line, c="k")
+                # ax2.set_xlabel("Predicted")
+                # ax2.set_ylabel("Observed")
+                # ax2.axhline(y=0, color="k")
+                # ax2.axvline(x=0, color="k")
+                # ax2.axis("equal")
+                # writer.add_figure("Parody", fig2, n_iter)
 
                 # Add QQ plot to TensorBoard
                 fig2, ax2 = plt.subplots()
@@ -1008,8 +1023,6 @@ def run_prediction(
 
     logger.info("Loaded model from file, given run_train=False\n")
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
     with torch.no_grad():
         preds = []
         for (feats, v) in val_loader:
@@ -1089,7 +1102,6 @@ def _plot_results(configs, measured, predictions):
             "{}_external_test.h5".format(configs["target_var"]),
         )
         test_data = pd.read_hdf(file, key="df")
-        index = test_data.index
     else:
         test_data = pd.read_hdf(os.path.join(file_prefix, "internal_test.h5"), key="df")
 
@@ -1101,7 +1113,6 @@ def _plot_results(configs, measured, predictions):
 
     # Plotting the test set with ALL of the sequence forecasts
     fig, ax1 = plt.subplots()
-    cmap = plt.get_cmap("Blues")
     plt.rc("font", family="serif")
     # for j in range(0, test_data.shape[0]-1):
     # for j in range(1515, 1528):
@@ -1123,15 +1134,37 @@ def _plot_results(configs, measured, predictions):
                 color="Blue",
                 zorder=5,
             )
-            # for i in range(int(len(configs["qs"])/2) - 1,-1,-1):
-            #     q = configs["qs"][i]
-            #     # ax1.plot(time_index, data[j, i, :], color='black', lw=0.3, alpha=1, zorder=i)
-            #     # ax1.plot(time_index, data[j, -(i + 1), :], color='black', lw=0.3, alpha=1, zorder=i)
-            #     ax1.fill_between(time_index, data[j, i, :], data[j, -(i + 1), :], color=cmap(q), alpha=1,
-            #                      label="{}% PI".format(round((configs["qs"][-(i + 1)] - q) * 100)), zorder=i)
+    #         for i in range(int(len(configs["qs"]) / 2) - 1, -1, -1):
+    #             q = configs["qs"][i]
+    #             ax1.plot(
+    #                 time_index, data[j, i, :], color="black", lw=0.3, alpha=1, zorder=i
+    #             )
+    #             ax1.plot(
+    #                 time_index,
+    #                 data[j, -(i + 1), :],
+    #                 color="black",
+    #                 lw=0.3,
+    #                 alpha=1,
+    #                 zorder=i,
+    #             )
+    #             ax1.fill_between(
+    #                 time_index,
+    #                 data[j, i, :],
+    #                 data[j, -(i + 1), :],
+    #                 color=cmap(q),
+    #                 alpha=1,
+    #                 label="{}% PI".format(round((configs["qs"][-(i + 1)] - q) * 100)),
+    #                 zorder=i,
+    #             )
 
     # plt.axvline(test_data.index[1522], c="black", ls="--", lw=1, zorder=6)
-    # plt.text(test_data.index[1522], 50, r' Forecast generation time $t_{gen}$', rotation=0, fontsize=8)
+    # plt.text(
+    #     test_data.index[1522],
+    #     50,
+    #     r" Forecast generation time $t_{gen}$",
+    #     rotation=0,
+    #     fontsize=8,
+    # )
 
     # plt.xticks(rotation=45, ha="right", va="top", fontsize=8)
     myFmt = mdates.DateFormatter("%H:%M:%S\n%m/%d/%y")
@@ -1143,23 +1176,33 @@ def _plot_results(configs, measured, predictions):
     ax1.legend(loc="upper center", fontsize=8)
 
     plt.show()
-    #
-    # # Plotting residuals vs time-step-ahead forecast
-    # residuals = data[:,3,:] - measured
+
+    # Plotting residuals vs time-step-ahead forecast
+    # residuals = data[:, 3, :] - measured
     # fig, ax2 = plt.subplots()
-    # for i in range(0,residuals.shape[1]):
-    #     ax2.scatter(np.ones_like(residuals[:,i])*i, residuals[:,i], s=0.5, color="black")
-    # ax2.set_xlabel('Forecast steps ahead')
-    # ax2.set_ylabel('Residual')
+    # for i in range(0, residuals.shape[1]):
+    #     ax2.scatter(
+    #         np.ones_like(residuals[:, i]) * i, residuals[:, i], s=0.5, color="black"
+    #     )
+    # ax2.set_xlabel("Forecast steps ahead")
+    # ax2.set_ylabel("Residual")
     # plt.show()
-    #
+
     # # Plot residuals for all times in test set
     # fig, ax3 = plt.subplots()
-    # ax3.scatter(test_data.index, residuals[:,-1], s=0.5, alpha=0.5, color="blue")
-    # ax3.set_ylabel('Residual of 18hr ahead forecast')
-    # # ax3.scatter(processed.index[np.logical_and(processed.index.weekday == 5, processed.index.hour == 12)],
-    # #             residuals[:, -1][np.logical_and(processed.index.weekday == 5, processed.index.hour == 12)],
-    # #             s=20, alpha=0.5, color="black")
+    # ax3.scatter(test_data.index, residuals[:, -1], s=0.5, alpha=0.5, color="blue")
+    # ax3.set_ylabel("Residual of 18hr ahead forecast")
+    # ax3.scatter(
+    #     processed.index[
+    #         np.logical_and(processed.index.weekday == 5, processed.index.hour == 12)
+    #     ],
+    #     residuals[:, -1][
+    #         np.logical_and(processed.index.weekday == 5, processed.index.hour == 12)
+    #     ],
+    #     s=20,
+    #     alpha=0.5,
+    #     color="black",
+    # )
 
 
 def eval_trained_model(file_prefix, train_data, train_batch_size, configs):
@@ -1302,7 +1345,8 @@ def plot_training_history(x):
 
 def plot_resid_dist(study_path, building, alphas, q):
     """
-    Plot the residual distribution over the smooth approximations for different values of the alpha smoothing parameter.
+    Plot the residual distribution over the smooth approximations for different values of the alpha
+     smoothing parameter.
     Can be used with V4 and V5 algorithms
 
     :param study_path: (str) Relative path to the study directory in question.
@@ -1411,9 +1455,15 @@ def eval_tests(file_prefix, batch_tot):
         # init_indices = np.arange(start_index_init, end_index_init)
 
         # if configs["S2S_stagger"]["secondary_num"] > 0:
-        #     second_indices = np.arange(end_index_init + (configs["S2S_stagger"]["decay"] - 1), end_index_init + (
-        #                 configs["S2S_stagger"]["secondary_num"] * configs["S2S_stagger"]["decay"]),
-        #                                configs["S2S_stagger"]["decay"])
+        #     second_indices = np.arange(
+        #         end_index_init + (configs["S2S_stagger"]["decay"] - 1),
+        #         end_index_init
+        #         + (
+        #             configs["S2S_stagger"]["secondary_num"]
+        #             * configs["S2S_stagger"]["decay"]
+        #         ),
+        #         configs["S2S_stagger"]["decay"],
+        #     )
         #     indices = np.append(init_indices, second_indices)
         #     time_index = mask.index[indices]
         # else:
@@ -1628,7 +1678,6 @@ def main(train_df, val_df, configs):
     run_resume = configs["run_resume"]
     tr_desired_batch_size = configs["train_batch_size"]
     te_desired_batch_size = configs["val_batch_size"]
-    building_ID = configs["building"]
 
     # Make results directory
     global file_prefix

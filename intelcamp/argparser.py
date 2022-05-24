@@ -41,7 +41,8 @@ def get_arguments():
     )
     parser.add_argument(
         "--train",
-        help="True or False, To train the model or not. If False, the test will be run on the existing model",
+        help="True or False, To train the model or not. If False, the test will be run on the"
+        " existing model",
     )
     parser.add_argument(
         "--num-epochs",
@@ -57,7 +58,8 @@ def get_arguments():
     )
     parser.add_argument(
         "--resume",
-        help="True or False, To resume from the previous model. If False, a new model will be instantiated and trained",
+        help="True or False, To resume from the previous model. If False, a new model will be"
+        " instantiated and trained",
     )
     parser.add_argument(
         "--arch-type", help="pick architecture type from 'FFNN', 'RNN','LSTM','GRU'"

@@ -11,20 +11,21 @@ Script for retrieving data for: Building Data Genome Project
 
 """
 
-import json
 import os
 import pathlib
 
 import numpy as np
 import pandas as pd
-import tables
 from historical_weather import get_nsrdb
 
 # Inputs
 data_dir = "/projects/intelcamp/data/GP_new"
-weather_url = "https://github.com/buds-lab/building-data-genome-project-2/blob/master/data/weather/weather.csv"
-meta_url = "https://github.com/buds-lab/building-data-genome-project-2/blob/master/data/metadata/metadata.csv"
-loads_url = "https://github.com/buds-lab/building-data-genome-project-2/blob/master/data/meters/cleaned/electricity_cleaned.csv"
+building_data_genome_project_url = (
+    "https://github.com/buds-lab/building-data-genome-project-2/blob/master/data"
+)
+weather_url = f"{building_data_genome_project_url}/weather/weather.csv"
+meta_url = f"{building_data_genome_project_url}/metadata/metadata.csv"
+loads_url = f"{building_data_genome_project_url}/meters/cleaned/electricity_cleaned.csv"
 
 # Get data
 pathlib.Path(data_dir).mkdir(parents=True, exist_ok=True)

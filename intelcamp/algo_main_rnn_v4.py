@@ -10,18 +10,17 @@ import numpy as np
 import pandas as pd
 import psutil
 import torch
-import torch.nn as nn
 import torch.utils.data as data_utils
 from psutil import virtual_memory
 from tensorboardX import SummaryWriter
 from torch.autograd import Variable
-from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data.dataloader import DataLoader
 
 import intelcamp.buildings_processing as bp
 from intelcamp import lstm, rnn
 from intelcamp.error import ConfigsError
-from intelcamp.util import factors, prtime, tile
+from intelcamp.util import factors
 
 file_prefix = "/default"
 logger = logging.getLogger(str(os.getpid()))
@@ -41,7 +40,8 @@ def size_the_batches(
     """
 
     if configs["use_case"] == "train":
-        # Find factors of the length of train and val df's and pick the closest one to the requested batch sizes
+        # Find factors of the length of train and val df's and pick the closest one to the requested
+        #  batch sizes
         train_bth = factors(train_data.shape[0])
         train_num_batches = min(train_bth, key=lambda x: abs(x - tr_desired_batch_size))
         train_bt_size = int(train_data.shape[0] / train_num_batches)
@@ -50,14 +50,13 @@ def size_the_batches(
         val_num_batches = min(val_bth, key=lambda x: abs(x - te_desired_batch_size))
         val_bt_size = int(val_data.shape[0] / val_num_batches)
 
-        train_ratio = round(
-            train_data.shape[0] * 100 / (train_data.shape[0] + val_data.shape[0]), 1
-        )
-        val_ratio = 100 - train_ratio
         num_train_data = train_data.shape[0]
 
-        # logger.info("Train size: {}, val size: {}, split {}%:{}%".format(train_data.shape[0], val_data.shape[0], train_ratio,
-        #                                                           val_ratio))
+        # logger.info(
+        #     "Train size: {}, val size: {}, split {}%:{}%".format(
+        #         train_data.shape[0], val_data.shape[0], train_ratio, val_ratio
+        #     )
+        # )
         logger.info("Available train batch factors: {}".format(sorted(train_bth)))
         logger.info(
             "Requested number of batches per epoch - Train: {}, val: {}".format(
@@ -93,7 +92,8 @@ def data_transform(train_data, val_data, transformation_method, run_train):
     :return:
     """
     if run_train:
-        # For the result de-normalization purpose, saving the max and min values of the STM_Xcel_Meter columns
+        # For the result de-normalization purpose, saving the max and min values of the
+        # STM_Xcel_Meter columns
         train_stats = {}
         train_stats["train_max"] = train_data.max().to_dict()
         train_stats["train_min"] = train_data.min().to_dict()
@@ -148,7 +148,8 @@ def data_iterable_random(
     train_data, val_data, run_train, train_batch_size, val_batch_size, configs
 ):
     """
-    Converts train and val data to torch data types (used only if splitting training and val set randomly)
+    Converts train and val data to torch data types (used only if splitting training and val set
+     randomly)
 
     :param train_data: (DataFrame)
     :param val_data: (DataFrame)
@@ -247,11 +248,10 @@ def quantile_loss(output, target, configs):
     loss = resid * tau + alpha * log_term
     loss = torch.mean(torch.mean(loss, 0))
 
-    # Extra statistics to return optionally
-    stats = [resid.data.numpy().min(), resid.data.numpy().max()]
-
     # See histogram of residuals
-    # graph = pd.DataFrame(resid.data.numpy()).plot(kind="hist", alpha=0.5, bins=50, ec='black', stacked=True)
+    # graph = pd.DataFrame(resid.data.numpy()).plot(
+    #     kind="hist", alpha=0.5, bins=50, ec="black", stacked=True
+    # )
 
     return loss
 
@@ -424,7 +424,7 @@ def test_processing(
     return predictions, targets, errors, Q_vals, hist_data
 
 
-def run_training(
+def run_training(  # noqa: C901 TODO: remove no qa
     train_loader,
     val_loader,
     val_df,
@@ -498,7 +498,8 @@ def run_training(
         # RNN layer
         # input_dim: The number of expected features in the input x
         # hidden_dim: the number of features in the hidden state h
-        # layer_dim: Number of recurrent layers. i.e. if 2, it is stacking two RNNs together to form a stacked RNN
+        # layer_dim: Number of recurrent layers. i.e. if 2, it is stacking two RNNs together to form
+        #  a stacked RNN
         # Initialize the model
         if configs["arch_type_variant"] == "vanilla":
             model = rnn.RNNModel(input_dim, hidden_dim, layer_dim, output_dim)
@@ -531,7 +532,8 @@ def run_training(
         configs["lr_config"]["schedule"]
         and configs["lr_config"]["type"] == "performance"
     ):
-        # Patience (for our case) is # of iterations, not epochs, but configs specification is num epochs
+        # Patience (for our case) is # of iterations, not epochs, but configs specification is num
+        # epochs
         scheduler = ReduceLROnPlateau(
             optimizer,
             mode="min",
@@ -545,9 +547,13 @@ def run_training(
     elif (
         configs["lr_config"]["schedule"] and configs["lr_config"]["type"] == "absolute"
     ):
-        # scheduler = StepLR(optimizer,
-        #                    step_size=int(configs['lr_config']["step_size"]*(num_train_data/train_batch_size)),
-        #                    gamma=configs['lr_config']['factor'])
+        # scheduler = StepLR(
+        #     optimizer,
+        #     step_size=int(
+        #         configs["lr_config"]["step_size"] * (num_train_data / train_batch_size)
+        #     ),
+        #     gamma=configs["lr_config"]["factor"],
+        # )
         pass
     else:
         raise ConfigsError(
@@ -583,9 +589,8 @@ def run_training(
     if len(epoch_range) == 0:
         epoch = resume_num_epoch + 1
         logger.info(
-            "The previously saved model was at epoch= {}, which is same as num_epochs. So, not training".format(
-                resume_num_epoch
-            )
+            f"The previously saved model was at epoch= {resume_num_epoch}, which is same as "
+            "num_epochs. So, not training"
         )
 
     if run_resume:
@@ -597,9 +602,6 @@ def run_training(
 
     # Start training timer
     train_start_time = timeit.default_timer()
-
-    # Residual diagnostics
-    resid_stats = []
 
     # Initialize re-trainable matrix
     # train_y_at_t = torch.zeros(train_batch_size, seq_dim, 1)  # 960 x 5 x 1
@@ -675,7 +677,8 @@ def run_training(
 
             time4 = timeit.default_timer()
 
-            # Does backpropogation and gets gradients, (the weights and bias). Create computational graph
+            # Does backpropogation and gets gradients, (the weights and bias). Create computational
+            # graph
             loss.backward()
 
             time5 = timeit.default_timer()
@@ -736,16 +739,19 @@ def run_training(
 
                 # Add parody plot to TensorBoard
                 # fig2, ax2 = plt.subplots()
-                # ax2.scatter(predictions, val_df[configs['target_var']], s=5, alpha=0.3)
-                # strait_line = np.linspace(min(min(predictions), min(val_df[configs['target_var']])),
-                #                           max(max(predictions), max(val_df[configs['target_var']])), 5)
-                # ax2.plot(strait_line, strait_line, c='k')
-                # ax2.set_xlabel('Predicted')
-                # ax2.set_ylabel('Observed')
-                # ax2.axhline(y=0, color='k')
-                # ax2.axvline(x=0, color='k')
-                # ax2.axis('equal')
-                # writer.add_figure('Parody', fig2, n_iter)
+                # ax2.scatter(predictions, val_df[configs["target_var"]], s=5, alpha=0.3)
+                # strait_line = np.linspace(
+                #     min(min(predictions), min(val_df[configs["target_var"]])),
+                #     max(max(predictions), max(val_df[configs["target_var"]])),
+                #     5,
+                # )
+                # ax2.plot(strait_line, strait_line, c="k")
+                # ax2.set_xlabel("Predicted")
+                # ax2.set_ylabel("Observed")
+                # ax2.axhline(y=0, color="k")
+                # ax2.axvline(x=0, color="k")
+                # ax2.axis("equal")
+                # writer.add_figure("Parody", fig2, n_iter)
 
                 # Add QQ plot to TensorBoard
                 fig2, ax2 = plt.subplots()
@@ -945,8 +951,6 @@ def run_prediction(
 
     logger.info("Loaded model from file, given run_train=False\n")
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
     with torch.no_grad():
         preds = []
         for (feats, v) in val_loader:
@@ -999,7 +1003,6 @@ def _plot_results(configs, targets, predictions):
             "{}_external_test.h5".format(configs["target_var"]),
         )
         test_data = pd.read_hdf(file, key="df")
-        index = test_data.index
     else:
         test_data = pd.read_hdf(os.path.join(file_prefix, "internal_test.h5"), key="df")
 
@@ -1196,7 +1199,8 @@ def plot_training_history(x):
 
 def plot_resid_dist(study_path, building, alphas, q):
     """
-    Plot the residual distribution over the smooth approximations for different values of the alpha smoothing parameter.
+    Plot the residual distribution over the smooth approximations for different values of the alpha
+     smoothing parameter.
 
     :param study_path: (str) Relative path to the study directory in question.
     :param building: (str) Name of the building in question
@@ -1417,7 +1421,6 @@ def main(train_df, val_df, configs):
     run_resume = configs["run_resume"]
     tr_desired_batch_size = configs["train_batch_size"]
     te_desired_batch_size = configs["val_batch_size"]
-    building_ID = configs["building"]
 
     # Make results directory
     global file_prefix

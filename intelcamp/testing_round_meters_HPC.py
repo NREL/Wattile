@@ -1,6 +1,5 @@
 import json
 import os
-import sys
 from multiprocessing import Process
 
 import intelcamp.entry_point as epb
@@ -47,8 +46,13 @@ for meter_ID in meters:
 
     # Execute
     # target = configs["target_var"].replace(" ", "").replace("(", "-").replace(")", "")
-    # python_file = "/projects/intelcamp20/repos/intelligentcampus-pred-analytics/entry_point.py"
-    # stdout_file = "/projects/intelcamp20/repos/intelcamp20-hpc/results/Outputs/stdout_{}.txt".format(configs["target_var"].replace(" ", ""))
+    # python_file = (
+    #     "/projects/intelcamp20/repos/intelligentcampus-pred-analytics/entry_point.py"
+    # )
+    # stdout_file = (
+    #     "/projects/intelcamp20/repos/intelcamp20-hpc/results/Outputs/"
+    #     f"stdout_{configs['target_var'].replace(' ', '')}.txt"
+    # )
     # os.system("python -u " + python_file + " > " + stdout_file + " &")
 
     if __name__ == "__main__":

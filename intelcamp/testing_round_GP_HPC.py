@@ -1,6 +1,6 @@
 import json
 import os
-from multiprocessing import Pool, Process, set_start_method
+from multiprocessing import Pool, set_start_method
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,7 +9,7 @@ from matplotlib import rc
 
 import intelcamp.entry_point as epb
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # noqa: C901 TODO: remove noqa
     set_start_method("spawn")
     print("starting file")
     # Read in base configurations from json file
@@ -59,7 +59,7 @@ if __name__ == "__main__":
             else:
                 try:
                     epb.main(configs)
-                except:
+                except Exception:
                     print(
                         "Error in training for {}. Terminating training process".format(
                             configs["target_var"]
@@ -78,7 +78,8 @@ if __name__ == "__main__":
         print("Done")
 
     elif "Test" in states:
-        # Find the models that were trained and are currently in the folder with the name "test_dir_path"
+        # Find the models that were trained and are currently in the folder with the name
+        # "test_dir_path"
         meter_models = os.listdir(testing_round_dir)
 
         # Iterate through those results directories, run a test set on each
@@ -111,7 +112,8 @@ if __name__ == "__main__":
         rc("ytick", labelsize=6)
         plt.rc("font", family="serif")
 
-        # Find the models that were trained and are currently in the folder with the name "test_dir_path"
+        # Find the models that were trained and are currently in the folder with the name
+        # "test_dir_path"
         meter_models = os.listdir(testing_round_dir)
 
         # Get building metadata
@@ -204,18 +206,29 @@ if __name__ == "__main__":
         )
         plt.show()
 
-        #     ax[plot_index % 4, int(plot_index/ 4)].scatter(QQ_data["q_requested"], QQ_data["q_actual"], s=5, c="black")
+        # ax[plot_index % 4, int(plot_index / 4)].scatter(
+        #     QQ_data["q_requested"], QQ_data["q_actual"], s=5, c="black"
+        # )
         #
         #     i = i + 1
-        #     # print("Just finished plotting for target variable {} ({}/{})".format(meter, i, len(meter_models)))
+        #     print(f"Just finished plotting for target variable {meter} ({i}/{len(meter_models)})")
         #     if i == stop_num:
         #         break
         #
         # for usage in usages:
         #     index = usages[usage]
-        #     ax[index % 4, int(index / 4)].text(.5, 1, usage, ha='center', va="bottom",
-        #                                                  transform=ax[index % 4, int(index / 4)].transAxes, fontsize=8)
-        #     ax[index % 4, int(index / 4)].plot([0, 1], [0, 1], c='k', alpha=0.5, linewidth=1.0)
+        #     ax[index % 4, int(index / 4)].text(
+        #         0.5,
+        #         1,
+        #         usage,
+        #         ha="center",
+        #         va="bottom",
+        #         transform=ax[index % 4, int(index / 4)].transAxes,
+        #         fontsize=8,
+        #     )
+        #     ax[index % 4, int(index / 4)].plot(
+        #         [0, 1], [0, 1], c="k", alpha=0.5, linewidth=1.0
+        #     )
         #     ax[index % 4, int(index / 4)].set_xlim(left=0, right=1)
         #     ax[index % 4, int(index / 4)].set_ylim(bottom=0, top=1)
         #
