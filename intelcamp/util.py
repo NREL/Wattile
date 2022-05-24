@@ -1,13 +1,12 @@
+import os
 import sys
 import time
 from datetime import datetime
 from functools import reduce
-import torch
-import numpy as np
-
-import os
 from pathlib import Path
 
+import numpy as np
+import torch
 
 start = time.time()
 lasttime = time.time()

@@ -1,7 +1,8 @@
+import json
 import pathlib
 import shutil
+
 import pytest
-import json
 
 import intelcamp.entry_point as epb
 

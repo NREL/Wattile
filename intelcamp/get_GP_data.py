@@ -11,13 +11,14 @@ Script for retrieving data for: Building Data Genome Project
 
 """
 
-import pandas as pd
-import numpy as np
-import os
-from historical_weather import get_nsrdb
-import tables
-import pathlib
 import json
+import os
+import pathlib
+
+import numpy as np
+import pandas as pd
+import tables
+from historical_weather import get_nsrdb
 
 # Inputs
 data_dir = "/projects/intelcamp/data/GP_new"

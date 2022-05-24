@@ -1,8 +1,9 @@
 import json
-import intelcamp.entry_point as epb
 import os
 import sys
 from multiprocessing import Process
+
+import intelcamp.entry_point as epb
 
 # User inputs
 meters = [

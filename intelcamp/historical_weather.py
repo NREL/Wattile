@@ -14,11 +14,12 @@ Sources:
 ghi,dhi,dni,air_temperature,relative_humidity,total_precipitable_water,surface_albedo
 
 """
-import pandas as pd
-import numpy as np
-import os
-from scipy import spatial
 import json
+import os
+
+import numpy as np
+import pandas as pd
+from scipy import spatial
 
 
 def get_nsrdb(year, target_lat, target_lon):

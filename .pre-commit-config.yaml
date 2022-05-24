@@ -4,11 +4,11 @@ repos:
     hooks:
     -   id: black
         entry: black --check
-# -   repo: https://github.com/pycqa/isort
-#     rev: 5.10.1
-#     hooks:
-#     -    id: isort
-#          entry: isort --check
+-   repo: https://github.com/pycqa/isort
+    rev: 5.10.1
+    hooks:
+    -    id: isort
+         entry: isort --check
 # -   repo: https://github.com/gvanderest/pylama-pre-commit
 #     rev: 0.1.2
 #     hooks:

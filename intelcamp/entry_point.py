@@ -1,11 +1,13 @@
-import sys
-import pandas as pd
 import importlib
 import json
-import intelcamp.buildings_processing as bp
 import logging
 import os
 import pathlib
+import sys
+
+import pandas as pd
+
+import intelcamp.buildings_processing as bp
 from intelcamp import util
 
 PACKAGE_PATH = pathlib.Path(__file__).parent

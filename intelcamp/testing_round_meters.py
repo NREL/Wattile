@@ -1,6 +1,7 @@
 import json
-import intelcamp.entry_point as epb
 import os
+
+import intelcamp.entry_point as epb
 
 # User inputs
 meters = [
