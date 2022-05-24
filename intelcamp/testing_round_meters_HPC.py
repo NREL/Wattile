@@ -10,8 +10,8 @@ meters = [
     ["ESIF", "ESIF Office Power (kW)"],
     ["RSF2", "RSF2 Mechanical Power (kW)"],
     ["RSF2", "RSF2 Lighting Power (kW)"],
-    ["SSEB", "SSEB Mechanical Power (kW)"]
-    ]
+    ["SSEB", "SSEB Mechanical Power (kW)"],
+]
 
 #     ["ESEB", "ESEB Main Power (kW)"],
 #     ["TTF", "TTF Main Power (kW)"],
@@ -32,7 +32,9 @@ for meter_ID in meters:
         configs = json.load(read_file)
 
     # Make a sub-directory in the main results directory specific to this test study
-    configs["results_dir"] = os.path.join(configs["results_dir"], "all_meters_T{}".format(test_ID))
+    configs["results_dir"] = os.path.join(
+        configs["results_dir"], "all_meters_T{}".format(test_ID)
+    )
 
     # Modify inputs
     configs["building"] = meter_ID[0]
@@ -48,7 +50,7 @@ for meter_ID in meters:
     # stdout_file = "/projects/intelcamp20/repos/intelcamp20-hpc/results/Outputs/stdout_{}.txt".format(configs["target_var"].replace(" ", ""))
     # os.system("python -u " + python_file + " > " + stdout_file + " &")
 
-    if __name__ == '__main__':
+    if __name__ == "__main__":
         p = Process(target=epb.main, args=(configs,))
         processes.append(p)
         p.start()
@@ -59,4 +61,3 @@ print("Joining Processes...")
 for p in processes:
     p.join()
 print("Done")
-

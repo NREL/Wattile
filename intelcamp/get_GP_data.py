@@ -87,7 +87,6 @@ for id in filtered["ids"]:
     # Put load and weather data together
     # id_data = pd.concat([id_weather, id_load], axis=1)
 
-
     site_id = meta[meta["building_id"] == id]["site_id"].values[0]
 
     # Iterate through years
@@ -110,10 +109,16 @@ for id in filtered["ids"]:
                 sites_weather[str(year)][site_id] = df
 
             # Combine site data together
-            site_data = pd.concat([id_load[id_load.index.year == year], df[['GHI', 'Temperature', 'Relative Humidity']]], axis=1)
+            site_data = pd.concat(
+                [
+                    id_load[id_load.index.year == year],
+                    df[["GHI", "Temperature", "Relative Humidity"]],
+                ],
+                axis=1,
+            )
 
             # Save dataset
-            site_data.to_hdf(output_string, key='df', mode='w')
+            site_data.to_hdf(output_string, key="df", mode="w")
 
     print("Done with {}: {}/{} sites".format(id, i, len(filtered["ids"])))
     i = i + 1
