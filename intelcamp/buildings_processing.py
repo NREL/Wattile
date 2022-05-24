@@ -571,12 +571,15 @@ def correct_timestamps(configs, data):
     return data
 
 
-def prep_for_rnn(configs, data):
-    """
-    Prepare data for input to a RNN model.
+def _preprocess_data(configs, data):
+    """Preprocess data as dictated by the configs.
 
-    :param configs: (Dict)
-    :return: train and val DataFrames
+    :param configs: configs
+    :type configs: dict
+    :param data: data
+    :type data: pd.dataframe
+    :return: data
+    :rtype: pd.dataframe
     """
     # assert we have the correct columns and order them
     data = correct_predictor_columns(configs, data)
@@ -595,38 +598,37 @@ def prep_for_rnn(configs, data):
     configs["input_dim"] = data.shape[1] - 1
     logger.info("Number of features: {}".format(configs["input_dim"]))
     logger.debug("Features: {}".format(data.columns.values))
+
     if configs["arch_version"] == 4:
         data = pad_full_data(data, configs)
     elif configs["arch_version"] == 5:
         data = pad_full_data_s2s(data, configs)
 
+    return data
+
+
+def prep_for_rnn(configs, data):
+    """
+    Prepare data for input to a RNN model.
+
+    :param configs: (Dict)
+    :return: train and val DataFrames
+    """
+    data = _preprocess_data(configs, data)
+
+    # if validatate with external data, write data to h5 for future testing.
+    if configs["use_case"] == "validation" and configs["test_method"] == "external":
+        filepath = (
+            pathlib.Path(configs["data_dir"])
+            / f"{configs['target_var']}_external_test.h5"
+        )
+        data.to_hdf(filepath, key="df", mode="w")
+
     if configs["use_case"] == "train":
-        # split data into training/validation/testing sets
         train_df, val_df = input_data_split(data, configs)
 
-    elif configs["use_case"] == "validation" or configs["use_case"] == "prediction":
-        val_df = data
-        train_df = pd.DataFrame()
-
-        if configs["use_case"] == "validation":
-            if configs["test_method"] == "external":
-                filepath = filepath = (
-                    pathlib.Path(configs["data_dir"])
-                    / f"{configs['target_var']}_external_test.h5"
-                )
-                val_df.to_hdf(filepath, key="df", mode="w")
-
-            elif configs["test_method"] == "internal":
-                local_results_dir = Path(configs["exp_dir"])
-                temp_config_file = os.path.join(local_results_dir, "configs.json")
-                with open(temp_config_file, "r") as f:
-                    temp_configs = json.load(f)
-                configs["input_dim"] = temp_configs["input_dim"]
-
-            else:
-                ConfigsError("test_method not valid.")
     else:
-        raise ConfigsError("use_case not valid.")
+        train_df, val_df = pd.DataFrame(), data
 
     return train_df, val_df
 
