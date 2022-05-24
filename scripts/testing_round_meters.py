@@ -1,7 +1,7 @@
 import json
 import os
 
-import intelcamp.entry_point as epb
+import wattile.entry_point as epb
 
 # User inputs
 meters = [

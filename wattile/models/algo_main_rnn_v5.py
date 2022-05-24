@@ -20,10 +20,10 @@ from torch.utils.data.dataloader import DataLoader
 # from tensorboardX import SummaryWriter
 from torch.utils.tensorboard import SummaryWriter
 
-import intelcamp.buildings_processing as bp
-from intelcamp.error import ConfigsError
-from intelcamp.models.utils import init_model, load_model, save_model
-from intelcamp.util import factors
+import wattile.buildings_processing as bp
+from wattile.error import ConfigsError
+from wattile.models.utils import init_model, load_model, save_model
+from wattile.util import factors
 
 file_prefix = "/default"
 logger = logging.getLogger(str(os.getpid()))

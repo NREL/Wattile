@@ -11,7 +11,7 @@ import seaborn as sns
 import torch
 
 # import tables
-from intelcamp.error import ConfigsError
+from wattile.error import ConfigsError
 
 PROJECT_DIRECTORY = pathlib.Path(__file__).resolve().parent
 

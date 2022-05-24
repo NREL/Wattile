@@ -6,8 +6,8 @@ import pathlib
 
 import pandas as pd
 
-import intelcamp.buildings_processing as bp
-from intelcamp.data_reading import read_dataset_from_file
+import wattile.buildings_processing as bp
+from wattile.data_reading import read_dataset_from_file
 
 PACKAGE_PATH = pathlib.Path(__file__).parent
 CONFIGS_PATH = PACKAGE_PATH / "configs" / "configs.json"
@@ -99,7 +99,7 @@ def run_model(configs, train_df, val_df):
     if configs["arch_type"] == "RNN":
         # What RNN version you are implementing? Specified in configs.
         rnn_mod = importlib.import_module(
-            "intelcamp.models.algo_main_rnn_v{}".format(configs["arch_version"])
+            "wattile.models.algo_main_rnn_v{}".format(configs["arch_version"])
         )
         logger.info("training with arch version {}".format(configs["arch_version"]))
 

@@ -1,4 +1,4 @@
-from intelcamp import util
+from wattile import util
 
 
 def test_factor():
