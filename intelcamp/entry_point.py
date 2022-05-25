@@ -7,6 +7,7 @@ import pathlib
 import pandas as pd
 
 import intelcamp.buildings_processing as bp
+from intelcamp.data_reading import read_dataset_from_file
 
 PACKAGE_PATH = pathlib.Path(__file__).parent
 CONFIGS_PATH = PACKAGE_PATH / "configs" / "configs.json"
@@ -53,7 +54,7 @@ def create_input_dataframe(configs):
     if configs["use_case"] == "validation" and configs["test_method"] == "internal":
         data = pd.read_hdf(os.path.join(local_results_dir, "internal_test.h5"))
     else:
-        data = bp.get_full_data(configs)
+        data = read_dataset_from_file(configs)
 
     train_df, val_df = bp.prep_for_rnn(configs, data)
 
