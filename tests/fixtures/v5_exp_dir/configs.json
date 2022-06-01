@@ -1,0 +1,88 @@
+{
+ "building": "Synthetic Site",
+ "target_var": "Synthetic Site Electricity Main Total Power",
+ "start_time": "2018-01-01T00:00:00-07:00",
+ "end_time": "2022-01-01T00:00:00-07:00",
+ "data_time_interval_mins": 1,
+ "predictor_columns": [
+  "SRRL BMS Dew Point Temperature",
+  "SRRL BMS Diffuse Horizontal Irradiance",
+  "SRRL BMS Direct Normal Irradiance",
+  "SRRL BMS Dry Bulb Temperature",
+  "SRRL BMS Global Horizontal Irradiance",
+  "SRRL BMS Relative Humidity",
+  "SRRL BMS Wind Speed at 19'"
+ ],
+ "arch_version": 5,
+ "exp_id": "Debugging_for_rolling_stats",
+ "arch_type": "RNN",
+ "arch_type_variant": "lstm",
+ "transformation_method": "minmaxscale",
+ "train_batch_size": 5,
+ "val_batch_size": 1,
+ "convert_csvs": false,
+ "exp_dir": "tests/fixtures/v5_exp_dir",
+ "data_dir": "tests/data",
+ "resample_freq": 15,
+ "sequence_freq_min": 15,
+ "splicer": {
+  "active": true,
+  "time": "3h"
+ },
+ "rolling_window": {
+  "active": true,
+  "type": "binned",
+  "minutes": 15
+ },
+ "window": 12,
+ "EC_future_gap_min": 0,
+ "DOW": [
+  "binary_reg"
+ ],
+ "MOY": [
+  "sincos"
+ ],
+ "HOD": [
+  "sincos"
+ ],
+ "Holidays": false,
+ "S2S_stagger": {
+  "initial_num": 72,
+  "decay": 0,
+  "secondary_num": 0
+ },
+ "train_size_factor": 4,
+ "train_val_split": "Random",
+ "data_split": "80:10:10",
+ "random_seed": 1,
+ "qs": [
+  0.025,
+  0.25,
+  0.5,
+  0.75,
+  0.975
+ ],
+ "use_case": "train",
+ "run_resume": false,
+ "num_epochs": 1,
+ "weight_decay": 0.001,
+ "hidden_nodes": 5,
+ "layer_dim": 1,
+ "eval_frequency": 2,
+ "lr_config": {
+  "base": 0.001,
+  "schedule": false,
+  "type": "performance",
+  "factor": 0.1,
+  "min": 1e-05,
+  "patience": 30,
+  "step_size": 75
+ },
+ "smoothing_alpha": 0.001,
+ "test_method": "external",
+ "plot_results": false,
+ "target_feat_name": [
+  "Synthetic Site Electricity Main Total Power"
+ ],
+ "input_dim": 54
+}

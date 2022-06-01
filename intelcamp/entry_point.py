@@ -9,7 +9,7 @@ import pandas as pd
 import intelcamp.buildings_processing as bp
 
 PACKAGE_PATH = pathlib.Path(__file__).parent
-CONFIGS_PATH = PACKAGE_PATH / "configs.json"
+CONFIGS_PATH = PACKAGE_PATH / "configs" / "configs.json"
 
 logger = logging.getLogger(str(os.getpid()))
 
@@ -98,7 +98,7 @@ def run_model(configs, train_df, val_df):
     if configs["arch_type"] == "RNN":
         # What RNN version you are implementing? Specified in configs.
         rnn_mod = importlib.import_module(
-            "intelcamp.algo_main_rnn_v{}".format(configs["arch_version"])
+            "intelcamp.models.algo_main_rnn_v{}".format(configs["arch_version"])
         )
         logger.info("training with arch version {}".format(configs["arch_version"]))
 
