@@ -1,5 +1,4 @@
 import datetime as dt
-import json
 import logging
 import os
 import pathlib
@@ -12,6 +11,7 @@ import torch
 
 # import tables
 from intelcamp.error import ConfigsError
+from intelcamp.time_processing import add_processed_time_columns
 
 PROJECT_DIRECTORY = pathlib.Path(__file__).resolve().parent
 
@@ -29,103 +29,6 @@ def check_complete(torch_file, des_epochs):
     torch_model = torch.load(torch_file)
     check = des_epochs == torch_model["epoch_num"] + 1
     return check
-
-
-def time_dummies(data, configs):  # noqa: C901 TODO: remove noqa
-    """
-    Adds time-based indicator variables. Elements in configs describe what method to use.
-    regDummy: Binary indicator variables, one column for each entry.
-    fuzzy: Same as regDummy, but binary edges are smoothed.
-    sincos: Cyclic time variables are used (one sin column and one cos column)
-
-    :param data: (DataFrame)
-    :param configs: (Dictionary)
-    :return: (Dictionary)
-    """
-
-    # HOD
-    if "sincos" in configs["HOD"]:
-        data["sin_HOD"] = np.sin(
-            2
-            * np.pi
-            * (
-                data.index.hour * 3600 + data.index.minute * 60 + data.index.second
-            ).values
-            / (24 * 60 * 60)
-        )
-        data["cos_HOD"] = np.cos(
-            2
-            * np.pi
-            * (
-                data.index.hour * 3600 + data.index.minute * 60 + data.index.second
-            ).values
-            / (24 * 60 * 60)
-        )
-    if "binary_reg" in configs["HOD"]:
-        for i in range(0, 24):
-            data["HOD_binary_reg_{}".format(i)] = (data.index.hour == i).astype(int)
-
-        # data = data.join(
-        #     pd.get_dummies(
-        #         data.index.hour, prefix="HOD_binary_reg", drop_first=True
-        #     ).set_index(data.index)
-        # )
-
-    if "binary_fuzzy" in configs["HOD"]:
-        for HOD in range(0, 24):
-            data["HOD_binary_fuzzy_{}".format(HOD)] = np.maximum(
-                1 - abs((data.index.hour + data.index.minute / 60) - HOD) / 1, 0
-            )
-
-    # DOW
-    if "binary_reg" in configs["DOW"]:
-        for i in range(0, 7):
-            data["DOW_binary_reg_{}".format(i)] = (data.index.weekday == i).astype(int)
-        # data = data.join(
-        #     pd.get_dummies(
-        #         data.index.weekday, prefix="DOW_binary_reg", drop_first=True
-        #     ).set_index(data.index)
-        # )
-    if "binary_fuzzy" in configs["DOW"]:
-        for i in range(0, 7):
-            data["DOW_binary_fuzzy_{}".format(i)] = (data.index.weekday == i).astype(
-                int
-            )
-        # data = data.join(
-        #     pd.get_dummies(
-        #         data.index.weekday, prefix="DOW_binary_fuzzy", drop_first=True
-        #     ).set_index(data.index)
-        # )
-        for DOW in range(0, 7):
-            data["DOW_binary_fuzzy_{}".format(DOW)] = np.maximum(
-                1 - abs((data.index.weekday + data.index.hour / 24) - DOW) / 1, 0
-            )
-
-    # MOY
-    if "sincos" in configs["MOY"]:
-        data["sin_MOY"] = np.sin(2 * np.pi * (data.index.dayofyear).values / (365))
-        data["cos_MOY"] = np.cos(2 * np.pi * (data.index.dayofyear).values / (365))
-
-    if "Holidays" in configs and configs["Holidays"]:
-        # -----Automatic (fetches federal holidays based on dates in imported data
-        # cal = USFederalHolidayCalendar()
-        # holidays = cal.holidays(
-        #     start=data.index[0].strftime("%Y-%m-%d"),
-        #     end=data.index[-1].strftime("%Y-%m-%d"),
-        # )
-        # data['Holiday'] = pd.to_datetime(data.index.date).isin(holidays).astype(int)
-
-        # -----Read from JSON file
-        with open("holidays.json", "r") as read_file:
-            holidays = json.load(read_file)
-        data["Holiday"] = pd.to_datetime(data.index.date).isin(holidays).astype(int)
-        data["Holiday_forward"] = (
-            pd.to_datetime(data.index.date + dt.timedelta(days=1))
-            .isin(holidays)
-            .astype(int)
-        )
-
-    return data
 
 
 def input_data_split(data, configs):
@@ -453,7 +356,7 @@ def _preprocess_data(configs, data):
     data = correct_timestamps(configs, data)
 
     # Add time-based features
-    data = time_dummies(data, configs)
+    data = add_processed_time_columns(data, configs)
 
     # Add statistics features
     if configs["rolling_window"]["active"]:
