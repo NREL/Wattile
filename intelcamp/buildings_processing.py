@@ -31,141 +31,6 @@ def check_complete(torch_file, des_epochs):
     return check
 
 
-def get_full_data(configs):  # noqa: C901 TODO: remove no qa
-    """
-    Fetches all data for a requested building based on the information reflected in the input data
-     summary json file.
-
-    :param configs: (Dictionary)
-    :return: (DataFrame)
-    """
-
-    # assuming there is only one json file in the folder summerizing input data
-    # read json file
-    configs_file_inputdata = (
-        Path(configs["data_dir"])
-        / configs["building"]
-        / f"{configs['building']} Config.json"
-    )
-    logger.info(
-        "Pre-process: reading input data summary json file from {}".format(
-            configs_file_inputdata
-        )
-    )
-    with open(configs_file_inputdata, "r") as read_file:
-        configs_input = json.load(read_file)
-
-    # converting json into dataframe
-    df_inputdata = pd.DataFrame(configs_input["files"])
-
-    # converting date time column into pandas datetime (raw format based on ISO 8601)
-    df_inputdata["start"] = pd.to_datetime(
-        df_inputdata.start, format="t:%Y-%m-%dT%H:%M:%S%z", exact=False, utc=True
-    )
-    df_inputdata["end"] = pd.to_datetime(
-        df_inputdata.end, format="t:%Y-%m-%dT%H:%M:%S%z", exact=False, utc=True
-    )
-
-    timestamp_start = dt.datetime.fromisoformat(configs["start_time"])
-    timestamp_end = dt.datetime.fromisoformat(configs["end_time"])
-
-    # only read from files that's timespan intersects with the configs
-    # the extra will be removed in `prep_for_rnn`
-    df_inputdata = df_inputdata.loc[
-        (df_inputdata.start <= timestamp_end) & (df_inputdata.end >= timestamp_start), :
-    ]
-
-    df_inputdata["path"] = (
-        configs["data_dir"] + "/" + configs["building"] + "/" + df_inputdata["filename"]
-    )
-
-    if df_inputdata.empty:
-        logger.info(
-            "Pre-process: measurements during the specified time period "
-            f"({timestamp_start} to {timestamp_end}) are empty."
-        )
-
-        raise ConfigsError("No datapoints found in dataset for specified timeframe.")
-
-    else:
-        data_full_p = pd.DataFrame()
-        data_full_t = pd.DataFrame()
-        for datatype in df_inputdata.contentType.unique():
-
-            df_list_datatype = df_inputdata.loc[df_inputdata.contentType == datatype, :]
-
-            for filepath in df_list_datatype.path:
-
-                if datatype == "predictors":
-                    logger.info(
-                        "Pre-process: reading predictor file = {}".format(
-                            filepath.split(configs["data_dir"])[1]
-                        )
-                    )
-                    try:
-                        data_full_p = pd.concat([data_full_p, pd.read_csv(filepath)])
-                    except Exception:
-                        logger.info(
-                            "Pre-process: error in read_csv with predictor file "
-                            f"{filepath.split(configs['data_dir'])[1]}. not reading.."
-                        )
-                        continue
-                elif datatype == "targets":
-                    logger.info(
-                        "Pre-process: reading target file = {}".format(
-                            filepath.split(configs["data_dir"])[1]
-                        )
-                    )
-                    try:
-                        data_full_t = pd.concat(
-                            [
-                                data_full_t,
-                                pd.read_csv(filepath)[
-                                    ["Timestamp", configs["target_var"]]
-                                ],
-                            ]
-                        )
-                    except Exception:
-                        logger.info(
-                            "Pre-process: error in read_csv with target file "
-                            f"{filepath.split(configs['data_dir'])[1]}. not reading.."
-                        )
-                        continue
-                else:
-                    logger.info(
-                        "Pre-process: input file not properly differentiated between Predictors "
-                        "and Targets"
-                    )
-
-        if data_full_p.empty:
-            logger.info("Pre-process: predictor dataframe is empty. Exiting process...")
-
-            raise ConfigsError(
-                "No datapoints found in dataset for specified timeframe."
-            )
-
-        elif data_full_t.empty and configs["use_case"] != "prediction":
-            logger.info("Pre-process: target dataframe is empty. Exiting process...")
-
-            raise ConfigsError(
-                "No datapoints found in dataset for specified timeframe."
-            )
-
-        if configs["use_case"] == "prediction":
-            data_full = data_full_p
-            data_full[configs["target_var"]] = -999
-
-        else:
-            data_full = pd.merge(data_full_p, data_full_t, how="outer", on="Timestamp")
-
-    data_full["Timestamp"] = pd.to_datetime(
-        data_full["Timestamp"], format="%Y-%m-%dT%H:%M:%S%z", exact=False, utc=True
-    )
-    data_full = data_full.set_index("Timestamp")
-
-    return data_full
-
-
 def time_dummies(data, configs):  # noqa: C901 TODO: remove noqa
     """
     Adds time-based indicator variables. Elements in configs describe what method to use.
@@ -571,12 +436,15 @@ def correct_timestamps(configs, data):
     return data
 
 
-def prep_for_rnn(configs, data):
-    """
-    Prepare data for input to a RNN model.
+def _preprocess_data(configs, data):
+    """Preprocess data as dictated by the configs.
 
-    :param configs: (Dict)
-    :return: train and val DataFrames
+    :param configs: configs
+    :type configs: dict
+    :param data: data
+    :type data: pd.dataframe
+    :return: data
+    :rtype: pd.dataframe
     """
     # assert we have the correct columns and order them
     data = correct_predictor_columns(configs, data)
@@ -595,38 +463,37 @@ def prep_for_rnn(configs, data):
     configs["input_dim"] = data.shape[1] - 1
     logger.info("Number of features: {}".format(configs["input_dim"]))
     logger.debug("Features: {}".format(data.columns.values))
+
     if configs["arch_version"] == 4:
         data = pad_full_data(data, configs)
     elif configs["arch_version"] == 5:
         data = pad_full_data_s2s(data, configs)
 
+    return data
+
+
+def prep_for_rnn(configs, data):
+    """
+    Prepare data for input to a RNN model.
+
+    :param configs: (Dict)
+    :return: train and val DataFrames
+    """
+    data = _preprocess_data(configs, data)
+
+    # if validatate with external data, write data to h5 for future testing.
+    if configs["use_case"] == "validation" and configs["test_method"] == "external":
+        filepath = (
+            pathlib.Path(configs["data_dir"])
+            / f"{configs['target_var']}_external_test.h5"
+        )
+        data.to_hdf(filepath, key="df", mode="w")
+
     if configs["use_case"] == "train":
-        # split data into training/validation/testing sets
         train_df, val_df = input_data_split(data, configs)
 
-    elif configs["use_case"] == "validation" or configs["use_case"] == "prediction":
-        val_df = data
-        train_df = pd.DataFrame()
-
-        if configs["use_case"] == "validation":
-            if configs["test_method"] == "external":
-                filepath = filepath = (
-                    pathlib.Path(configs["data_dir"])
-                    / f"{configs['target_var']}_external_test.h5"
-                )
-                val_df.to_hdf(filepath, key="df", mode="w")
-
-            elif configs["test_method"] == "internal":
-                local_results_dir = Path(configs["exp_dir"])
-                temp_config_file = os.path.join(local_results_dir, "configs.json")
-                with open(temp_config_file, "r") as f:
-                    temp_configs = json.load(f)
-                configs["input_dim"] = temp_configs["input_dim"]
-
-            else:
-                ConfigsError("test_method not valid.")
     else:
-        raise ConfigsError("use_case not valid.")
+        train_df, val_df = pd.DataFrame(), data
 
     return train_df, val_df
 
