@@ -22,7 +22,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 import intelcamp.buildings_processing as bp
 from intelcamp.error import ConfigsError
-from intelcamp.models import lstm, rnn
+from intelcamp.models.utils import init_model, load_model, save_model
 from intelcamp.util import factors
 
 file_prefix = "/default"
@@ -215,19 +215,6 @@ def data_iterable_random(
     val_loader = DataLoader(dataset=val, batch_size=val_batch_size, shuffle=True)
 
     return train_loader, val_loader
-
-
-def save_model(model, epoch, n_iter):
-    """
-    Save a PyTorch model to a file
-
-    :param model: (Pytorch model)
-    :param epoch: (int)
-    :param n_iter: (int)
-    :return: None
-    """
-    model_dict = {"epoch_num": epoch, "n_iter": n_iter, "torch_model": model}
-    torch.save(model_dict, os.path.join(file_prefix, "torch_model"))
 
 
 def pinball_np(output, target, configs):
@@ -533,13 +520,8 @@ def run_training(  # noqa: C901 TODO: remove noqa
     :return: None
     """
 
-    hidden_dim = int(configs["hidden_nodes"])
-    output_dim = (
-        configs["S2S_stagger"]["initial_num"] + configs["S2S_stagger"]["secondary_num"]
-    ) * len(configs["qs"])
     weight_decay = float(configs["weight_decay"])
     input_dim = configs["input_dim"]
-    layer_dim = configs["layer_dim"]
 
     # Write the configurations used for this training process to a json file
     path = os.path.join(file_prefix, "configs.json")
@@ -555,50 +537,21 @@ def run_training(  # noqa: C901 TODO: remove noqa
     val_iter = []
     # val_rmse = []
 
-    # If you are resuming from a previous training session
+    # TODO: make resumed model and new model use the same number of epochs
     if run_resume:
-        try:
-            torch_model = torch.load(os.path.join(file_prefix, "torch_model"))
-            model = torch_model["torch_model"]
-            resume_num_epoch = torch_model["epoch_num"]
-            resume_n_iter = torch_model["n_iter"]
+        model, resume_num_epoch, resume_n_iter = load_model(configs)
+        epoch_range = np.arange(resume_num_epoch + 1, num_epochs + 1)
 
-            epoch_range = np.arange(resume_num_epoch + 1, num_epochs + 1)
-        except FileNotFoundError:
-            logger.info(
-                "model does not exist in the given folder for resuming the training. Exiting..."
-            )
-            exit()
-        logger.info("rune_resume=True, model loaded from: {}".format(file_prefix))
+        logger.info(f"Model loaded from: {file_prefix}")
 
-    # If you want to start training a model from scratch
     else:
-        # RNN layer
-        # input_dim: The number of expected features in the input x
-        # hidden_dim: the number of features in the hidden state h
-        # layer_dim: Number of recurrent layers. i.e. if 2, it is stacking two RNNs together to form
-        #  a stacked RNN
-        # Initialize the model
-        if configs["arch_type_variant"] == "vanilla":
-            model = rnn.RNNModel(input_dim, hidden_dim, layer_dim, output_dim)
-            # model.to(device)
-        elif configs["arch_type_variant"] == "lstm":
-            model = lstm.LSTM_Model(
-                input_dim, hidden_dim, layer_dim, output_dim, device
-            )
-            # model.to(device)
-        else:
-            raise ConfigsError(
-                "{} is not a supported architecture variant".format(
-                    configs["arch_type_variant"]
-                )
-            )
+        model = init_model(configs)
         epoch_range = np.arange(num_epochs)
+
         logger.info(
-            "A new {} {} model instantiated, with run_train=True".format(
-                configs["arch_type_variant"], configs["arch_type"]
-            )
+            f"A new {configs['arch_type_variant']} {configs['arch_type']} model instantiated"
         )
+
     # Move model and data to GPU, if availiable
     model.to(device)
 
@@ -775,7 +728,8 @@ def run_training(  # noqa: C901 TODO: remove noqa
 
             # Save the model every ___ iterations
             if n_iter % configs["eval_frequency"] == 0:
-                save_model(model, epoch, n_iter)
+                filepath = os.path.join(file_prefix, "torch_model")
+                save_model(model, epoch, n_iter, filepath)
 
             # Do a val batch every ___ iterations
             if n_iter % configs["eval_frequency"] == 0:
@@ -860,7 +814,8 @@ def run_training(  # noqa: C901 TODO: remove noqa
         epoch_num += 1
 
     # Once model training is done, save the current model state
-    save_model(model, epoch, n_iter)
+    filepath = os.path.join(file_prefix, "torch_model")
+    save_model(model, epoch, n_iter, filepath)
 
     # Once model is done training, process a final val set
     predictions, errors, measured, Q_vals = test_processing(
@@ -956,8 +911,7 @@ def run_validation(
     :param seq_dim: (Int)
     :return: None
     """
-    torch_model = torch.load(os.path.join(file_prefix, "torch_model"))
-    model = torch_model["torch_model"]
+    model, _, _ = load_model(configs)
     logger.info("Loaded model from file, given run_train=False\n")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -1016,9 +970,7 @@ def run_validation(
 def run_prediction(
     val_loader, val_df, writer, transformation_method, configs, val_batch_size, seq_dim
 ):
-    torch_model_path = pathlib.Path(configs["exp_dir"]) / "torch_model"
-    torch_model = torch.load(torch_model_path)
-    model = torch_model["torch_model"]
+    model, _, _ = load_model(configs)
     model.eval()
 
     logger.info("Loaded model from file, given run_train=False\n")
@@ -1219,8 +1171,7 @@ def eval_trained_model(file_prefix, train_data, train_batch_size, configs):
     """
 
     # Evaluate the training model
-    torch_model = torch.load(os.path.join(file_prefix, "torch_model"))
-    model = torch_model["torch_model"]
+    model, _, _ = load_model(configs)
     X_train = train_data.drop(configs["target_var"], axis=1).values.astype(
         dtype="float32"
     )
@@ -1594,8 +1545,7 @@ def predict(data, file_prefix):
     train_feat_tensor = torch.from_numpy(data).type(torch.FloatTensor)
 
     # Load model
-    torch_model = pathlib.Path(configs["exp_dir"]) / "torch_model"
-    model = torch_model["torch_model"]
+    model, _, _ = load_model(configs)
 
     # Evaluate model
     model.eval()
