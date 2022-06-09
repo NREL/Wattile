@@ -43,11 +43,12 @@ Docs for the format of the output is [here](./tests/fixtures/v5_exp_dir/README.m
 ```py
 import json 
 
-from intelcamp.entry_point import create_input_dataframe, run_model
+from intelcamp.entry_point import init_logging, create_input_dataframe, run_model
 
 with open("intelcamp/configs/configs.json", "r") as f:
     configs = json.load(f)
 
+init_logging(configs["exp_dir"])  
 train_df, val_df = create_input_dataframe(configs)
 run_model(configs, train_df, val_df)
 ```
