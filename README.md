@@ -45,11 +45,11 @@ import json
 
 from intelcamp.entry_point import create_input_dataframe, run_model
 
-with open("intelcamp/configs.json", "r") as f:
+with open("intelcamp/configs/configs.json", "r") as f:
     configs = json.load(f)
 
 train_df, val_df = create_input_dataframe(configs)
-run_model(configs, train_val, val_df)
+run_model(configs, train_df, val_df)
 ```
 
 After running, you may use tensordboard on the results.
