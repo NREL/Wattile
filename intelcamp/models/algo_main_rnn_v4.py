@@ -81,7 +81,7 @@ def size_the_batches(
     return train_bt_size, val_bt_size, num_train_data
 
 
-def data_transform(train_data, val_data, transformation_method, run_train):
+def data_transform(configs, train_data, val_data, transformation_method, run_train):
     """
     Normalize the training and val data according to a user-defined criteria
 
@@ -99,9 +99,7 @@ def data_transform(train_data, val_data, transformation_method, run_train):
         train_stats["train_min"] = train_data.min().to_dict()
         train_stats["train_mean"] = train_data.mean(axis=0).to_dict()
         train_stats["train_std"] = train_data.std(axis=0).to_dict()
-        path = os.path.join(file_prefix, "train_stats.json")
-        with open(path, "w") as fp:
-            json.dump(train_stats, fp)
+        configs["train_stats"] = train_stats
 
         if transformation_method == "minmaxscale":
             train_data = (train_data - train_data.min()) / (
@@ -119,9 +117,7 @@ def data_transform(train_data, val_data, transformation_method, run_train):
             )
 
     # Reading back the train stats for normalizing val data w.r.t to train data
-    file_loc = os.path.join(file_prefix, "train_stats.json")
-    with open(file_loc, "r") as f:
-        train_stats = json.load(f)
+    train_stats = configs["train_stats"]
 
     # get statistics for training data
     train_max = pd.DataFrame(train_stats["train_max"], index=[1]).iloc[0]
@@ -300,9 +296,7 @@ def test_processing(
     pinball_loss = np.mean(np.mean(loss, 0))
 
     # Loading the training data stats for de-normalization purpose
-    file_loc = os.path.join(file_prefix, "train_stats.json")
-    with open(file_loc, "r") as f:
-        train_stats = json.load(f)
+    train_stats = configs["train_stats"]
 
     # Get normalization statistics
     train_max = pd.DataFrame(train_stats["train_max"], index=[1]).iloc[0]
@@ -962,9 +956,7 @@ def run_prediction(
     semifinal_preds = np.concatenate(preds)
 
     # Loading the training data stats for de-normalization purpose
-    file_loc = os.path.join(file_prefix, "train_stats.json")
-    with open(file_loc, "r") as f:
-        train_stats = json.load(f)
+    train_stats = configs["train_stats"]
 
     # Get normalization statistics
     train_max = pd.DataFrame(train_stats["train_max"], index=[1]).iloc[0]
@@ -1323,9 +1315,7 @@ def predict(data, file_prefix):
 
     # Do normalization
     # Reading back the train stats for normalizing test data w.r.t to train data
-    file_loc = os.path.join(file_prefix, "train_stats.json")
-    with open(file_loc, "r") as f:
-        train_stats = json.load(f)
+    train_stats = configs["train_stats"]
 
     # get statistics for training data
     train_max = (
@@ -1445,7 +1435,7 @@ def main(train_df, val_df, configs):
 
     # Normalization transformation
     train_data, val_data = data_transform(
-        train_data, val_data, transformation_method, run_train
+        configs, train_data, val_data, transformation_method, run_train
     )
     logger.info(
         "Data transformed using {} as transformation method".format(
