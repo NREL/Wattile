@@ -78,7 +78,7 @@ def get_nsrdb(year, target_lat, target_lon):
 
 
 # Inputs
-data_dir = "/projects/intelcamp/data/GP_new"
+data_dir = "/projects/wattile/data/GP_new"
 building_data_genome_project_url = (
     "https://github.com/buds-lab/building-data-genome-project-2/blob/master/data"
 )

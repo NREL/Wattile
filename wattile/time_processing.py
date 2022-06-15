@@ -3,7 +3,7 @@ import datetime as dt
 import numpy as np
 import pandas as pd
 
-from intelcamp.holidays import HOLIDAYS
+from wattile.holidays import HOLIDAYS
 
 
 def _add_hour_based_columns(data, configs):

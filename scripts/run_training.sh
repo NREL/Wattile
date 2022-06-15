@@ -13,8 +13,8 @@ module load conda
 source activate /projects/intelcamp/conda/pytorch_gpu
 ##conda list
 
-python -u /projects/intelcamp/repos/intelligentcampus-pred-analytics/entry_point.py > /projects/intelcamp/repos/intelcamp20-hpc/results/Outputs/testing_round_${SLURM_JOB_ID}.txt
-tensorboard dev upload --logdir /projects/intelcamp/repos/intelcamp20-hpc/results/RNN_MCafeWholeBuildingRealPowerTotal_T7-9-21 --one_shot
+python -u /projects/intelcamp/repos/wattile/entry_point.py > /projects/intelcamp/repos/wattile/results/Outputs/testing_round_${SLURM_JOB_ID}.txt
+tensorboard dev upload --logdir /projects/intelcamp/repos/wattile/results/RNN_MCafeWholeBuildingRealPowerTotal_T7-9-21 --one_shot
 
 echo "Done with sbatch script"
 

@@ -2,8 +2,8 @@ import pathlib
 
 import torch
 
-from intelcamp.error import ConfigsError
-from intelcamp.models import lstm, rnn
+from wattile.error import ConfigsError
+from wattile.models import lstm, rnn
 
 
 def save_model(model, epoch_num, n_iter, filepath):

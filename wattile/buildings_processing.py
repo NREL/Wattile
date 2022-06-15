@@ -10,8 +10,8 @@ import seaborn as sns
 import torch
 
 # import tables
-from intelcamp.error import ConfigsError
-from intelcamp.time_processing import add_processed_time_columns
+from wattile.error import ConfigsError
+from wattile.time_processing import add_processed_time_columns
 
 PROJECT_DIRECTORY = pathlib.Path(__file__).resolve().parent
 
