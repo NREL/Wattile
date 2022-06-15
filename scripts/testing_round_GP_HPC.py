@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from matplotlib import rc
 
-import intelcamp.entry_point as epb
+import wattile.entry_point as epb
 
 if __name__ == "__main__":  # noqa: C901 TODO: remove noqa
     set_start_method("spawn")

@@ -4,8 +4,8 @@ import pandas as pd
 import pytest
 from pandas.testing import assert_frame_equal
 
-from intelcamp.buildings_processing import correct_predictor_columns, correct_timestamps
-from intelcamp.error import ConfigsError
+from wattile.buildings_processing import correct_predictor_columns, correct_timestamps
+from wattile.error import ConfigsError
 
 JULY_14_CONFIG = {
     "start_time": "1997-07-14T00:00:00-00:00",

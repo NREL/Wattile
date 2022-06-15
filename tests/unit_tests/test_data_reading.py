@@ -3,7 +3,7 @@ import pathlib
 
 import pytest
 
-from intelcamp.data_reading import read_dataset_from_file
+from wattile.data_reading import read_dataset_from_file
 
 TESTS_PATH = pathlib.Path(__file__).parents[1]
 TESTS_FIXTURES_PATH = TESTS_PATH / "fixtures"
