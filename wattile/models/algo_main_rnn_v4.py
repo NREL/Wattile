@@ -760,10 +760,13 @@ def run_training(  # noqa: C901 TODO: remove no qa
         os.path.join(file_prefix, "residual_distribution.h5"), key="df", mode="w"
     )
 
-    # Save the final predictions to a file
+    # Save the final predictions and measured target to a file
     # predictions.to_csv(file_prefix + '/predictions.csv', index=False)
     pd.DataFrame(predictions).to_hdf(
         os.path.join(file_prefix, "predictions.h5"), key="df", mode="w"
+    )
+    pd.DataFrame(targets.iloc[:, 0]).to_hdf(
+        os.path.join(file_prefix, "measured.h5"), key="df", mode="w"
     )
 
     # Save the QQ information to a file
