@@ -1438,9 +1438,7 @@ def main(train_df, val_df, configs):
         )
 
         # create visualization
-        print("### DEBUGGING check before IF")
         if configs["plot_comparison"] is True:
-            print("### DEBUGGING check after IF")
             timeseries_comparison(configs)
 
     elif configs["use_case"] == "validation":

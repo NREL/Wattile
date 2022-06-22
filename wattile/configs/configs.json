@@ -62,7 +62,7 @@
  ],
  "use_case": "train",
  "run_resume": false,
- "num_epochs": 1,
+ "num_epochs": 100,
  "weight_decay": 0.001,
  "hidden_nodes": 25,
  "layer_dim": 1,
