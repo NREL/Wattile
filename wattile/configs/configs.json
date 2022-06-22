@@ -62,7 +62,7 @@
  ],
  "use_case": "train",
  "run_resume": false,
- "num_epochs": 2,
+ "num_epochs": 1,
  "weight_decay": 0.001,
  "hidden_nodes": 25,
  "layer_dim": 1,
@@ -82,5 +82,8 @@
   "year": "2020",
   "month": [1, 2, 3, 4, 5, 6]
  },
- "trained_model_path":"./EnergyForecasting_Results/RNN_MSyntheticSiteElectricityMainTotalPower_T7-9-21"
+ "trained_model_path":"./EnergyForecasting_Results/RNN_MSyntheticSiteElectricityMainTotalPower_T7-9-21",
+ "plot_comparison":true,
+ "plot_comparison_portion_start":0.0,
+ "plot_comparison_portion_end":1.0
 }
