@@ -295,7 +295,7 @@ def timeseries_comparison(configs):
         showgrid=False,
     )
 
-    timeseries_comparison = configs["file_prefix"] + "/Vis_TimeseriesComparisons.svg"
+    timeseries_comparison = configs["exp_dir"] + "/Vis_TimeseriesComparisons.svg"
     print("saving timeseries comparison in {}".format(timeseries_comparison))
     pio.write_image(fig, timeseries_comparison)
-    fig.write_html(configs["file_prefix"] + "/Vis_TimeseriesComparisons.html")
+    fig.write_html(configs["exp_dir"] + "/Vis_TimeseriesComparisons.html")
