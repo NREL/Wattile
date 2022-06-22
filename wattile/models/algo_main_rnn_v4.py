@@ -21,6 +21,7 @@ import wattile.buildings_processing as bp
 from wattile.error import ConfigsError
 from wattile.models.utils import init_model, load_model, save_model
 from wattile.util import factors
+from wattile.visualization import timeseries_comparison
 
 file_prefix = "/default"
 logger = logging.getLogger(str(os.getpid()))
@@ -1435,6 +1436,12 @@ def main(train_df, val_df, configs):
             configs["window"] + 1,
             num_train_data,
         )
+
+        # create visualization
+        print("### DEBUGGING check before IF")
+        if configs["plot_comparison"] is True:
+            print("### DEBUGGING check after IF")
+            timeseries_comparison(configs)
 
     elif configs["use_case"] == "validation":
         run_validation(
