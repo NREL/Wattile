@@ -22,9 +22,9 @@
     },
     {
       "site": "Synthetic Site",
-      "column": "SRRL BMS Direct Normal Irradiance",
-      "id": "r:p:dash:r:278f79c0-4fe536b4 SRRL BMS Direct Normal Irradiance",
-      "description": "SRRL BMS Direct Normal Irradiance",
+      "column": "Synthetic Weather Station Direct Normal Irradiance",
+      "id": "r:278f79c0-4fe536b4 Synthetic Weather Station Direct Normal Irradiance",
+      "description": "Synthetic Weather Station Direct Normal Irradiance",
       "unit": "W/m²_irr",
       "pv": false
     },
