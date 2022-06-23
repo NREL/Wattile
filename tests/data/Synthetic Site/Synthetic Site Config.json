@@ -38,9 +38,9 @@
     },
     {
       "site": "Synthetic Site",
-      "column": "SRRL BMS Global Horizontal Irradiance",
-      "id": "r:p:dash:r:278f79c0-8d722bdb SRRL BMS Global Horizontal Irradiance",
-      "description": "SRRL BMS Global Horizontal Irradiance",
+      "column": "Synthetic Weather Station Global Horizontal Irradiance",
+      "id": "r:278f79c0-8d722bdb Synthetic Weather Station Global Horizontal Irradiance",
+      "description": "Synthetic Weather Station Global Horizontal Irradiance",
       "unit": "W/m²_irr",
       "pv": false
     },
