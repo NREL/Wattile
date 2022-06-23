@@ -65,7 +65,7 @@
     {
       "site": "Synthetic Site",
       "column": "Synthetic Site Electricity Main Total Power",
-      "id": "r:p:dash:r:294fd256-a17bb5c7 Synthetic Site Electricity Main Total Power",
+      "id": "r:294fd256-a17bb5c7 Synthetic Site Electricity Main Total Power",
       "description": "Synthetic Site Electricity Main Total Power",
       "unit": "kW",
       "pv": false
