@@ -840,6 +840,8 @@ def run_validation(
     model, _, _ = load_model(configs)
     logger.info("Loaded model from file, given run_train=False\n")
 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     # Run val
     predictions, targets, errors, Q_vals, hist_data = test_processing(
         val_df,
@@ -851,6 +853,7 @@ def run_validation(
         transformation_method,
         configs,
         True,
+        device,
     )
 
     # Save the QQ information to a file
