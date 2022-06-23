@@ -599,6 +599,18 @@ def run_training(  # noqa: C901 TODO: remove no qa
             features = Variable(feats.view(-1, seq_dim, input_dim))
             target = Variable(values)  # size: batch size
 
+            # DEBUGGING
+            print(
+                "### DEBUGGING: [{}] feats.get_device() = {}".format(
+                    type(feats), feats.get_device()
+                )
+            )
+            print(
+                "### DEBUGGING: [{}] values.get_device() = {}".format(
+                    type(values), values.get_device()
+                )
+            )
+
             time2 = timeit.default_timer()
 
             # Clear gradients w.r.t. parameters (from previous epoch). Same as model.zero_grad()
