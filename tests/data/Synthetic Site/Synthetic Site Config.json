@@ -6,9 +6,9 @@
   "predictors": [
     {
       "site": "Synthetic Site",
-      "column": "SRRL BMS Dew Point Temperature",
-      "id": "r:p:dash:r:278f8943-6a199bd7 SRRL BMS Dew Point Temperature",
-      "description": "SRRL BMS Dew Point Temperature",
+      "column": "Synthetic Weather Station Dew Point Temperature",
+      "id": "r:278f8943-6a199bd7 Synthetic Weather Station Dew Point Temperature",
+      "description": "Synthetic Weather Station Dew Point Temperature",
       "unit": "°F",
       "pv": false
     },

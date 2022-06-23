@@ -5,7 +5,7 @@
  "end_time": "2022-01-01T00:00:00-07:00",
  "data_time_interval_mins":1,   
  "predictor_columns": [
-    "SRRL BMS Dew Point Temperature",
+    "Synthetic Weather Station Dew Point Temperature",
     "SRRL BMS Diffuse Horizontal Irradiance",
     "SRRL BMS Direct Normal Irradiance",
     "SRRL BMS Dry Bulb Temperature",
