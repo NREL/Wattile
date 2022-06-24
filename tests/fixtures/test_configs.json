@@ -6,7 +6,7 @@
  "data_time_interval_mins":1,   
  "predictor_columns": [
     "Synthetic Weather Station Dew Point Temperature",
-    "SRRL BMS Diffuse Horizontal Irradiance",
+    "Synthetic Weather Station Diffuse Horizontal Irradiance",
     "Synthetic Weather Station Direct Normal Irradiance",
     "SRRL BMS Dry Bulb Temperature",
     "Synthetic Weather Station Global Horizontal Irradiance",

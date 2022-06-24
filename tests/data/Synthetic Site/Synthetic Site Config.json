@@ -14,9 +14,9 @@
     },
     {
       "site": "Synthetic Site",
-      "column": "SRRL BMS Diffuse Horizontal Irradiance",
-      "id": "r:p:dash:r:278f79c0-03da5abc SRRL BMS Diffuse Horizontal Irradiance",
-      "description": "SRRL BMS Diffuse Horizontal Irradiance",
+      "column": "Synthetic Weather Station Diffuse Horizontal Irradiance",
+      "id": "r:278f79c0-03da5abc Synthetic Weather Station Diffuse Horizontal Irradiance",
+      "description": "Synthetic Weather Station Diffuse Horizontal Irradiance",
       "unit": "W/m²_irr",
       "pv": false
     },
