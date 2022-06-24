@@ -54,9 +54,9 @@
     },
     {
       "site": "Synthetic Site",
-      "column": "SRRL BMS Wind Speed at 19'",
-      "id": "r:p:dash:r:278f79c0-c1f48e5c SRRL BMS Wind Speed at 19'",
-      "description": "SRRL BMS Wind Speed at 19'",
+      "column": "Synthetic Weather Station Wind Speed",
+      "id": "r:278f79c0-c1f48e5c Synthetic Weather Station Wind Speed",
+      "description": "Synthetic Weather Station Wind Speed",
       "unit": "mph",
       "pv": false
     }

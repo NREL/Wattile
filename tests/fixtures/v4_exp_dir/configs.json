@@ -11,7 +11,7 @@
   "Synthetic Weather Station Dry Bulb Temperature",
   "Synthetic Weather Station Global Horizontal Irradiance",
   "Synthetic Weather Station Relative Humidity",
-  "SRRL BMS Wind Speed at 19'"
+  "Synthetic Weather Station Wind Speed"
  ],
  "arch_version": 4,
  "exp_id": "Debugging_for_rolling_stats",
