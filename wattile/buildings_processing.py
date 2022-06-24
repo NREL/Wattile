@@ -26,7 +26,8 @@ def check_complete(torch_file, des_epochs):
     :return:
     """
 
-    torch_model = torch.load(torch_file)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    torch_model = torch.load(torch_file, map_location=device)
     check = des_epochs == torch_model["epoch_num"] + 1
     return check
 
