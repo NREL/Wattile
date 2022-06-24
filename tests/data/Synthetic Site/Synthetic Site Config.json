@@ -46,9 +46,9 @@
     },
     {
       "site": "Synthetic Site",
-      "column": "SRRL BMS Relative Humidity",
-      "id": "r:p:dash:r:278f79c0-e7db4305 SRRL BMS Relative Humidity",
-      "description": "SRRL BMS Relative Humidity",
+      "column": "Synthetic Weather Station Relative Humidity",
+      "id": "r:278f79c0-e7db4305 Synthetic Weather Station Relative Humidity",
+      "description": "Synthetic Weather Station Relative Humidity",
       "unit": "%RH",
       "pv": false
     },
