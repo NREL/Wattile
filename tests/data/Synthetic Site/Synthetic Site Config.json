@@ -30,9 +30,9 @@
     },
     {
       "site": "Synthetic Site",
-      "column": "SRRL BMS Dry Bulb Temperature",
-      "id": "r:p:dash:r:278f79c0-8a8f26b0 SRRL BMS Dry Bulb Temperature",
-      "description": "SRRL BMS Dry Bulb Temperature",
+      "column": "Synthetic Weather Station Dry Bulb Temperature",
+      "id": "r:278f79c0-8a8f26b0 Synthetic Weather Station Dry Bulb Temperature",
+      "description": "Synthetic Weather Station Dry Bulb Temperature",
       "unit": "°F",
       "pv": false
     },

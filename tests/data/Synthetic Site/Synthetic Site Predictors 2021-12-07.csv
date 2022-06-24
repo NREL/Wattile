@@ -1,4 +1,4 @@
-Timestamp,Synthetic Weather Station Dew Point Temperature,Synthetic Weather Station Diffuse Horizontal Irradiance,Synthetic Weather Station Direct Normal Irradiance,SRRL BMS Dry Bulb Temperature,Synthetic Weather Station Global Horizontal Irradiance,SRRL BMS Relative Humidity,SRRL BMS Wind Speed at 19'
+Timestamp,Synthetic Weather Station Dew Point Temperature,Synthetic Weather Station Diffuse Horizontal Irradiance,Synthetic Weather Station Direct Normal Irradiance,Synthetic Weather Station Dry Bulb Temperature,Synthetic Weather Station Global Horizontal Irradiance,SRRL BMS Relative Humidity,SRRL BMS Wind Speed at 19'
 2021-12-07T00:00:00-07:00 Denver,16.614700263727077,-1.268599033355713,-0.9826242923736572,44.283199310302734,-1.4815820455551147,29.84000015258789,6.655078887939453
 2021-12-07T00:01:00-07:00 Denver,16.633359530269473,-1.2981669902801514,-0.5910540223121643,43.941200256347656,-1.5265560150146484,30.260000228881836,7.350786209106445
 2021-12-07T00:02:00-07:00 Denver,16.601740591747188,-1.283323049545288,-0.3951301872730255,43.55780029296875,-1.5699679851531982,30.65999984741211,7.746735572814941
