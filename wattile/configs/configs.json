@@ -27,7 +27,7 @@
  "sequence_freq_min": 15,
  "splicer": {
   "active": false,
-  "time": "12hr"
+  "time": "1W"
  },
  "rolling_window": {
   "active": true,
@@ -36,9 +36,9 @@
  },
  "window": 24,
  "EC_future_gap_min": 0,
- "DOW": ["binary_reg"],
+ "DOW": ["binary_reg", "binary_fuzzy"],
  "MOY": ["sincos"],
- "HOD": ["sincos"],
+ "HOD": ["sincos", "binary_reg", "binary_fuzzy"],
  "Holidays": false,
  "S2S_stagger": {
   "initial_num": 72,
@@ -47,7 +47,7 @@
  },
  "train_size_factor": 1,
  "train_val_split": "Random",
- "data_split": "80:10:10",
+ "data_split": "80:20:0",
  "random_seed": 382,
  "qs": [
   0.025,
@@ -62,7 +62,7 @@
  ],
  "use_case": "train",
  "run_resume": false,
- "num_epochs": 2,
+ "num_epochs": 100,
  "weight_decay": 0.001,
  "hidden_nodes": 25,
  "layer_dim": 1,
