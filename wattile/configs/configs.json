@@ -27,7 +27,7 @@
  "sequence_freq_min": 15,
  "splicer": {
   "active": false,
-  "time": "12hr"
+  "time": "1W"
  },
  "rolling_window": {
   "active": true,
@@ -36,9 +36,9 @@
  },
  "window": 24,
  "EC_future_gap_min": 0,
- "DOW": ["binary_reg"],
+ "DOW": ["binary_reg", "binary_fuzzy"],
  "MOY": ["sincos"],
- "HOD": ["sincos"],
+ "HOD": ["sincos", "binary_reg", "binary_fuzzy"],
  "Holidays": false,
  "S2S_stagger": {
   "initial_num": 72,
