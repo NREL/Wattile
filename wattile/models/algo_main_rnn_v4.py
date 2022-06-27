@@ -1437,7 +1437,7 @@ def main(train_df, val_df, configs):
             num_train_data,
         )
 
-        # create visualization
+        # Create visualization
         if configs["plot_comparison"] is True:
             timeseries_comparison(configs)
 
