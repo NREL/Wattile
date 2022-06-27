@@ -12,10 +12,10 @@ import psutil
 import torch
 import torch.utils.data as data_utils
 from psutil import virtual_memory
-from tensorboardX import SummaryWriter
 from torch.autograd import Variable
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data.dataloader import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 
 import wattile.buildings_processing as bp
 from wattile.error import ConfigsError
