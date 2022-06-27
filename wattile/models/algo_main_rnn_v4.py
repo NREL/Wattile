@@ -1441,6 +1441,10 @@ def main(train_df, val_df, configs):
         if configs["plot_comparison"] is True:
             timeseries_comparison(configs)
 
+        # When training is done, wrap up the tensorboard files
+        writer.flush()
+        writer.close()
+
     elif configs["use_case"] == "validation":
         run_validation(
             val_loader,
