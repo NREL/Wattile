@@ -1437,6 +1437,10 @@ def main(train_df, val_df, configs):
             num_train_data,
         )
 
+        # When training is done, wrap up the tensorboard files
+        writer.flush()
+        writer.close()
+
         # Create visualization
         if configs["plot_comparison"]:
             timeseries_comparison(configs)
