@@ -47,7 +47,7 @@
  },
  "train_size_factor": 1,
  "train_val_split": "Random",
- "data_split": "80:10:10",
+ "data_split": "80:20:0",
  "random_seed": 382,
  "qs": [
   0.025,
