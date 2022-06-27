@@ -6,57 +6,57 @@
   "predictors": [
     {
       "site": "Synthetic Site",
-      "column": "SRRL BMS Dew Point Temperature",
-      "id": "r:p:dash:r:278f8943-6a199bd7 SRRL BMS Dew Point Temperature",
-      "description": "SRRL BMS Dew Point Temperature",
+      "column": "Synthetic Weather Station Dew Point Temperature",
+      "id": "r:278f8943-6a199bd7 Synthetic Weather Station Dew Point Temperature",
+      "description": "Synthetic Weather Station Dew Point Temperature",
       "unit": "°F",
       "pv": false
     },
     {
       "site": "Synthetic Site",
-      "column": "SRRL BMS Diffuse Horizontal Irradiance",
-      "id": "r:p:dash:r:278f79c0-03da5abc SRRL BMS Diffuse Horizontal Irradiance",
-      "description": "SRRL BMS Diffuse Horizontal Irradiance",
+      "column": "Synthetic Weather Station Diffuse Horizontal Irradiance",
+      "id": "r:278f79c0-03da5abc Synthetic Weather Station Diffuse Horizontal Irradiance",
+      "description": "Synthetic Weather Station Diffuse Horizontal Irradiance",
       "unit": "W/m²_irr",
       "pv": false
     },
     {
       "site": "Synthetic Site",
-      "column": "SRRL BMS Direct Normal Irradiance",
-      "id": "r:p:dash:r:278f79c0-4fe536b4 SRRL BMS Direct Normal Irradiance",
-      "description": "SRRL BMS Direct Normal Irradiance",
+      "column": "Synthetic Weather Station Direct Normal Irradiance",
+      "id": "r:278f79c0-4fe536b4 Synthetic Weather Station Direct Normal Irradiance",
+      "description": "Synthetic Weather Station Direct Normal Irradiance",
       "unit": "W/m²_irr",
       "pv": false
     },
     {
       "site": "Synthetic Site",
-      "column": "SRRL BMS Dry Bulb Temperature",
-      "id": "r:p:dash:r:278f79c0-8a8f26b0 SRRL BMS Dry Bulb Temperature",
-      "description": "SRRL BMS Dry Bulb Temperature",
+      "column": "Synthetic Weather Station Dry Bulb Temperature",
+      "id": "r:278f79c0-8a8f26b0 Synthetic Weather Station Dry Bulb Temperature",
+      "description": "Synthetic Weather Station Dry Bulb Temperature",
       "unit": "°F",
       "pv": false
     },
     {
       "site": "Synthetic Site",
-      "column": "SRRL BMS Global Horizontal Irradiance",
-      "id": "r:p:dash:r:278f79c0-8d722bdb SRRL BMS Global Horizontal Irradiance",
-      "description": "SRRL BMS Global Horizontal Irradiance",
+      "column": "Synthetic Weather Station Global Horizontal Irradiance",
+      "id": "r:278f79c0-8d722bdb Synthetic Weather Station Global Horizontal Irradiance",
+      "description": "Synthetic Weather Station Global Horizontal Irradiance",
       "unit": "W/m²_irr",
       "pv": false
     },
     {
       "site": "Synthetic Site",
-      "column": "SRRL BMS Relative Humidity",
-      "id": "r:p:dash:r:278f79c0-e7db4305 SRRL BMS Relative Humidity",
-      "description": "SRRL BMS Relative Humidity",
+      "column": "Synthetic Weather Station Relative Humidity",
+      "id": "r:278f79c0-e7db4305 Synthetic Weather Station Relative Humidity",
+      "description": "Synthetic Weather Station Relative Humidity",
       "unit": "%RH",
       "pv": false
     },
     {
       "site": "Synthetic Site",
-      "column": "SRRL BMS Wind Speed at 19'",
-      "id": "r:p:dash:r:278f79c0-c1f48e5c SRRL BMS Wind Speed at 19'",
-      "description": "SRRL BMS Wind Speed at 19'",
+      "column": "Synthetic Weather Station Wind Speed",
+      "id": "r:278f79c0-c1f48e5c Synthetic Weather Station Wind Speed",
+      "description": "Synthetic Weather Station Wind Speed",
       "unit": "mph",
       "pv": false
     }
@@ -65,7 +65,7 @@
     {
       "site": "Synthetic Site",
       "column": "Synthetic Site Electricity Main Total Power",
-      "id": "r:p:dash:r:294fd256-a17bb5c7 Synthetic Site Electricity Main Total Power",
+      "id": "r:294fd256-a17bb5c7 Synthetic Site Electricity Main Total Power",
       "description": "Synthetic Site Electricity Main Total Power",
       "unit": "kW",
       "pv": false
