@@ -12,10 +12,10 @@ import psutil
 import torch
 import torch.utils.data as data_utils
 from psutil import virtual_memory
-from tensorboardX import SummaryWriter
 from torch.autograd import Variable
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data.dataloader import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 
 import wattile.buildings_processing as bp
 from wattile.error import ConfigsError
@@ -161,6 +161,10 @@ def data_iterable_random(
     :return:
     """
 
+    # Check for GPU
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    logger.info("Training on {}".format(device))
+
     if run_train:
         # Define input feature matrix
         X_train = train_data.drop(configs["target_var"], axis=1).values.astype(
@@ -174,8 +178,8 @@ def data_iterable_random(
         y_train = np.transpose(y_train)
 
         # Convert to iterable tensors
-        train_feat_tensor = torch.from_numpy(X_train).type(torch.FloatTensor)
-        train_target_tensor = torch.from_numpy(y_train).type(torch.FloatTensor)
+        train_feat_tensor = torch.from_numpy(X_train).to(device)
+        train_target_tensor = torch.from_numpy(y_train).to(device)
         train = data_utils.TensorDataset(train_feat_tensor, train_target_tensor)
         train_loader = data_utils.DataLoader(
             train, batch_size=train_batch_size, shuffle=True
@@ -192,11 +196,11 @@ def data_iterable_random(
     y_val = np.tile(y_val, (len(configs["qs"]), 1))
     y_val = np.transpose(y_val)
 
-    val_feat_tensor = torch.from_numpy(X_val).type(torch.FloatTensor)
-    val_target_tensor = torch.from_numpy(y_val).type(torch.FloatTensor)
+    val_feat_tensor = torch.from_numpy(X_val).to(device)
+    val_target_tensor = torch.from_numpy(y_val).to(device)
 
     val = data_utils.TensorDataset(val_feat_tensor, val_target_tensor)
-    val_loader = DataLoader(dataset=val, batch_size=val_batch_size, shuffle=False)
+    val_loader = DataLoader(dataset=val, batch_size=val_batch_size, shuffle=True)
 
     return train_loader, val_loader
 
@@ -215,7 +219,7 @@ def pinball_np(output, target, configs):
     return loss
 
 
-def quantile_loss(output, target, configs):
+def quantile_loss(output, target, configs, device):
     """
     Computes loss for quantile methods.
 
@@ -226,9 +230,9 @@ def quantile_loss(output, target, configs):
     """
 
     resid = target - output
-    tau = torch.FloatTensor(configs["qs"])
+    tau = torch.tensor(configs["qs"], device=device)
     alpha = configs["smoothing_alpha"]
-    log_term = torch.zeros_like(resid)
+    log_term = torch.zeros_like(resid, device=device)
     log_term[resid < 0] = torch.log(1 + torch.exp(resid[resid < 0] / alpha)) - (
         resid[resid < 0] / alpha
     )
@@ -254,6 +258,7 @@ def test_processing(
     transformation_method,
     configs,
     last_run,
+    device,
 ):
     """
     Process the val set and report error statistics.
@@ -269,146 +274,152 @@ def test_processing(
     :return:
     """
 
-    # Plug the val set into the model
-    model.eval()
-    preds = []
-    targets = []
-    for i, (feats, values) in enumerate(val_loader):
-        features = Variable(feats.view(-1, seq_dim, input_dim))
-        outputs = model(features)
-        preds.append(outputs.data.numpy().squeeze())
-        targets.append(values.data.numpy())
+    with torch.no_grad():
 
-    # (Normalized Data) Concatenate the predictions and targets for the whole val set
-    semifinal_preds = np.concatenate(preds)
-    semifinal_targs = np.concatenate(targets)
+        # Plug the val set into the model
+        model.eval()
+        preds = []
+        targets = []
+        for i, (feats, values) in enumerate(val_loader):
+            features = Variable(feats.view(-1, seq_dim, input_dim))
+            outputs = model(features)
+            preds.append(outputs.cpu().numpy())
+            targets.append(values.cpu().numpy())
 
-    # Calculate pinball loss (done on normalized data)
-    loss = pinball_np(semifinal_preds, semifinal_targs, configs)
-    pinball_loss = np.mean(np.mean(loss, 0))
+        # (Normalized Data) Concatenate the predictions and targets for the whole val set
+        semifinal_preds = np.concatenate(preds)
+        semifinal_targs = np.concatenate(targets)
 
-    # Loading the training data stats for de-normalization purpose
-    file_loc = os.path.join(file_prefix, "train_stats.json")
-    with open(file_loc, "r") as f:
-        train_stats = json.load(f)
+        # Calculate pinball loss (done on normalized data)
+        loss = pinball_np(semifinal_preds, semifinal_targs, configs)
+        pinball_loss = np.mean(np.mean(loss, 0))
 
-    # Get normalization statistics
-    train_max = pd.DataFrame(train_stats["train_max"], index=[1]).iloc[0]
-    train_min = pd.DataFrame(train_stats["train_min"], index=[1]).iloc[0]
-    train_mean = pd.DataFrame(train_stats["train_mean"], index=[1]).iloc[0]
-    train_std = pd.DataFrame(train_stats["train_std"], index=[1]).iloc[0]
+        # Loading the training data stats for de-normalization purpose
+        file_loc = os.path.join(file_prefix, "train_stats.json")
+        with open(file_loc, "r") as f:
+            train_stats = json.load(f)
 
-    # Do de-normalization process on predictions and targets from val set
-    if transformation_method == "minmaxscale":
-        final_preds = (
-            (train_max[configs["target_var"]] - train_min[configs["target_var"]])
-            * semifinal_preds
-        ) + train_min[configs["target_var"]]
-        final_targs = (
-            (train_max[configs["target_var"]] - train_min[configs["target_var"]])
-            * semifinal_targs
-        ) + train_min[configs["target_var"]]
-    elif transformation_method == "standard":
-        final_preds = (semifinal_preds * train_std[configs["target_var"]]) + train_mean[
-            configs["target_var"]
-        ]
-        final_targs = (semifinal_targs * train_std[configs["target_var"]]) + train_mean[
-            configs["target_var"]
-        ]
-    else:
-        raise ConfigsError(
-            "{} is not a supported form of data normalization".format(
-                transformation_method
+        # Get normalization statistics
+        train_max = pd.DataFrame(train_stats["train_max"], index=[1]).iloc[0]
+        train_min = pd.DataFrame(train_stats["train_min"], index=[1]).iloc[0]
+        train_mean = pd.DataFrame(train_stats["train_mean"], index=[1]).iloc[0]
+        train_std = pd.DataFrame(train_stats["train_std"], index=[1]).iloc[0]
+
+        # Do de-normalization process on predictions and targets from val set
+
+        if transformation_method == "minmaxscale":
+            final_preds = (
+                (train_max[configs["target_var"]] - train_min[configs["target_var"]])
+                * semifinal_preds
+            ) + train_min[configs["target_var"]]
+            final_targs = (
+                (train_max[configs["target_var"]] - train_min[configs["target_var"]])
+                * semifinal_targs
+            ) + train_min[configs["target_var"]]
+        elif transformation_method == "standard":
+            final_preds = (
+                semifinal_preds * train_std[configs["target_var"]]
+            ) + train_mean[configs["target_var"]]
+            final_targs = (
+                semifinal_targs * train_std[configs["target_var"]]
+            ) + train_mean[configs["target_var"]]
+        else:
+            raise ConfigsError(
+                "{} is not a supported form of data normalization".format(
+                    transformation_method
+                )
             )
-        )
 
-    # (De-Normalized Data) Assign target and output variables
-    target = final_targs
-    output = final_preds
+        # (De-Normalized Data) Assign target and output variables
+        target = final_targs
+        output = final_preds
 
-    # Do quantile-related (q != 0.5) error statistics
-    # QS (single point)
-    loss = pinball_np(output, target, configs)
-    QS = loss.mean()
-    # PICP (single point for each bound)
-    target_1D = target[:, 0]
-    bounds = np.zeros((target.shape[0], int(len(configs["qs"]) / 2)))
-    PINC = []
-    for i, q in enumerate(configs["qs"]):
-        if q == 0.5:
-            break
-        bounds[:, i] = np.logical_and(
-            output[:, i] < target_1D, target_1D < output[:, -(i + 1)]
-        )
-        PINC.append(configs["qs"][-(i + 1)] - configs["qs"][i])
-    PINC = np.array(PINC)
-    PICP = bounds.mean(axis=0)
-    # ACE (single point)
-    ACE = np.sum(np.abs(PICP - PINC))
-    # IS (single point)
-    lower = output[:, : int(len(configs["qs"]) / 2)]
-    upper = np.flip(output[:, int(len(configs["qs"]) / 2) + 1 :], 1)
-    alph = 1 - PINC
-    x = target[:, : int(len(configs["qs"]) / 2)]
-    IS = (
-        (upper - lower)
-        + (2 / alph) * (lower - x) * (x < lower)
-        + (2 / alph) * (x - upper) * (x > upper)
-    )
-    IS = IS.mean()
-
-    # Compare theoretical and actual Q's
-    act_prob = (output > target).sum(axis=0) / (target.shape[0])
-    Q_vals = pd.DataFrame()
-    Q_vals["q_requested"] = configs["qs"]
-    Q_vals["q_actual"] = act_prob
-
-    # Do quantile-related (q == 0.5) error statistics
-    # Only do reportable error statistics on the q=0.5 predictions. Crop np arrays accordingly
-    final_preds_median = final_preds[:, int(semifinal_preds.shape[1] / 2)]
-    final_targs_median = final_targs[:, int(semifinal_targs.shape[1] / 2)]
-    predictions = pd.DataFrame(final_preds_median)
-    output = final_preds_median
-    target = final_targs_median
-    # Set "Number of adjustable model parameters" for each type of error statistic
-    p_nmbe = 0
-    p_cvrmse = 1
-    # Calculate different error metrics
-    rmse = np.sqrt(np.mean((output - target) ** 2))
-    nmbe = (1 / (np.mean(target))) * (np.sum(target - output)) / (len(target) - p_nmbe)
-    cvrmse = (1 / (np.mean(target))) * np.sqrt(
-        np.sum((target - output) ** 2) / (len(target) - p_cvrmse)
-    )
-    gof = (np.sqrt(2) / 2) * np.sqrt(cvrmse**2 + nmbe**2)
-
-    # If this is the last val run of training, get histogram data of residuals for each quantile
-    if last_run:
-        # resid = target - output
-        resid = semifinal_targs - semifinal_preds
-        hist_data = pd.DataFrame()
+        # Do quantile-related (q != 0.5) error statistics
+        # QS (single point)
+        loss = pinball_np(output, target, configs)
+        QS = loss.mean()
+        # PICP (single point for each bound)
+        target_1D = target[:, 0]
+        bounds = np.zeros((target.shape[0], int(len(configs["qs"]) / 2)))
+        PINC = []
         for i, q in enumerate(configs["qs"]):
-            tester = np.histogram(resid[:, i], bins=200)
-            y_vals = tester[0]
-            x_vals = 0.5 * (tester[1][1:] + tester[1][:-1])
-            hist_data["{}_x".format(q)] = x_vals
-            hist_data["{}_y".format(q)] = y_vals
-    else:
-        hist_data = []
+            if q == 0.5:
+                break
+            bounds[:, i] = np.logical_and(
+                output[:, i] < target_1D, target_1D < output[:, -(i + 1)]
+            )
+            PINC.append(configs["qs"][-(i + 1)] - configs["qs"][i])
+        PINC = np.array(PINC)
+        PICP = bounds.mean(axis=0)
+        # ACE (single point)
+        ACE = np.sum(np.abs(PICP - PINC))
+        # IS (single point)
+        lower = output[:, : int(len(configs["qs"]) / 2)]
+        upper = np.flip(output[:, int(len(configs["qs"]) / 2) + 1 :], 1)
+        alph = 1 - PINC
+        x = target[:, : int(len(configs["qs"]) / 2)]
+        IS = (
+            (upper - lower)
+            + (2 / alph) * (lower - x) * (x < lower)
+            + (2 / alph) * (x - upper) * (x > upper)
+        )
+        IS = IS.mean()
 
-    # Add different error statistics to a dictionary
-    errors = {
-        "pinball_loss": pinball_loss,
-        "rmse": rmse,
-        "nmbe": nmbe,
-        "cvrmse": cvrmse,
-        "gof": gof,
-        "qs": QS,
-        "ace": ACE,
-        "is": IS,
-    }
+        # Compare theoretical and actual Q's
+        act_prob = (output > target).sum(axis=0) / (target.shape[0])
+        Q_vals = pd.DataFrame()
+        Q_vals["q_requested"] = configs["qs"]
+        Q_vals["q_actual"] = act_prob
 
-    predictions = pd.DataFrame(final_preds)
-    targets = pd.DataFrame(final_targs)
+        # Do quantile-related (q == 0.5) error statistics
+        # Only do reportable error statistics on the q=0.5 predictions. Crop np arrays accordingly
+        final_preds_median = final_preds[:, int(semifinal_preds.shape[1] / 2)]
+        final_targs_median = final_targs[:, int(semifinal_targs.shape[1] / 2)]
+        predictions = pd.DataFrame(final_preds_median)
+        output = final_preds_median
+        target = final_targs_median
+        # Set "Number of adjustable model parameters" for each type of error statistic
+        p_nmbe = 0
+        p_cvrmse = 1
+        # Calculate different error metrics
+        rmse = np.sqrt(np.mean((output - target) ** 2))
+        nmbe = (
+            (1 / (np.mean(target))) * (np.sum(target - output)) / (len(target) - p_nmbe)
+        )
+        cvrmse = (1 / (np.mean(target))) * np.sqrt(
+            np.sum((target - output) ** 2) / (len(target) - p_cvrmse)
+        )
+        gof = (np.sqrt(2) / 2) * np.sqrt(cvrmse**2 + nmbe**2)
+
+        # If this is the last val run of training, get histogram data of residuals for each quantile
+        if last_run:
+            # resid = target - output
+            resid = semifinal_targs - semifinal_preds
+            hist_data = pd.DataFrame()
+            for i, q in enumerate(configs["qs"]):
+                tester = np.histogram(resid[:, i], bins=200)
+                y_vals = tester[0]
+                x_vals = 0.5 * (tester[1][1:] + tester[1][:-1])
+                hist_data["{}_x".format(q)] = x_vals
+                hist_data["{}_y".format(q)] = y_vals
+        else:
+            hist_data = []
+
+        # Add different error statistics to a dictionary
+        errors = {
+            "pinball_loss": pinball_loss,
+            "rmse": rmse,
+            "nmbe": nmbe,
+            "cvrmse": cvrmse,
+            "gof": gof,
+            "qs": QS,
+            "ace": ACE,
+            "is": IS,
+        }
+
+        predictions = pd.DataFrame(final_preds)
+        targets = pd.DataFrame(final_targs)
+
     return predictions, targets, errors, Q_vals, hist_data
 
 
@@ -453,6 +464,8 @@ def run_training(  # noqa: C901 TODO: remove no qa
     with open(path, "w") as fp:
         json.dump(configs, fp, indent=1)
 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     # initializing lists to store losses over epochs:
     train_loss = []
     train_iter = []
@@ -474,6 +487,9 @@ def run_training(  # noqa: C901 TODO: remove no qa
         logger.info(
             f"A new {configs['arch_type_variant']} {configs['arch_type']} model instantiated"
         )
+
+    # Move model and data to GPU, if availiable
+    model.to(device)
 
     # Instantiate Optimizer Class
     optimizer = torch.optim.Adam(
@@ -534,13 +550,6 @@ def run_training(  # noqa: C901 TODO: remove no qa
     )
     logger.info("Initial memory statistics (GB): {}".format(mem))
 
-    # Check for GPU
-    cuda_avail = torch.cuda.is_available()
-    if cuda_avail:
-        logger.info("GPU is available for training")
-    else:
-        logger.info("GPU is not available for training")
-
     if len(epoch_range) == 0:
         epoch = resume_num_epoch + 1
         logger.info(
@@ -596,17 +605,6 @@ def run_training(  # noqa: C901 TODO: remove no qa
             # Clear gradients w.r.t. parameters (from previous epoch). Same as model.zero_grad()
             optimizer.zero_grad()
 
-            # Get memory statistics
-            if n_iter % configs["eval_frequency"] == 0:
-                mem = virtual_memory()
-                mem = {
-                    "total": mem.total / 10**9,
-                    "available": mem.available / 10**9,
-                    "used": mem.used / 10**9,
-                    "free": mem.free / 10**9,
-                }
-                writer.add_scalars("Memory_GB", mem, n_iter)
-
             # FORWARD PASS to get output/logits.
             # train_y_at_t is (#batches x timesteps x 1)
             # features is     (#batches x timesteps x features)
@@ -621,7 +619,7 @@ def run_training(  # noqa: C901 TODO: remove no qa
             # train_y_at_t_nump = train_y_at_t.detach().numpy()
 
             # Calculate Loss
-            loss = quantile_loss(outputs, target, configs)
+            loss = quantile_loss(outputs, target, configs, device)
 
             # resid_stats.append(stats)
             train_loss.append(loss.data.item())
@@ -682,6 +680,7 @@ def run_training(  # noqa: C901 TODO: remove no qa
                     transformation_method,
                     configs,
                     False,
+                    device,
                 )
                 predictions = predictions.iloc[:, int(predictions.shape[1] / 2)]
                 temp_holder = errors
@@ -719,15 +718,6 @@ def run_training(  # noqa: C901 TODO: remove no qa
                 ax2.set_ylim(bottom=0, top=1)
                 writer.add_figure("QQ", fig2, n_iter)
 
-                # Write information about CPU usage to tensorboard
-                percentages = dict(
-                    zip(
-                        list(np.arange(1, num_logical_processors + 1).astype(str)),
-                        psutil.cpu_percent(interval=None, percpu=True),
-                    )
-                )
-                writer.add_scalars("CPU_Utilization", percentages, n_iter)
-
                 logger.info(
                     "Epoch: {} Iteration: {}. Train_loss: {}. val_loss: {}, LR: {}".format(
                         epoch_num,
@@ -754,6 +744,7 @@ def run_training(  # noqa: C901 TODO: remove no qa
         transformation_method,
         configs,
         True,
+        device,
     )
 
     # Save the residual distribution to a file
@@ -850,6 +841,8 @@ def run_validation(
     model, _, _ = load_model(configs)
     logger.info("Loaded model from file, given run_train=False\n")
 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     # Run val
     predictions, targets, errors, Q_vals, hist_data = test_processing(
         val_df,
@@ -861,6 +854,7 @@ def run_validation(
         transformation_method,
         configs,
         True,
+        device,
     )
 
     # Save the QQ information to a file
