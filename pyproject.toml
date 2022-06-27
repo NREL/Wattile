@@ -19,7 +19,6 @@ tensorboard = "^2.8.0"
 Pillow = "^9.0.0"
 numpy = "^1.21"
 plotly = "^5.8.2"
-kaleido = "^0.2.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
