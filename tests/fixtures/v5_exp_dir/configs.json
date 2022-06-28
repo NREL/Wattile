@@ -21,7 +21,7 @@
  "train_batch_size": 5,
  "val_batch_size": 1,
  "convert_csvs": false,
- "exp_dir": "v5_exp_dir",
+ "exp_dir": "tests/fixtures/v5_exp_dir",
  "data_dir": "/Users/heslinge/Repos/intelligentcampus-pred-analytics/tests/data",
  "resample_freq": 15,
  "sequence_freq_min": 15,

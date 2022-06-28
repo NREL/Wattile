@@ -14,6 +14,32 @@ PROJECT_DIRECTORY = pathlib.Path(__file__).resolve().parent
 logger = logging.getLogger(str(os.getpid()))
 
 
+def save_data_config_to_exp_dir(configs):
+    """save data config to exp dir
+
+    :param configs: config
+    :type configs: dict
+    """
+    dataset_dir = Path(configs["data_dir"]) / configs["building"]
+    configs_file_inputdata = dataset_dir / f"{configs['building']} Config.json"
+
+    with open(configs_file_inputdata, "r") as read_file:
+        data_configs = json.load(read_file)
+
+    data_configs = {
+        "predictors": [
+            p
+            for p in data_configs["predictors"]
+            if p["column"] in configs["predictor_columns"]
+        ],
+        "targets": data_configs["targets"],
+    }
+
+    train_data_config_path = Path(configs["exp_dir"]) / "train_data_config.json"
+    with open(train_data_config_path, "w+") as f:
+        json.dump(data_configs, f)
+
+
 def _concat_data_from_files(filepaths, needed_columns):
     """Concat the data in the files
 

@@ -7,7 +7,7 @@ import pathlib
 import pandas as pd
 
 import wattile.buildings_processing as bp
-from wattile.data_reading import read_dataset_from_file
+from wattile.data_reading import read_dataset_from_file, save_data_config_to_exp_dir
 
 PACKAGE_PATH = pathlib.Path(__file__).parent
 CONFIGS_PATH = PACKAGE_PATH / "configs" / "configs.json"
@@ -55,6 +55,9 @@ def create_input_dataframe(configs):
         data = pd.read_hdf(os.path.join(local_results_dir, "internal_test.h5"))
     else:
         data = read_dataset_from_file(configs)
+
+    if configs["use_case"] == "train":
+        save_data_config_to_exp_dir(configs)
 
     train_df, val_df = bp.prep_for_rnn(configs, data)
 
