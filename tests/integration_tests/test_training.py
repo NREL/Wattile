@@ -66,5 +66,5 @@ def test_model_trains(config_for_tests, tmpdir, config_patch):
     assert (exp_dir / "output.out").exists()
     assert (exp_dir / "torch_model").exists()
     assert (exp_dir / "train_stats.json").exists()
-    assert (exp_dir / "train_data_config.json").exists()
+    assert (exp_dir / "data_config.json").exists()
     assert (exp_dir / "configs.json").exists()

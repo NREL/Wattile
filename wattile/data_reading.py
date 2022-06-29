@@ -35,7 +35,7 @@ def save_data_config_to_exp_dir(configs):
         "targets": data_configs["targets"],
     }
 
-    train_data_config_path = Path(configs["exp_dir"]) / "train_data_config.json"
+    train_data_config_path = Path(configs["exp_dir"]) / "data_config.json"
     with open(train_data_config_path, "w+") as f:
         json.dump(data_configs, f)
 
