@@ -82,5 +82,8 @@
   "year": "2020",
   "month": [1, 2, 3, 4, 5, 6]
  },
- "trained_model_path":"./EnergyForecasting_Results/RNN_MSyntheticSiteElectricityMainTotalPower_T7-9-21"
+ "trained_model_path":"./EnergyForecasting_Results/RNN_MSyntheticSiteElectricityMainTotalPower_T7-9-21",
+ "plot_comparison":true,
+ "plot_comparison_portion_start":0.0,
+ "plot_comparison_portion_end":1.0
 }

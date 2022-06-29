@@ -74,5 +74,8 @@
  },
  "smoothing_alpha": 0.001,
  "test_method": "external",
- "plot_results": false
+ "plot_results": false,
+ "plot_comparison":true,
+ "plot_comparison_portion_start":0.0,
+ "plot_comparison_portion_end":1.0
 }

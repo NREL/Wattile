@@ -21,6 +21,7 @@ import wattile.buildings_processing as bp
 from wattile.error import ConfigsError
 from wattile.models.utils import init_model, load_model, save_model
 from wattile.util import factors
+from wattile.visualization import timeseries_comparison
 
 file_prefix = "/default"
 logger = logging.getLogger(str(os.getpid()))
@@ -1433,6 +1434,10 @@ def main(train_df, val_df, configs):
         # When training is done, wrap up the tensorboard files
         writer.flush()
         writer.close()
+
+        # Create visualization
+        if configs["plot_comparison"]:
+            timeseries_comparison(configs)
 
     elif configs["use_case"] == "validation":
         run_validation(
