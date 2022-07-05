@@ -1,4 +1,3 @@
-import importlib
 import json
 import logging
 import os
@@ -8,6 +7,7 @@ import pandas as pd
 
 import wattile.buildings_processing as bp
 from wattile.data_reading import read_dataset_from_file
+from wattile.models import MODELS_DICT
 
 PACKAGE_PATH = pathlib.Path(__file__).parent
 CONFIGS_PATH = PACKAGE_PATH / "configs" / "configs.json"
@@ -97,14 +97,14 @@ def run_model(configs, train_df, val_df):
 
     # Choose what ML architecture to use and execute the corresponding script
     if configs["arch_type"] == "RNN":
-        # What RNN version you are implementing? Specified in configs.
-        rnn_mod = importlib.import_module(
-            "wattile.models.algo_main_rnn_v{}".format(configs["arch_version"])
-        )
+        model = MODELS_DICT.get(configs["arch_version"])
+        if model is None:
+            ValueError(f"Invalid arch version {configs['arch_version']}")
+
         logger.info("training with arch version {}".format(configs["arch_version"]))
 
         # Prepare data for the RNN model type
-        results = rnn_mod.main(train_df, val_df, configs)
+        results = model.main(train_df, val_df, configs)
 
     logger.info(
         "Run with arch {}({}), on {}, with session ID {}, is done!".format(
