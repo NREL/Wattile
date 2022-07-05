@@ -66,5 +66,10 @@
             "unit": "kW",
             "pv": false
         }
-    ]
+    ],
+    "window": {
+        "interval": 15,
+        "lags": 12,
+        "duration": 195
+    }
 }

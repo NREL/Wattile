@@ -56,7 +56,7 @@ def test_model_trains(config_for_tests, tmpdir, config_patch):
     """
     # patch configs and create temporary, unquie output file
     config_for_tests.update(config_patch)
-    exp_dir = pathlib.Path("tmpdir") / "train_results"
+    exp_dir = pathlib.Path(tmpdir) / "train_results"
     config_for_tests["exp_dir"] = str(exp_dir)
 
     # train model

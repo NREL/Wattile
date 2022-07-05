@@ -21,18 +21,23 @@ def save_data_config_to_exp_dir(configs):
     :type configs: dict
     """
     dataset_dir = Path(configs["data_dir"]) / configs["building"]
-    configs_file_inputdata = dataset_dir / f"{configs['building']} Config.json"
+    dataset_configs_file = dataset_dir / f"{configs['building']} Config.json"
 
-    with open(configs_file_inputdata, "r") as read_file:
-        data_configs = json.load(read_file)
+    with open(dataset_configs_file, "r") as f:
+        dataset_configs = json.load(f)
 
     data_configs = {
         "predictors": [
             p
-            for p in data_configs["predictors"]
+            for p in dataset_configs["predictors"]
             if p["column"] in configs["predictor_columns"]
         ],
-        "targets": data_configs["targets"],
+        "targets": dataset_configs["targets"],
+        "window": {
+            "interval": configs["rolling_window"]["minutes"],
+            "lags": configs["window"],
+            "duration": (configs["window"] + 1) * configs["sequence_freq_min"],
+        },
     }
 
     train_data_config_path = Path(configs["exp_dir"]) / "data_config.json"
