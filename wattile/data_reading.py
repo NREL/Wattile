@@ -32,7 +32,11 @@ def save_data_config_to_exp_dir(configs):
             for p in dataset_configs["predictors"]
             if p["column"] in configs["predictor_columns"]
         ],
-        "targets": dataset_configs["targets"],
+        "target": next(
+            t
+            for t in dataset_configs["targets"]
+            if t["column"] == configs["target_var"]
+        ),
         "window": {
             "interval": configs["rolling_window"]["minutes"],
             "lags": configs["window"],
