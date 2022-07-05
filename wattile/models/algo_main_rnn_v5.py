@@ -31,7 +31,12 @@ logger = logging.getLogger(str(os.getpid()))
 
 class AlgoMainRNNv5:
     def size_the_batches(
-        train_data, val_data, tr_desired_batch_size, te_desired_batch_size, configs
+        self,
+        train_data,
+        val_data,
+        tr_desired_batch_size,
+        te_desired_batch_size,
+        configs,
     ):
         """
         Compute the batch sizes for training and val set
@@ -86,7 +91,7 @@ class AlgoMainRNNv5:
 
         return train_bt_size, val_bt_size, num_train_data
 
-    def data_transform(train_data, val_data, transformation_method, run_train):
+    def data_transform(self, train_data, val_data, transformation_method, run_train):
         """
         Normalize the training and val data according to a user-defined criteria
 
@@ -149,7 +154,7 @@ class AlgoMainRNNv5:
         return train_data, val_data
 
     def data_iterable_random(
-        train_data, val_data, run_train, train_batch_size, val_batch_size, configs
+        self, train_data, val_data, run_train, train_batch_size, val_batch_size, configs
     ):
         """
         Converts train and val data to torch data types (used only if splitting training and val set
@@ -219,7 +224,7 @@ class AlgoMainRNNv5:
 
         return train_loader, val_loader
 
-    def pinball_np(output, target, configs):
+    def pinball_np(self, output, target, configs):
         num_future_time_instances = (
             configs["S2S_stagger"]["initial_num"]
             + configs["S2S_stagger"]["secondary_num"]
@@ -236,7 +241,7 @@ class AlgoMainRNNv5:
 
         return loss
 
-    def quantile_loss(output, target, configs, device):
+    def quantile_loss(self, output, target, configs, device):
         """
         Computes loss for quantile methods.
 
@@ -279,6 +284,7 @@ class AlgoMainRNNv5:
         return loss
 
     def test_processing(  # noqa: C901 TODO: remove noqa
+        self,
         val_df,
         val_loader,
         model,
@@ -325,7 +331,7 @@ class AlgoMainRNNv5:
             semifinal_targs = np.concatenate(targets)
 
             # Calculate pinball loss (done on normalized data)
-            loss = AlgoMainRNNv5.pinball_np(semifinal_preds, semifinal_targs, configs)
+            loss = self.pinball_np(semifinal_preds, semifinal_targs, configs)
             pinball_loss = np.mean(np.mean(loss, 0))
 
             # Loading the training data stats for de-normalization purpose
@@ -387,7 +393,7 @@ class AlgoMainRNNv5:
 
             # Do quantile-related (q != 0.5) error statistics
             # QS (single point)
-            loss = AlgoMainRNNv5.pinball_np(output, target, configs)
+            loss = self.pinball_np(output, target, configs)
             QS = loss.mean()
             # PICP (single point for each bound)
             target_1D = target[:, range(num_timestamps)]
@@ -492,6 +498,7 @@ class AlgoMainRNNv5:
         return final_preds, errors, target, Q_vals
 
     def run_training(  # noqa: C901 TODO: remove noqa
+        self,
         train_loader,
         val_loader,
         val_df,
@@ -694,7 +701,7 @@ class AlgoMainRNNv5:
                 time3 = timeit.default_timer()
 
                 # Calculate Loss
-                loss = AlgoMainRNNv5.quantile_loss(outputs, target, configs, device)
+                loss = self.quantile_loss(outputs, target, configs, device)
 
                 # resid_stats.append(stats)
                 # train_loss.append(loss.data.item())
@@ -746,12 +753,7 @@ class AlgoMainRNNv5:
                 # Do a val batch every ___ iterations
                 if n_iter % configs["eval_frequency"] == 0:
                     # Evaluate val set
-                    (
-                        predictions,
-                        errors,
-                        measured,
-                        Q_vals,
-                    ) = AlgoMainRNNv5.test_processing(
+                    (predictions, errors, measured, Q_vals,) = self.test_processing(
                         val_df,
                         val_loader,
                         model,
@@ -837,7 +839,7 @@ class AlgoMainRNNv5:
         save_model(model, epoch, n_iter, filepath)
 
         # Once model is done training, process a final val set
-        predictions, errors, measured, Q_vals = AlgoMainRNNv5.test_processing(
+        predictions, errors, measured, Q_vals = self.test_processing(
             val_df,
             val_loader,
             model,
@@ -918,6 +920,7 @@ class AlgoMainRNNv5:
             json.dump(errors, fp, indent=1)
 
     def run_validation(
+        self,
         val_loader,
         val_df,
         writer,
@@ -941,7 +944,7 @@ class AlgoMainRNNv5:
         logger.info("Loaded model from file, given run_train=False\n")
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        predictions, errors, measured, Q_vals = AlgoMainRNNv5.test_processing(
+        predictions, errors, measured, Q_vals = self.test_processing(
             val_df,
             val_loader,
             model,
@@ -990,9 +993,10 @@ class AlgoMainRNNv5:
             )
 
         if configs.get("plot_results", True):
-            AlgoMainRNNv5._plot_results(configs, measured, predictions)
+            self._plot_results(configs, measured, predictions)
 
     def run_prediction(
+        self,
         val_loader,
         val_df,
         writer,
@@ -1074,7 +1078,7 @@ class AlgoMainRNNv5:
 
         return final_preds
 
-    def _plot_results(configs, measured, predictions):
+    def _plot_results(self, configs, measured, predictions):
         """
         Plot some stats about the predictions
         """  # # Plotting
@@ -1195,7 +1199,7 @@ class AlgoMainRNNv5:
         #     color="black",
         # )
 
-    def eval_trained_model(file_prefix, train_data, train_batch_size, configs):
+    def eval_trained_model(self, file_prefix, train_data, train_batch_size, configs):
         """
         Pass the entire training set through the trained model and get the predictions.
         Compute the residual and save to a DataFrame.
@@ -1266,7 +1270,7 @@ class AlgoMainRNNv5:
             os.path.join(file_prefix, "evaluated_training_model.h5"), key="df", mode="w"
         )
 
-    def plot_processed_model(file_prefix):
+    def plot_processed_model(self, file_prefix):
         """
         Plot the trained model, along with the residuals for the trained model.
         The plot will show what time periods are not being captured by the model.
@@ -1304,7 +1308,7 @@ class AlgoMainRNNv5:
         axarr[1].axhline(y=0, color="k")
         plt.show()
 
-    def plot_QQ(file_prefix):
+    def plot_QQ(self, file_prefix):
         """
         Plots a QQ plot for a specific study specified by an input file directory string.
 
@@ -1323,7 +1327,7 @@ class AlgoMainRNNv5:
         ax2.set_ylim(bottom=0, top=1)
         plt.show()
 
-    def plot_training_history(x):
+    def plot_training_history(self, x):
         """
         Platform for plotting results recorded in the shared csv results file. In development.
 
@@ -1334,7 +1338,7 @@ class AlgoMainRNNv5:
         data["iterable"] = x
         data.plot(x="iterable", subplots=True)
 
-    def plot_resid_dist(study_path, building, alphas, q):
+    def plot_resid_dist(self, study_path, building, alphas, q):
         """
         Plot the residual distribution over the smooth approximations
         for different values of the alpha smoothing parameter.
@@ -1395,13 +1399,13 @@ class AlgoMainRNNv5:
         ax1.legend()
         plt.show()
 
-    def plot_mid_train_stats(file_prefix):
+    def plot_mid_train_stats(self, file_prefix):
         data = pd.read_hdf(
             os.path.join(file_prefix, "mid_train_error_stats.h5"), key="df"
         )
         data.plot(x="n_iter", subplots=True)
 
-    def eval_tests(file_prefix, batch_tot):
+    def eval_tests(self, file_prefix, batch_tot):
         """
         Plot test results from file.
         Can be used with V5 algorithm.
@@ -1484,7 +1488,7 @@ class AlgoMainRNNv5:
         # ax1.legend()
         plt.show()
 
-    def predict(data, file_prefix):
+    def predict(self, data, file_prefix):
         # Get rid of this eventually
         # file_prefix = "EnergyForecasting_Results\RNN_MCafeMainPower(kW)_Tlaptop_baseline"
 
@@ -1651,7 +1655,7 @@ class AlgoMainRNNv5:
         )
         return final_preds
 
-    def main(train_df, val_df, configs):
+    def main(self, train_df, val_df, configs):
         """
         Main executable for prepping data for input to RNN model.
 
@@ -1690,7 +1694,7 @@ class AlgoMainRNNv5:
         val_df.reset_index(drop=True, inplace=True)
 
         # Normalization transformation
-        train_data, val_data = AlgoMainRNNv5.data_transform(
+        train_data, val_data = self.data_transform(
             train_data, val_data, transformation_method, run_train
         )
         logger.info(
@@ -1700,17 +1704,13 @@ class AlgoMainRNNv5:
         )
 
         # Size the batches
-        (
-            train_batch_size,
-            val_batch_size,
-            num_train_data,
-        ) = AlgoMainRNNv5.size_the_batches(
+        (train_batch_size, val_batch_size, num_train_data,) = self.size_the_batches(
             train_data, val_data, tr_desired_batch_size, te_desired_batch_size, configs
         )
 
         # Already did sequential padding: Convert to iterable dataset (DataLoaders)
         if configs["train_val_split"] == "Random":
-            train_loader, val_loader = AlgoMainRNNv5.data_iterable_random(
+            train_loader, val_loader = self.data_iterable_random(
                 train_data,
                 val_data,
                 run_train,
@@ -1723,7 +1723,7 @@ class AlgoMainRNNv5:
 
         # Start the training process
         if configs["use_case"] == "train":
-            AlgoMainRNNv5.run_training(
+            self.run_training(
                 train_loader,
                 val_loader,
                 val_df,
@@ -1739,7 +1739,7 @@ class AlgoMainRNNv5:
             )
 
         elif configs["use_case"] == "validation":
-            AlgoMainRNNv5.run_validation(
+            self.run_validation(
                 val_loader,
                 val_df,
                 writer,
@@ -1750,7 +1750,7 @@ class AlgoMainRNNv5:
             )
 
         elif configs["use_case"] == "prediction":
-            return AlgoMainRNNv5.run_prediction(
+            return self.run_prediction(
                 val_loader,
                 val_df,
                 writer,

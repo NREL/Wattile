@@ -97,9 +97,11 @@ def run_model(configs, train_df, val_df):
 
     # Choose what ML architecture to use and execute the corresponding script
     if configs["arch_type"] == "RNN":
-        model = MODELS_DICT.get(configs["arch_version"])
-        if model is None:
+        model_class = MODELS_DICT.get(configs["arch_version"])
+        if model_class is None:
             ValueError(f"Invalid arch version {configs['arch_version']}")
+        else:
+            model = model_class()
 
         logger.info("training with arch version {}".format(configs["arch_version"]))
 
