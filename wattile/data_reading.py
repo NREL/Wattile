@@ -42,7 +42,7 @@ def save_data_config_to_exp_dir(configs):
 
     train_data_config_path = Path(configs["exp_dir"]) / "data_config.json"
     with open(train_data_config_path, "w+") as f:
-        json.dump(data_configs, f)
+        json.dump(data_configs, f, ensure_ascii=False)
 
 
 def _concat_data_from_files(filepaths, needed_columns):
