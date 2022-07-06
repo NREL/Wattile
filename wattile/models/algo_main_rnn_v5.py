@@ -25,11 +25,14 @@ from wattile.error import ConfigsError
 from wattile.models.utils import init_model, load_model, save_model
 from wattile.util import factors
 
-file_prefix = "/default"
 logger = logging.getLogger(str(os.getpid()))
 
 
 class AlgoMainRNNv5:
+    def __init__(self, configs):
+        self.file_prefix = pathlib.Path(configs["exp_dir"])
+        self.file_prefix.mkdir(parents=True, exist_ok=True)
+
     def size_the_batches(
         self,
         train_data,
@@ -109,7 +112,7 @@ class AlgoMainRNNv5:
             train_stats["train_min"] = train_data.min().to_dict()
             train_stats["train_mean"] = train_data.mean(axis=0).to_dict()
             train_stats["train_std"] = train_data.std(axis=0).to_dict()
-            path = os.path.join(file_prefix, "train_stats.json")
+            path = os.path.join(self.file_prefix, "train_stats.json")
             with open(path, "w") as fp:
                 json.dump(train_stats, fp)
 
@@ -129,7 +132,7 @@ class AlgoMainRNNv5:
                 )
 
         # Reading back the train stats for normalizing val data w.r.t to train data
-        file_loc = os.path.join(file_prefix, "train_stats.json")
+        file_loc = os.path.join(self.file_prefix, "train_stats.json")
         with open(file_loc, "r") as f:
             train_stats = json.load(f)
 
@@ -335,7 +338,7 @@ class AlgoMainRNNv5:
             pinball_loss = np.mean(np.mean(loss, 0))
 
             # Loading the training data stats for de-normalization purpose
-            file_loc = os.path.join(file_prefix, "train_stats.json")
+            file_loc = os.path.join(self.file_prefix, "train_stats.json")
             with open(file_loc, "r") as f:
                 train_stats = json.load(f)
 
@@ -534,7 +537,7 @@ class AlgoMainRNNv5:
         input_dim = configs["input_dim"]
 
         # Write the configurations used for this training process to a json file
-        path = os.path.join(file_prefix, "configs.json")
+        path = os.path.join(self.file_prefix, "configs.json")
         with open(path, "w") as fp:
             json.dump(configs, fp, indent=1)
 
@@ -552,7 +555,7 @@ class AlgoMainRNNv5:
             model, resume_num_epoch, resume_n_iter = load_model(configs)
             epoch_range = np.arange(resume_num_epoch + 1, num_epochs + 1)
 
-            logger.info(f"Model loaded from: {file_prefix}")
+            logger.info(f"Model loaded from: {self.file_prefix}")
 
         else:
             model = init_model(configs)
@@ -747,7 +750,7 @@ class AlgoMainRNNv5:
 
                 # Save the model every ___ iterations
                 if n_iter % configs["eval_frequency"] == 0:
-                    filepath = os.path.join(file_prefix, "torch_model")
+                    filepath = os.path.join(self.file_prefix, "torch_model")
                     save_model(model, epoch, n_iter, filepath)
 
                 # Do a val batch every ___ iterations
@@ -779,15 +782,15 @@ class AlgoMainRNNv5:
 
                     # Save the final predictions to a file
                     # pd.DataFrame(predictions).to_hdf(
-                    #     os.path.join(file_prefix, "predictions.h5"), key="df", mode="w"
+                    #     os.path.join(self.file_prefix, "predictions.h5"), key="df", mode="w"
                     # )
                     # pd.DataFrame(measured).to_hdf(
-                    #     os.path.join(file_prefix, "measured.h5"), key="df", mode="w"
+                    #     os.path.join(self.file_prefix, "measured.h5"), key="df", mode="w"
                     # )
 
                     # Save the QQ information to a file
                     # Q_vals.to_hdf(
-                    #     os.path.join(file_prefix, "QQ_data.h5"), key="df", mode="w"
+                    #     os.path.join(self.file_prefix, "QQ_data.h5"), key="df", mode="w"
                     # )
 
                     # Add parody plot to TensorBoard
@@ -835,7 +838,7 @@ class AlgoMainRNNv5:
             epoch_num += 1
 
         # Once model training is done, save the current model state
-        filepath = os.path.join(file_prefix, "torch_model")
+        filepath = os.path.join(self.file_prefix, "torch_model")
         save_model(model, epoch, n_iter, filepath)
 
         # Once model is done training, process a final val set
@@ -854,23 +857,27 @@ class AlgoMainRNNv5:
 
         # Save the residual distribution to a file
         # hist_data.to_hdf(
-        #     os.path.join(file_prefix, "residual_distribution.h5"), key='df', mode='w'
+        #     os.path.join(self.file_prefix, "residual_distribution.h5"), key='df', mode='w'
         # )
 
         # Save the final predictions to a file
         pd.DataFrame(predictions).to_hdf(
-            os.path.join(file_prefix, "predictions.h5"), key="df", mode="w"
+            os.path.join(self.file_prefix, "predictions.h5"), key="df", mode="w"
         )
         pd.DataFrame(measured).to_hdf(
-            os.path.join(file_prefix, "measured.h5"), key="df", mode="w"
+            os.path.join(self.file_prefix, "measured.h5"), key="df", mode="w"
         )
 
         # Save the QQ information to a file
-        Q_vals.to_hdf(os.path.join(file_prefix, "QQ_data_Train.h5"), key="df", mode="w")
+        Q_vals.to_hdf(
+            os.path.join(self.file_prefix, "QQ_data_Train.h5"), key="df", mode="w"
+        )
 
         # Save the mid-train error statistics to a file
         mid_train_error_stats.to_hdf(
-            os.path.join(file_prefix, "mid_train_error_stats.h5"), key="df", mode="w"
+            os.path.join(self.file_prefix, "mid_train_error_stats.h5"),
+            key="df",
+            mode="w",
         )
 
         # End training timer
@@ -899,7 +906,7 @@ class AlgoMainRNNv5:
             writer = csv.writer(f, lineterminator="\n")
             writer.writerow(
                 [
-                    file_prefix,
+                    self.file_prefix,
                     errors["rmse"],
                     errors["cvrmse"],
                     errors["nmbe"],
@@ -915,7 +922,7 @@ class AlgoMainRNNv5:
         errors["train_time"] = train_time
         for k in errors:
             errors[k] = str(errors[k])
-        path = os.path.join(file_prefix, "error_stats_train.json")
+        path = os.path.join(self.file_prefix, "error_stats_train.json")
         with open(path, "w") as fp:
             json.dump(errors, fp, indent=1)
 
@@ -958,17 +965,19 @@ class AlgoMainRNNv5:
         )
 
         # Save the QQ information to a file
-        Q_vals.to_hdf(os.path.join(file_prefix, "QQ_data_Test.h5"), key="df", mode="w")
+        Q_vals.to_hdf(
+            os.path.join(self.file_prefix, "QQ_data_Test.h5"), key="df", mode="w"
+        )
 
         # Save the errors to a file
         for k in errors:
             errors[k] = str(errors[k])
-        path = os.path.join(file_prefix, "error_stats_test.json")
+        path = os.path.join(self.file_prefix, "error_stats_test.json")
         with open(path, "w") as fp:
             json.dump(errors, fp, indent=1)
 
         # If a training history csv file does not exist, make one
-        train_history_path = file_prefix / "Testing_history.csv"
+        train_history_path = self.file_prefix / "Testing_history.csv"
         if not train_history_path.exists():
             with open(train_history_path, "a") as f:
                 writer = csv.writer(f, lineterminator="\n")
@@ -981,7 +990,7 @@ class AlgoMainRNNv5:
             writer = csv.writer(f, lineterminator="\n")
             writer.writerow(
                 [
-                    file_prefix,
+                    self.file_prefix,
                     errors["rmse"],
                     errors["cvrmse"],
                     errors["nmbe"],
@@ -1091,7 +1100,7 @@ class AlgoMainRNNv5:
             test_data = pd.read_hdf(file, key="df")
         else:
             test_data = pd.read_hdf(
-                os.path.join(file_prefix, "internal_test.h5"), key="df"
+                os.path.join(self.file_prefix, "internal_test.h5"), key="df"
             )
 
         num_timestamps = (
@@ -1199,13 +1208,12 @@ class AlgoMainRNNv5:
         #     color="black",
         # )
 
-    def eval_trained_model(self, file_prefix, train_data, train_batch_size, configs):
+    def eval_trained_model(self, train_data, train_batch_size, configs):
         """
         Pass the entire training set through the trained model and get the predictions.
         Compute the residual and save to a DataFrame.
         Not used for Seq2Seq models
 
-        :param file_prefix: (str)
         :param train_data: (DataFrame)
         :param train_batch_size: (Float)
         :param configs: (Dictionary)
@@ -1243,7 +1251,7 @@ class AlgoMainRNNv5:
         semifinal_targs = np.concatenate(targets)
 
         # Get the saved binary mask from file
-        mask_file = os.path.join(file_prefix, "mask.h5")
+        mask_file = os.path.join(self.file_prefix, "mask.h5")
         mask = pd.read_hdf(mask_file, key="df")
         msk = mask["msk"]
         msk = mask["msk"] == 0
@@ -1267,24 +1275,25 @@ class AlgoMainRNNv5:
 
         # Save DataFrame to file
         processed_data.to_hdf(
-            os.path.join(file_prefix, "evaluated_training_model.h5"), key="df", mode="w"
+            os.path.join(self.file_prefix, "evaluated_training_model.h5"),
+            key="df",
+            mode="w",
         )
 
-    def plot_processed_model(self, file_prefix):
+    def plot_processed_model(self):
         """
         Plot the trained model, along with the residuals for the trained model.
         The plot will show what time periods are not being captured by the model.
 
-        :param file_prefix: (str) Relative path to the results folder
         for the model you want to study
         :return: None
         """
 
         # Read in training data and config file from results directory
         processed_data = pd.read_hdf(
-            os.path.join(file_prefix, "evaluated_training_model.h5"), key="df"
+            os.path.join(self.file_prefix, "evaluated_training_model.h5"), key="df"
         )
-        with open(os.path.join(file_prefix, "configs.json"), "r") as read_file:
+        with open(os.path.join(self.file_prefix, "configs.json"), "r") as read_file:
             configs = json.load(read_file)
 
         # Plot data
@@ -1308,14 +1317,13 @@ class AlgoMainRNNv5:
         axarr[1].axhline(y=0, color="k")
         plt.show()
 
-    def plot_QQ(self, file_prefix):
+    def plot_QQ(self):
         """
         Plots a QQ plot for a specific study specified by an input file directory string.
 
-        :param file_prefix: (str) Relative path to the training results directory in question.
         :return: None
         """
-        QQ_data = pd.read_hdf(os.path.join(file_prefix, "QQ_data.h5"), key="df")
+        QQ_data = pd.read_hdf(os.path.join(self.file_prefix, "QQ_data.h5"), key="df")
         fig2, ax2 = plt.subplots()
         ax2.scatter(QQ_data["q_requested"], QQ_data["q_actual"], s=20)
         # strait_line = np.linspace(min(min(QQ_data["q_requested"]), min(QQ_data["q_actual"])),
@@ -1399,24 +1407,23 @@ class AlgoMainRNNv5:
         ax1.legend()
         plt.show()
 
-    def plot_mid_train_stats(self, file_prefix):
+    def plot_mid_train_stats(self):
         data = pd.read_hdf(
-            os.path.join(file_prefix, "mid_train_error_stats.h5"), key="df"
+            os.path.join(self.file_prefix, "mid_train_error_stats.h5"), key="df"
         )
         data.plot(x="n_iter", subplots=True)
 
-    def eval_tests(self, file_prefix, batch_tot):
+    def eval_tests(self, batch_tot):
         """
         Plot test results from file.
         Can be used with V5 algorithm.
 
-        :param file_prefix:p
         :param configs:
         :return:
         """
 
         # Read in configs from file
-        with open(os.path.join(file_prefix, "configs.json"), "r") as read_file:
+        with open(os.path.join(self.file_prefix, "configs.json"), "r") as read_file:
             configs = json.load(read_file)
 
         num_timestamps = (
@@ -1425,17 +1432,17 @@ class AlgoMainRNNv5:
         )
 
         # Read in mask from file
-        mask_file = os.path.join(file_prefix, "mask.h5")
+        mask_file = os.path.join(self.file_prefix, "mask.h5")
         mask = pd.read_hdf(mask_file, key="df")
         msk = mask["msk"] == 0
 
         # Read in predictions from file
-        data = pd.read_hdf(os.path.join(file_prefix, "predictions.h5"), key="df")
+        data = pd.read_hdf(os.path.join(self.file_prefix, "predictions.h5"), key="df")
         data = np.array(data)
         data = data.reshape((data.shape[0], len(configs["qs"]), num_timestamps))
 
         # Read in measured values from file
-        measured = pd.read_hdf(os.path.join(file_prefix, "measured.h5"), key="df")
+        measured = pd.read_hdf(os.path.join(self.file_prefix, "measured.h5"), key="df")
         measured = np.array(measured)
 
         fig, ax1 = plt.subplots()
@@ -1488,12 +1495,12 @@ class AlgoMainRNNv5:
         # ax1.legend()
         plt.show()
 
-    def predict(self, data, file_prefix):
+    def predict(self, data):
         # Get rid of this eventually
-        # file_prefix = "EnergyForecasting_Results\RNN_MCafeMainPower(kW)_Tlaptop_baseline"
+        # self.file_prefix = "EnergyForecasting_Results\RNN_MCafeMainPower(kW)_Tlaptop_baseline"
 
         # Read configs from results directory
-        with open(os.path.join(file_prefix, "configs.json"), "r") as read_file:
+        with open(os.path.join(self.file_prefix, "configs.json"), "r") as read_file:
             configs = json.load(read_file)
 
         # Check if the supplied data matches the sequence length that the model was trained on
@@ -1550,7 +1557,7 @@ class AlgoMainRNNv5:
 
         # Do normalization
         # Reading back the train stats for normalizing test data w.r.t to train data
-        file_loc = os.path.join(file_prefix, "train_stats.json")
+        file_loc = os.path.join(self.file_prefix, "train_stats.json")
         with open(file_loc, "r") as f:
             train_stats = json.load(f)
 
@@ -1672,13 +1679,8 @@ class AlgoMainRNNv5:
         tr_desired_batch_size = configs["train_batch_size"]
         te_desired_batch_size = configs["val_batch_size"]
 
-        # Make results directory
-        global file_prefix
-        file_prefix = pathlib.Path(configs["exp_dir"])
-        file_prefix.mkdir(parents=True, exist_ok=True)
-
         # Create writer object for TensorBoard
-        writer_path = str(file_prefix)
+        writer_path = str(self.file_prefix)
         writer = SummaryWriter(writer_path)
         logger.info("Writer path: {}".format(writer_path))
 

@@ -101,7 +101,7 @@ def run_model(configs, train_df, val_df):
         if model_class is None:
             ValueError(f"Invalid arch version {configs['arch_version']}")
         else:
-            model = model_class()
+            model = model_class(configs)
 
         logger.info("training with arch version {}".format(configs["arch_version"]))
 
