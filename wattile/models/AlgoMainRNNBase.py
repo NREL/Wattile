@@ -145,12 +145,6 @@ class AlgoMainRNNBase(ABC):
 
         return train_data, val_data
 
-    def plot_mid_train_stats(self):
-        data = pd.read_hdf(
-            os.path.join(self.file_prefix, "mid_train_error_stats.h5"), key="df"
-        )
-        data.plot(x="n_iter", subplots=True)
-
     def main(self, train_df, val_df):
         """
         Main executable for prepping data for input to RNN model.
