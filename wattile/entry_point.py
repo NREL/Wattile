@@ -106,7 +106,7 @@ def run_model(configs, train_df, val_df):
         logger.info("training with arch version {}".format(configs["arch_version"]))
 
         # Prepare data for the RNN model type
-        results = model.main(train_df, val_df, configs)
+        results = model.main(train_df, val_df)
 
     logger.info(
         "Run with arch {}({}), on {}, with session ID {}, is done!".format(

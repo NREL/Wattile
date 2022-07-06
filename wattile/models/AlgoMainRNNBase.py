@@ -17,6 +17,7 @@ logger = logging.getLogger(str(os.getpid()))
 
 class AlgoMainRNNBase(ABC):
     def __init__(self, configs):
+        self.configs = configs
         self.file_prefix = Path(configs["exp_dir"])
         self.file_prefix.mkdir(parents=True, exist_ok=True)
 
@@ -26,7 +27,6 @@ class AlgoMainRNNBase(ABC):
         val_data,
         tr_desired_batch_size,
         te_desired_batch_size,
-        configs,
     ):
         """
         Compute the batch sizes for training and val set
@@ -38,7 +38,7 @@ class AlgoMainRNNBase(ABC):
         :return:
         """
 
-        if configs["use_case"] == "train":
+        if self.configs["use_case"] == "train":
             # Find factors of the length of train and val df's
             # and pick the closest one to the requested batch sizes
             train_bth = factors(train_data.shape[0])
@@ -151,22 +151,21 @@ class AlgoMainRNNBase(ABC):
         )
         data.plot(x="n_iter", subplots=True)
 
-    def main(self, train_df, val_df, configs):
+    def main(self, train_df, val_df):
         """
         Main executable for prepping data for input to RNN model.
 
         :param train_df: (DataFrame)
         :param val_df: (DataFrame)
-        :param configs: (Dictionary)
         :return: None
         """
 
-        transformation_method = configs["transformation_method"]
-        run_train = configs["use_case"] == "train"
-        num_epochs = configs["num_epochs"]
-        run_resume = configs["run_resume"]
-        tr_desired_batch_size = configs["train_batch_size"]
-        te_desired_batch_size = configs["val_batch_size"]
+        transformation_method = self.configs["transformation_method"]
+        run_train = self.configs["use_case"] == "train"
+        num_epochs = self.configs["num_epochs"]
+        run_resume = self.configs["run_resume"]
+        tr_desired_batch_size = self.configs["train_batch_size"]
+        te_desired_batch_size = self.configs["val_batch_size"]
 
         # Create writer object for TensorBoard
         writer_path = str(self.file_prefix)
@@ -196,22 +195,24 @@ class AlgoMainRNNBase(ABC):
 
         # Size the batches
         (train_batch_size, val_batch_size, num_train_data,) = self.size_the_batches(
-            train_data, val_data, tr_desired_batch_size, te_desired_batch_size, configs
+            train_data,
+            val_data,
+            tr_desired_batch_size,
+            te_desired_batch_size,
         )
 
         # Already did sequential padding: Convert to iterable dataset (DataLoaders)
-        if configs["train_val_split"] == "Random":
+        if self.configs["train_val_split"] == "Random":
             train_loader, val_loader = self.data_iterable_random(
                 train_data,
                 val_data,
                 run_train,
                 train_batch_size,
                 val_batch_size,
-                configs,
             )
         logger.info("Data converted to iterable dataset")
 
-        if configs["use_case"] == "train":
+        if self.configs["use_case"] == "train":
             self.run_training(
                 train_loader,
                 val_loader,
@@ -220,10 +221,9 @@ class AlgoMainRNNBase(ABC):
                 run_resume,
                 writer,
                 transformation_method,
-                configs,
                 train_batch_size,
                 val_batch_size,
-                configs["window"] + 1,
+                self.configs["window"] + 1,
                 num_train_data,
             )
 
@@ -232,29 +232,27 @@ class AlgoMainRNNBase(ABC):
             writer.close()
 
             # Create visualization
-            if configs["plot_comparison"]:
-                timeseries_comparison(configs)
+            if self.configs["plot_comparison"]:
+                timeseries_comparison(self.configs)
 
-        elif configs["use_case"] == "validation":
+        elif self.configs["use_case"] == "validation":
             self.run_validation(
                 val_loader,
                 val_df,
                 writer,
                 transformation_method,
-                configs,
                 val_batch_size,
-                configs["window"] + 1,
+                self.configs["window"] + 1,
             )
 
-        elif configs["use_case"] == "prediction":
+        elif self.configs["use_case"] == "prediction":
             return self.run_prediction(
                 val_loader,
                 val_df,
                 writer,
                 transformation_method,
-                configs,
                 val_batch_size,
-                configs["window"] + 1,
+                self.configs["window"] + 1,
             )
 
         else:

@@ -27,7 +27,7 @@ logger = logging.getLogger(str(os.getpid()))
 
 class AlgoMainRNNv5(AlgoMainRNNBase):
     def data_iterable_random(
-        self, train_data, val_data, run_train, train_batch_size, val_batch_size, configs
+        self, train_data, val_data, run_train, train_batch_size, val_batch_size
     ):
         """
         Converts train and val data to torch data types (used only if splitting training and val set
@@ -38,13 +38,12 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
         :param run_train: (Boolean)
         :param train_batch_size: (int)
         :param val_batch_size: (int)
-        :param configs: (Dictionary)
         :return:
         """
 
         # Check for GPU
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        # configs["device"] = device
+        # self.configs["device"] = device
         logger.info("Training on {}".format(device))
 
         # # Set default floating point precision
@@ -58,14 +57,15 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
         if run_train:
             # Define input feature matrix
             X_train = train_data.drop(
-                train_data.filter(like=configs["target_var"], axis=1).columns, axis=1
+                train_data.filter(like=self.configs["target_var"], axis=1).columns,
+                axis=1,
             ).values.astype(dtype="float32")
 
             # Output variable (batch*72), then (batch*(72*num of qs))
             y_train = train_data[
-                train_data.filter(like=configs["target_var"], axis=1).columns
+                train_data.filter(like=self.configs["target_var"], axis=1).columns
             ].values.astype(dtype="float32")
-            y_train = np.tile(y_train, len(configs["qs"]))
+            y_train = np.tile(y_train, len(self.configs["qs"]))
 
             # Convert to iterable tensors
             train_feat_tensor = torch.from_numpy(X_train).to(device)
@@ -79,15 +79,15 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
             train_loader = []
 
         # Do the same as above, but for the val set
-        # X_val = val_data.drop(configs['target_var'], axis=1).values.astype(dtype='float32')
+        # X_val = val_data.drop(self.configs['target_var'], axis=1).values.astype(dtype='float32')
         X_val = val_data.drop(
-            val_data.filter(like=configs["target_var"], axis=1).columns, axis=1
+            val_data.filter(like=self.configs["target_var"], axis=1).columns, axis=1
         ).values.astype(dtype="float32")
 
         y_val = val_data[
-            val_data.filter(like=configs["target_var"], axis=1).columns
+            val_data.filter(like=self.configs["target_var"], axis=1).columns
         ].values.astype(dtype="float32")
-        y_val = np.tile(y_val, len(configs["qs"]))
+        y_val = np.tile(y_val, len(self.configs["qs"]))
 
         val_feat_tensor = torch.from_numpy(X_val).to(device)
         val_target_tensor = torch.from_numpy(y_val).to(device)
@@ -97,14 +97,14 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
 
         return train_loader, val_loader
 
-    def pinball_np(self, output, target, configs):
+    def pinball_np(self, output, target):
         num_future_time_instances = (
-            configs["S2S_stagger"]["initial_num"]
-            + configs["S2S_stagger"]["secondary_num"]
+            self.configs["S2S_stagger"]["initial_num"]
+            + self.configs["S2S_stagger"]["secondary_num"]
         )
         resid = target - output
-        tau = np.repeat(configs["qs"], num_future_time_instances)
-        alpha = configs["smoothing_alpha"]
+        tau = np.repeat(self.configs["qs"], num_future_time_instances)
+        alpha = self.configs["smoothing_alpha"]
         log_term = np.zeros_like(resid)
         log_term[resid < 0] = np.log(1 + np.exp(resid[resid < 0] / alpha)) - (
             resid[resid < 0] / alpha
@@ -114,30 +114,29 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
 
         return loss
 
-    def quantile_loss(self, output, target, configs, device):
+    def quantile_loss(self, output, target, device):
         """
         Computes loss for quantile methods.
 
         :param output: (Tensor)
         :param target: (Tensor)
-        :param configs: (Dictionary)
         :return: (Tensor) Loss for this study (single number)
         """
 
         num_future_time_instances = (
-            configs["S2S_stagger"]["initial_num"]
-            + configs["S2S_stagger"]["secondary_num"]
+            self.configs["S2S_stagger"]["initial_num"]
+            + self.configs["S2S_stagger"]["secondary_num"]
         )
         resid = target - output
 
         # logger.info("Resid device: ".format(resid.device))
 
-        # tau = np.repeat(configs["qs"], num_future_time_instances)
-        tau = torch.tensor(configs["qs"], device=device).repeat_interleave(
+        # tau = np.repeat(self.configs["qs"], num_future_time_instances)
+        tau = torch.tensor(self.configs["qs"], device=device).repeat_interleave(
             num_future_time_instances
         )
 
-        alpha = configs["smoothing_alpha"]
+        alpha = self.configs["smoothing_alpha"]
         log_term = torch.zeros_like(resid, device=device)
         log_term[resid < 0] = torch.log(1 + torch.exp(resid[resid < 0] / alpha)) - (
             resid[resid < 0] / alpha
@@ -165,7 +164,6 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
         input_dim,
         val_batch_size,
         transformation_method,
-        configs,
         last_run,
         device,
     ):
@@ -179,14 +177,13 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
         :param input_dim:
         :param val_batch_size:
         :param transformation_method:
-        :param configs: (Dictionary)
         :return:
         """
         with torch.no_grad():
             # Plug the val set into the model
             num_timestamps = (
-                configs["S2S_stagger"]["initial_num"]
-                + configs["S2S_stagger"]["secondary_num"]
+                self.configs["S2S_stagger"]["initial_num"]
+                + self.configs["S2S_stagger"]["secondary_num"]
             )
             model.eval()
             preds = []
@@ -204,7 +201,7 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
             semifinal_targs = np.concatenate(targets)
 
             # Calculate pinball loss (done on normalized data)
-            loss = self.pinball_np(semifinal_preds, semifinal_targs, configs)
+            loss = self.pinball_np(semifinal_preds, semifinal_targs)
             pinball_loss = np.mean(np.mean(loss, 0))
 
             # Loading the training data stats for de-normalization purpose
@@ -222,15 +219,15 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
             if transformation_method == "minmaxscale":
                 maxs = np.tile(
                     train_max[
-                        train_max.filter(like=configs["target_var"], axis=0).index
+                        train_max.filter(like=self.configs["target_var"], axis=0).index
                     ].values,
-                    len(configs["qs"]),
+                    len(self.configs["qs"]),
                 )
                 mins = np.tile(
                     train_min[
-                        train_min.filter(like=configs["target_var"], axis=0).index
+                        train_min.filter(like=self.configs["target_var"], axis=0).index
                     ].values,
-                    len(configs["qs"]),
+                    len(self.configs["qs"]),
                 )
                 final_preds = (
                     (maxs - mins) * semifinal_preds
@@ -241,15 +238,15 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
             elif transformation_method == "standard":
                 stds = np.tile(
                     train_std[
-                        train_std.filter(like=configs["target_var"], axis=0).index
+                        train_std.filter(like=self.configs["target_var"], axis=0).index
                     ].values,
-                    len(configs["qs"]),
+                    len(self.configs["qs"]),
                 )
                 means = np.tile(
                     train_mean[
-                        train_mean.filter(like=configs["target_var"], axis=0).index
+                        train_mean.filter(like=self.configs["target_var"], axis=0).index
                     ].values,
-                    len(configs["qs"]),
+                    len(self.configs["qs"]),
                 )
                 final_preds = (semifinal_preds * stds) + means
                 final_targs = (semifinal_targs * stds) + means
@@ -266,14 +263,14 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
 
             # Do quantile-related (q != 0.5) error statistics
             # QS (single point)
-            loss = self.pinball_np(output, target, configs)
+            loss = self.pinball_np(output, target)
             QS = loss.mean()
             # PICP (single point for each bound)
             target_1D = target[:, range(num_timestamps)]
-            bounds = np.zeros((target.shape[0], int(len(configs["qs"]) / 2)))
+            bounds = np.zeros((target.shape[0], int(len(self.configs["qs"]) / 2)))
             PINC = []
-            split_arrays = np.split(output, len(configs["qs"]), axis=1)
-            for i, q in enumerate(configs["qs"]):
+            split_arrays = np.split(output, len(self.configs["qs"]), axis=1)
+            for i, q in enumerate(self.configs["qs"]):
                 if q == 0.5:
                     break
                 filtered_low = split_arrays[i]
@@ -284,7 +281,7 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
                 time_averaged = check_across_time.mean(axis=1)
                 bounds[:, i] = time_averaged
                 # Calculate theoretical PI
-                PINC.append(configs["qs"][-(i + 1)] - configs["qs"][i])
+                PINC.append(self.configs["qs"][-(i + 1)] - self.configs["qs"][i])
             PINC = np.array(PINC)
             PICP = bounds.mean(axis=0)
             # ACE (single point)
@@ -292,13 +289,15 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
             # IS (single point)
             ISs = []
             # Iterate through Prediction Intervals (pair of quantiles)
-            for i, q in enumerate(configs["qs"]):
+            for i, q in enumerate(self.configs["qs"]):
                 if q == 0.5:
                     break
                 low = split_arrays[i]  # (batches * time) for a single quantile
                 high = split_arrays[-(i + 1)]  # (batches * time) for a single quantile
                 x = target_1D  # (batches * time) for nominal results
-                alph = 1 - (configs["qs"][-(i + 1)] - configs["qs"][i])  # Single float
+                alph = 1 - (
+                    self.configs["qs"][-(i + 1)] - self.configs["qs"][i]
+                )  # Single float
                 IS = (
                     (high - low)
                     + (2 / alph) * (low - x) * (x < low)
@@ -310,21 +309,21 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
 
             # Compare theoretical and actual Q's
             temp_actual = []
-            for i, q in enumerate(configs["qs"]):
+            for i, q in enumerate(self.configs["qs"]):
                 act_prob = (split_arrays[i] > target_1D).mean()
                 temp_actual.append(act_prob)
             Q_vals = pd.DataFrame()
-            Q_vals["q_requested"] = configs["qs"]
+            Q_vals["q_requested"] = self.configs["qs"]
             Q_vals["q_actual"] = temp_actual
 
             # Do quantile-related (q == 0.5) error statistics
             # Get the predictions for the q=0.5 case
-            final_preds_median = np.split(final_preds, len(configs["qs"]), axis=1)[
-                int(len(configs["qs"]) / 2)
+            final_preds_median = np.split(final_preds, len(self.configs["qs"]), axis=1)[
+                int(len(self.configs["qs"]) / 2)
             ]
             output = pd.DataFrame(final_preds_median).values.squeeze()
-            target = np.split(final_targs, len(configs["qs"]), axis=1)[
-                int(len(configs["qs"]) / 2)
+            target = np.split(final_targs, len(self.configs["qs"]), axis=1)[
+                int(len(self.configs["qs"]) / 2)
             ]
             # Set "Number of adjustable model parameters" for each type of error statistic
             p_nmbe = 0
@@ -345,9 +344,9 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
             # get histogram data of residuals for each quantile (use normalized data)
             if last_run:
                 resid = semifinal_targs - semifinal_preds
-                split_arrays = np.split(resid, len(configs["qs"]), axis=1)
+                split_arrays = np.split(resid, len(self.configs["qs"]), axis=1)
                 hist_data = pd.DataFrame()
-                for i, q in enumerate(configs["qs"]):
+                for i, q in enumerate(self.configs["qs"]):
                     tester = np.histogram(split_arrays[i], bins=200)
                     y_vals = tester[0]
                     x_vals = 0.5 * (tester[1][1:] + tester[1][:-1])
@@ -379,7 +378,6 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
         run_resume,
         writer,
         transformation_method,
-        configs,
         train_batch_size,
         val_batch_size,
         seq_dim,
@@ -395,7 +393,6 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
         :param run_resume: (Boolean)
         :param writer: (SummaryWriter object)
         :param transformation_method: (str)
-        :param configs: (Dictionary)
         :param train_batch_size: (Float)
         :param val_batch_size: (Float)
         :param seq_dim: (Int)
@@ -403,13 +400,13 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
         :return: None
         """
 
-        weight_decay = float(configs["weight_decay"])
-        input_dim = configs["input_dim"]
+        weight_decay = float(self.configs["weight_decay"])
+        input_dim = self.configs["input_dim"]
 
         # Write the configurations used for this training process to a json file
         path = os.path.join(self.file_prefix, "configs.json")
         with open(path, "w") as fp:
-            json.dump(configs, fp, indent=1)
+            json.dump(self.configs, fp, indent=1)
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -422,17 +419,18 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
 
         # TODO: make resumed model and new model use the same number of epochs
         if run_resume:
-            model, resume_num_epoch, resume_n_iter = load_model(configs)
+            model, resume_num_epoch, resume_n_iter = load_model(self.configs)
             epoch_range = np.arange(resume_num_epoch + 1, num_epochs + 1)
 
             logger.info(f"Model loaded from: {self.file_prefix}")
 
         else:
-            model = init_model(configs)
+            model = init_model(self.configs)
             epoch_range = np.arange(num_epochs)
 
             logger.info(
-                f"A new {configs['arch_type_variant']} {configs['arch_type']} model instantiated"
+                f"A new {self.configs['arch_type_variant']} {self.configs['arch_type']} "
+                "model instantiated"
             )
 
         # Move model and data to GPU, if availiable
@@ -441,46 +439,46 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
         # Instantiate Optimizer Class
         optimizer = torch.optim.Adam(
             model.parameters(),
-            lr=configs["lr_config"]["base"],
+            lr=self.configs["lr_config"]["base"],
             weight_decay=weight_decay,
         )
 
         # Set up learning rate scheduler
-        if not configs["lr_config"]["schedule"]:
+        if not self.configs["lr_config"]["schedule"]:
             pass
         elif (
-            configs["lr_config"]["schedule"]
-            and configs["lr_config"]["type"] == "performance"
+            self.configs["lr_config"]["schedule"]
+            and self.configs["lr_config"]["type"] == "performance"
         ):
             # Patience (for our case) is # of iterations, not epochs,
-            # but configs specification is num epochs
+            # but self.configs specification is num epochs
             scheduler = ReduceLROnPlateau(
                 optimizer,
                 mode="min",
-                factor=configs["lr_config"]["factor"],
-                min_lr=configs["lr_config"]["min"],
+                factor=self.configs["lr_config"]["factor"],
+                min_lr=self.configs["lr_config"]["min"],
                 patience=int(
-                    configs["lr_config"]["patience"]
+                    self.configs["lr_config"]["patience"]
                     * (num_train_data / train_batch_size)
                 ),
                 verbose=True,
             )
         elif (
-            configs["lr_config"]["schedule"]
-            and configs["lr_config"]["type"] == "absolute"
+            self.configs["lr_config"]["schedule"]
+            and self.configs["lr_config"]["type"] == "absolute"
         ):
             # scheduler = StepLR(
             #     optimizer,
             #     step_size=int(
-            #         configs["lr_config"]["step_size"] * (num_train_data / train_batch_size)
+            #         self.configs["lr_config"]["step_size"] * (num_train_data / train_batch_size)
             #     ),
-            #     gamma=configs["lr_config"]["factor"],
+            #     gamma=self.configs["lr_config"]["factor"],
             # )
             pass
         else:
             raise ConfigsError(
                 "{} is not a supported method of LR scheduling".format(
-                    configs["lr_config"]["type"]
+                    self.configs["lr_config"]["type"]
                 )
             )
 
@@ -530,14 +528,14 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
 
             # Do manual learning rate scheduling, if requested
             if (
-                configs["lr_config"]["schedule"]
-                and configs["lr_config"]["type"] == "absolute"
-                and epoch_num % configs["lr_config"]["step_size"] == 0
+                self.configs["lr_config"]["schedule"]
+                and self.configs["lr_config"]["type"] == "absolute"
+                and epoch_num % self.configs["lr_config"]["step_size"] == 0
             ):
                 for param_group in optimizer.param_groups:
                     old_lr = param_group["lr"]
                     param_group["lr"] = (
-                        param_group["lr"] * configs["lr_config"]["factor"]
+                        param_group["lr"] * self.configs["lr_config"]["factor"]
                     )
                     new_lr = param_group["lr"]
                 logger.info(
@@ -562,7 +560,7 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
                 optimizer.zero_grad()
 
                 # # Get memory statistics
-                # if n_iter % configs["eval_frequency"] == 0:
+                # if n_iter % self.configs["eval_frequency"] == 0:
                 #     mem = virtual_memory()
                 #     mem = {"total": mem.total / 10 ** 9, "available": mem.available / 10 ** 9,
                 #            "used": mem.used / 10 ** 9, "free": mem.free / 10 ** 9}
@@ -574,7 +572,7 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
                 time3 = timeit.default_timer()
 
                 # Calculate Loss
-                loss = self.quantile_loss(outputs, target, configs, device)
+                loss = self.quantile_loss(outputs, target, device)
 
                 # resid_stats.append(stats)
                 # train_loss.append(loss.data.item())
@@ -593,8 +591,8 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
                 time5 = timeit.default_timer()
 
                 if (
-                    configs["lr_config"]["schedule"]
-                    and configs["lr_config"]["type"] == "performance"
+                    self.configs["lr_config"]["schedule"]
+                    and self.configs["lr_config"]["type"] == "performance"
                 ):
                     scheduler.step(loss)
 
@@ -619,12 +617,12 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
                 )
 
                 # Save the model every ___ iterations
-                if n_iter % configs["eval_frequency"] == 0:
+                if n_iter % self.configs["eval_frequency"] == 0:
                     filepath = os.path.join(self.file_prefix, "torch_model")
                     save_model(model, epoch, n_iter, filepath)
 
                 # Do a val batch every ___ iterations
-                if n_iter % configs["eval_frequency"] == 0:
+                if n_iter % self.configs["eval_frequency"] == 0:
                     # Evaluate val set
                     (predictions, errors, measured, Q_vals,) = self.test_processing(
                         val_df,
@@ -634,7 +632,6 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
                         input_dim,
                         val_batch_size,
                         transformation_method,
-                        configs,
                         False,
                         device,
                     )
@@ -665,10 +662,10 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
 
                     # Add parody plot to TensorBoard
                     # fig2, ax2 = plt.subplots()
-                    # ax2.scatter(predictions, val_df[configs["target_var"]], s=5, alpha=0.3)
+                    # ax2.scatter(predictions, val_df[self.configs["target_var"]], s=5, alpha=0.3)
                     # strait_line = np.linspace(
-                    #     min(min(predictions), min(val_df[configs["target_var"]])),
-                    #     max(max(predictions), max(val_df[configs["target_var"]])),
+                    #     min(min(predictions), min(val_df[self.configs["target_var"]])),
+                    #     max(max(predictions), max(val_df[self.configs["target_var"]])),
                     #     5,
                     # )
                     # ax2.plot(strait_line, strait_line, c="k")
@@ -720,7 +717,6 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
             input_dim,
             val_batch_size,
             transformation_method,
-            configs,
             True,
             device,
         )
@@ -802,7 +798,6 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
         val_df,
         writer,
         transformation_method,
-        configs,
         val_batch_size,
         seq_dim,
     ):
@@ -812,12 +807,11 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
         :param val_df: (DataFrame)
         :param writer: (SummaryWriter object)
         :param transformation_method: (str)
-        :param configs: (Dictionary)
         :param val_batch_size: (Float)
         :param seq_dim: (Int)
         :return: None
         """
-        model, _, _ = load_model(configs)
+        model, _, _ = load_model(self.configs)
         logger.info("Loaded model from file, given run_train=False\n")
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -826,10 +820,9 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
             val_loader,
             model,
             seq_dim,
-            configs["input_dim"],
+            self.configs["input_dim"],
             val_batch_size,
             transformation_method,
-            configs,
             False,
             device,
         )
@@ -871,8 +864,8 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
                 ]
             )
 
-        if configs.get("plot_results", True):
-            self._plot_results(configs, measured, predictions)
+        if self.configs.get("plot_results", True):
+            self._plot_results(measured, predictions)
 
     def run_prediction(
         self,
@@ -880,11 +873,10 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
         val_df,
         writer,
         transformation_method,
-        configs,
         val_batch_size,
         seq_dim,
     ):
-        model, _, _ = load_model(configs)
+        model, _, _ = load_model(self.configs)
         model.eval()
 
         logger.info("Loaded model from file, given run_train=False\n")
@@ -892,11 +884,11 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
         with torch.no_grad():
             preds = []
             for (feats, v) in val_loader:
-                features = Variable(feats.view(-1, seq_dim, configs["input_dim"]))
+                features = Variable(feats.view(-1, seq_dim, self.configs["input_dim"]))
                 outputs = model(features)
                 preds.append(outputs.cpu().numpy())
 
-            file_path = pathlib.Path(configs["exp_dir"]) / "train_stats.json"
+            file_path = pathlib.Path(self.configs["exp_dir"]) / "train_stats.json"
             with open(file_path, "r") as f:
                 train_stats = json.load(f)
 
@@ -912,15 +904,15 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
             if transformation_method == "minmaxscale":
                 maxs = np.tile(
                     train_max[
-                        train_max.filter(like=configs["target_var"], axis=0).index
+                        train_max.filter(like=self.configs["target_var"], axis=0).index
                     ].values,
-                    len(configs["qs"]),
+                    len(self.configs["qs"]),
                 )
                 mins = np.tile(
                     train_min[
-                        train_min.filter(like=configs["target_var"], axis=0).index
+                        train_min.filter(like=self.configs["target_var"], axis=0).index
                     ].values,
-                    len(configs["qs"]),
+                    len(self.configs["qs"]),
                 )
                 final_preds = (
                     (maxs - mins) * semifinal_preds
@@ -928,15 +920,15 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
             elif transformation_method == "standard":
                 stds = np.tile(
                     train_std[
-                        train_std.filter(like=configs["target_var"], axis=0).index
+                        train_std.filter(like=self.configs["target_var"], axis=0).index
                     ].values,
-                    len(configs["qs"]),
+                    len(self.configs["qs"]),
                 )
                 means = np.tile(
                     train_mean[
-                        train_mean.filter(like=configs["target_var"], axis=0).index
+                        train_mean.filter(like=self.configs["target_var"], axis=0).index
                     ].values,
-                    len(configs["qs"]),
+                    len(self.configs["qs"]),
                 )
                 final_preds = (semifinal_preds * stds) + means
             else:
@@ -947,25 +939,25 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
                 )
 
         num_timestamps = (
-            configs["S2S_stagger"]["initial_num"]
-            + configs["S2S_stagger"]["secondary_num"]
+            self.configs["S2S_stagger"]["initial_num"]
+            + self.configs["S2S_stagger"]["secondary_num"]
         )
         final_preds = np.array(final_preds)
         final_preds = final_preds.reshape(
-            (final_preds.shape[0], len(configs["qs"]), num_timestamps)
+            (final_preds.shape[0], len(self.configs["qs"]), num_timestamps)
         )
 
         return final_preds
 
-    def _plot_results(self, configs, measured, predictions):
+    def _plot_results(self, measured, predictions):
         """
         Plot some stats about the predictions
         """  # # Plotting
-        if configs["test_method"] == "external":
+        if self.configs["test_method"] == "external":
             file = os.path.join(
-                configs["data_dir"],
-                configs["building"],
-                "{}_external_test.h5".format(configs["target_var"]),
+                self.configs["data_dir"],
+                self.configs["building"],
+                "{}_external_test.h5".format(self.configs["target_var"]),
             )
             test_data = pd.read_hdf(file, key="df")
         else:
@@ -974,11 +966,11 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
             )
 
         num_timestamps = (
-            configs["S2S_stagger"]["initial_num"]
-            + configs["S2S_stagger"]["secondary_num"]
+            self.configs["S2S_stagger"]["initial_num"]
+            + self.configs["S2S_stagger"]["secondary_num"]
         )
         data = np.array(predictions)
-        data = data.reshape((data.shape[0], len(configs["qs"]), num_timestamps))
+        data = data.reshape((data.shape[0], len(self.configs["qs"]), num_timestamps))
 
         # Plotting the test set with ALL of the sequence forecasts
         fig, ax1 = plt.subplots()
@@ -988,8 +980,8 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
         for j in range(1, 100):
             time_index = pd.date_range(
                 start=test_data.index[j],
-                periods=configs["S2S_stagger"]["initial_num"],
-                freq="{}min".format(configs["resample_freq"]),
+                periods=self.configs["S2S_stagger"]["initial_num"],
+                freq="{}min".format(self.configs["resample_freq"]),
             )
             ax1.plot(time_index, measured[j, :], color="black", lw=1, zorder=5)
             if j == 70:
@@ -1003,13 +995,13 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
                 )
                 ax1.plot(
                     time_index,
-                    data[j, int(len(configs["qs"]) / 2), :],
+                    data[j, int(len(self.configs["qs"]) / 2), :],
                     label="Median Predicted Load",
                     color="Blue",
                     zorder=5,
                 )
-        #         for i in range(int(len(configs["qs"]) / 2) - 1, -1, -1):
-        #             q = configs["qs"][i]
+        #         for i in range(int(len(self.configs["qs"]) / 2) - 1, -1, -1):
+        #             q = self.configs["qs"][i]
         #             ax1.plot(
         #                 time_index, data[j, i, :], color="black", lw=0.3, alpha=1, zorder=i
         #             )
@@ -1027,7 +1019,7 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
         #                 data[j, -(i + 1), :],
         #                 color=cmap(q),
         #                 alpha=1,
-        #                 label="{}% PI".format(round((configs["qs"][-(i + 1)] - q) * 100)),
+        #                 label="{}% PI".format(round((self.configs["qs"][-(i + 1)] - q) * 100)),
         #                 zorder=i,
         #             )
 
@@ -1078,7 +1070,7 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
         #     color="black",
         # )
 
-    def eval_trained_model(self, train_data, train_batch_size, configs):
+    def eval_trained_model(self, train_data, train_batch_size):
         """
         Pass the entire training set through the trained model and get the predictions.
         Compute the residual and save to a DataFrame.
@@ -1086,18 +1078,17 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
 
         :param train_data: (DataFrame)
         :param train_batch_size: (Float)
-        :param configs: (Dictionary)
         :return: None
         """
 
         # Evaluate the training model
-        model, _, _ = load_model(configs)
-        X_train = train_data.drop(configs["target_var"], axis=1).values.astype(
+        model, _, _ = load_model(self.configs)
+        X_train = train_data.drop(self.configs["target_var"], axis=1).values.astype(
             dtype="float32"
         )
-        y_train = train_data[configs["target_var"]]
+        y_train = train_data[self.configs["target_var"]]
         y_train = y_train.values.astype(dtype="float32")
-        y_train = np.tile(y_train, (len(configs["qs"]), 1))
+        y_train = np.tile(y_train, (len(self.configs["qs"]), 1))
         y_train = np.transpose(y_train)
         train_feat_tensor = torch.from_numpy(X_train).type(torch.FloatTensor)
         train_target_tensor = torch.from_numpy(y_train).type(torch.FloatTensor)
@@ -1112,7 +1103,7 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
         targets = []
         for i, (feats, values) in enumerate(train_loader):
             features = Variable(
-                feats.view(-1, configs["window"] + 1, configs["input_dim"])
+                feats.view(-1, self.configs["window"] + 1, self.configs["input_dim"])
             )
             outputs = model(features)
             preds.append(outputs.data.numpy().squeeze())
@@ -1128,13 +1119,13 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
 
         # Adjust the datetime index so it is in line with the EC data
         target_index = mask.index[msk] + pd.DateOffset(
-            minutes=(configs["EC_future_gap"] * configs["resample_freq"])
+            minutes=(self.configs["EC_future_gap"] * self.configs["resample_freq"])
         )
         processed_data = pd.DataFrame(index=target_index)
 
         # Stick data into a DataFrame to be accessed later
         i = 0
-        for q in configs["qs"]:
+        for q in self.configs["qs"]:
             processed_data["{}_fit".format(q)] = semifinal_preds[:, i]
             i = i + 1
         processed_data["Target"] = semifinal_targs[:, 0]
@@ -1164,19 +1155,19 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
             os.path.join(self.file_prefix, "evaluated_training_model.h5"), key="df"
         )
         with open(os.path.join(self.file_prefix, "configs.json"), "r") as read_file:
-            configs = json.load(read_file)
+            self.configs = json.load(read_file)
 
         # Plot data
         f, axarr = plt.subplots(2, sharex=True)
-        for i, q in enumerate(configs["qs"]):
+        for i, q in enumerate(self.configs["qs"]):
             if q == 0.5:
                 break
             axarr[0].fill_between(
                 processed_data.index,
                 processed_data["{}_fit".format(q)],
-                processed_data["{}_fit".format(configs["qs"][-(i + 1)])],
+                processed_data["{}_fit".format(self.configs["qs"][-(i + 1)])],
                 alpha=0.2,
-                label="{}%".format(round((configs["qs"][-(i + 1)] - q) * 100)),
+                label="{}%".format(round((self.configs["qs"][-(i + 1)] - q) * 100)),
             )
         axarr[0].plot(processed_data["Target"], label="Target")
         axarr[0].plot(processed_data["0.5_fit"], label="q = 0.5")
@@ -1282,17 +1273,16 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
         Plot test results from file.
         Can be used with V5 algorithm.
 
-        :param configs:
         :return:
         """
 
         # Read in configs from file
         with open(os.path.join(self.file_prefix, "configs.json"), "r") as read_file:
-            configs = json.load(read_file)
+            self.configs = json.load(read_file)
 
         num_timestamps = (
-            configs["S2S_stagger"]["initial_num"]
-            + configs["S2S_stagger"]["secondary_num"]
+            self.configs["S2S_stagger"]["initial_num"]
+            + self.configs["S2S_stagger"]["secondary_num"]
         )
 
         # Read in mask from file
@@ -1303,7 +1293,7 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
         # Read in predictions from file
         data = pd.read_hdf(os.path.join(self.file_prefix, "predictions.h5"), key="df")
         data = np.array(data)
-        data = data.reshape((data.shape[0], len(configs["qs"]), num_timestamps))
+        data = data.reshape((data.shape[0], len(self.configs["qs"]), num_timestamps))
 
         # Read in measured values from file
         measured = pd.read_hdf(os.path.join(self.file_prefix, "measured.h5"), key="df")
@@ -1318,18 +1308,18 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
             time_index = pd.DatetimeIndex(
                 start=str(mask.index[start_index_init]), freq="15T", periods=72
             )
-            # end_index_init = start_index_init + configs["S2S_stagger"]["initial_num"]
+            # end_index_init = start_index_init + self.configs["S2S_stagger"]["initial_num"]
             # init_indices = np.arange(start_index_init, end_index_init)
 
-            # if configs["S2S_stagger"]["secondary_num"] > 0:
+            # if self.configs["S2S_stagger"]["secondary_num"] > 0:
             #     second_indices = np.arange(
-            #         end_index_init + (configs["S2S_stagger"]["decay"] - 1),
+            #         end_index_init + (self.configs["S2S_stagger"]["decay"] - 1),
             #         end_index_init
             #         + (
-            #             configs["S2S_stagger"]["secondary_num"]
-            #             * configs["S2S_stagger"]["decay"]
+            #             self.configs["S2S_stagger"]["secondary_num"]
+            #             * self.configs["S2S_stagger"]["decay"]
             #         ),
-            #         configs["S2S_stagger"]["decay"],
+            #         self.configs["S2S_stagger"]["decay"],
             #     )
             #     indices = np.append(init_indices, second_indices)
             #     time_index = mask.index[indices]
@@ -1340,11 +1330,11 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
             ax1.plot(time_index, measured[batch_num, :], label="Actual", color="black")
             ax1.plot(
                 time_index,
-                data[batch_num, int(len(configs["qs"]) / 2), :],
+                data[batch_num, int(len(self.configs["qs"]) / 2), :],
                 label="q = 0.5",
                 color="red",
             )
-            for i, q in enumerate(configs["qs"]):
+            for i, q in enumerate(self.configs["qs"]):
                 if q == 0.5:
                     break
                 ax1.fill_between(
@@ -1365,49 +1355,49 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
 
         # Read configs from results directory
         with open(os.path.join(self.file_prefix, "configs.json"), "r") as read_file:
-            configs = json.load(read_file)
+            self.configs = json.load(read_file)
 
         # Check if the supplied data matches the sequence length that the model was trained on
-        if not data.shape[0] == configs["window"] + 1:
+        if not data.shape[0] == self.configs["window"] + 1:
             raise ConfigsError(
                 "Input data has sequence length {}. Expected sequence length of {}".format(
-                    data.shape[0], configs["window"] + 1
+                    data.shape[0], self.configs["window"] + 1
                 )
             )
 
         # Data should be resampled, cleaned by this point. No nans.
 
         # Convert data to rolling average (except output) and create min, mean, and max columns
-        if configs["rolling_window"]["active"]:
-            target = data[configs["target_var"]]
-            X_data = data.drop(configs["target_var"], axis=1)
+        if self.configs["rolling_window"]["active"]:
+            target = data[self.configs["target_var"]]
+            X_data = data.drop(self.configs["target_var"], axis=1)
             mins = (
-                X_data.rolling(window=configs["rolling_window"]["minutes"] + 1)
+                X_data.rolling(window=self.configs["rolling_window"]["minutes"] + 1)
                 .min()
                 .add_suffix("_min")
             )
             means = (
-                X_data.rolling(window=configs["rolling_window"]["minutes"] + 1)
+                X_data.rolling(window=self.configs["rolling_window"]["minutes"] + 1)
                 .mean()
                 .add_suffix("_mean")
             )
             maxs = (
-                X_data.rolling(window=configs["rolling_window"]["minutes"] + 1)
+                X_data.rolling(window=self.configs["rolling_window"]["minutes"] + 1)
                 .max()
                 .add_suffix("_max")
             )
             data = pd.concat([mins, means, maxs], axis=1)
-            data[configs["target_var"]] = target
+            data[self.configs["target_var"]] = target
 
         # Add time-based variables
-        data = bp.time_dummies(data, configs)
+        data = bp.time_dummies(data, self.configs)
 
         # Get rid of this eventually
-        configs["input_dim"] = data.shape[1]
+        self.configs["input_dim"] = data.shape[1]
 
         # Do sequential padding of the inputs
         data_orig = data
-        for i in range(1, configs["window"] + 1):
+        for i in range(1, self.configs["window"] + 1):
             shifted = data_orig.shift(i)
             shifted = shifted.join(data, lsuffix="_lag{}".format(i))
             data = shifted
@@ -1431,27 +1421,27 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
         train_mean = pd.DataFrame(train_stats["train_mean"], index=[1]).iloc[0]
         train_std = pd.DataFrame(train_stats["train_std"], index=[1]).iloc[0]
         train_max = train_max.drop(
-            train_max.filter(like=configs["target_var"], axis=0).index
+            train_max.filter(like=self.configs["target_var"], axis=0).index
         )
         train_min = train_min.drop(
-            train_min.filter(like=configs["target_var"], axis=0).index
+            train_min.filter(like=self.configs["target_var"], axis=0).index
         )
         train_mean = train_mean.drop(
-            train_mean.filter(like=configs["target_var"], axis=0).index
+            train_mean.filter(like=self.configs["target_var"], axis=0).index
         )
         train_std = train_std.drop(
-            train_std.filter(like=configs["target_var"], axis=0).index
+            train_std.filter(like=self.configs["target_var"], axis=0).index
         )
 
         # Normalize data
-        if configs["transformation_method"] == "minmaxscale":
+        if self.configs["transformation_method"] == "minmaxscale":
             data = (data - train_min.values) / (train_max.values - train_min.values)
-        elif configs["transformation_method"] == "standard":
+        elif self.configs["transformation_method"] == "standard":
             data = (data - train_mean.values) / train_std.values
         else:
             raise ConfigsError(
                 "{} is not a supported form of data normalization".format(
-                    configs["transformation_method"]
+                    self.configs["transformation_method"]
                 )
             )
 
@@ -1460,12 +1450,14 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
         train_feat_tensor = torch.from_numpy(data).type(torch.FloatTensor)
 
         # Load model
-        model, _, _ = load_model(configs)
+        model, _, _ = load_model(self.configs)
 
         # Evaluate model
         model.eval()
         features = Variable(
-            train_feat_tensor.view(-1, configs["window"] + 1, configs["input_dim"])
+            train_feat_tensor.view(
+                -1, self.configs["window"] + 1, self.configs["input_dim"]
+            )
         )
         outputs = model(features)
         semifinal_preds = outputs.data.numpy()
@@ -1480,48 +1472,48 @@ class AlgoMainRNNv5(AlgoMainRNNBase):
         # Do de-normalization process on predictions and targets from test set
 
         # Do de-normalization process on predictions and targets from test set
-        if configs["transformation_method"] == "minmaxscale":
+        if self.configs["transformation_method"] == "minmaxscale":
             maxs = np.tile(
                 train_max[
-                    train_max.filter(like=configs["target_var"], axis=0).index
+                    train_max.filter(like=self.configs["target_var"], axis=0).index
                 ].values,
-                len(configs["qs"]),
+                len(self.configs["qs"]),
             )
             mins = np.tile(
                 train_min[
-                    train_min.filter(like=configs["target_var"], axis=0).index
+                    train_min.filter(like=self.configs["target_var"], axis=0).index
                 ].values,
-                len(configs["qs"]),
+                len(self.configs["qs"]),
             )
             final_preds = (
                 (maxs - mins) * semifinal_preds
             ) + mins  # (batch x (num time predictions * num q's)))
-        elif configs["transformation_method"] == "standard":
+        elif self.configs["transformation_method"] == "standard":
             stds = np.tile(
                 train_std[
-                    train_std.filter(like=configs["target_var"], axis=0).index
+                    train_std.filter(like=self.configs["target_var"], axis=0).index
                 ].values,
-                len(configs["qs"]),
+                len(self.configs["qs"]),
             )
             means = np.tile(
                 train_mean[
-                    train_mean.filter(like=configs["target_var"], axis=0).index
+                    train_mean.filter(like=self.configs["target_var"], axis=0).index
                 ].values,
-                len(configs["qs"]),
+                len(self.configs["qs"]),
             )
             final_preds = (semifinal_preds * stds) + means
         else:
             raise ConfigsError(
                 "{} is not a supported form of data normalization".format(
-                    configs["transformation_method"]
+                    self.configs["transformation_method"]
                 )
             )
 
         final_preds = final_preds.reshape(
             (
-                configs["S2S_stagger"]["initial_num"]
-                + configs["S2S_stagger"]["secondary_num"],
-                len(configs["qs"]),
+                self.configs["S2S_stagger"]["initial_num"]
+                + self.configs["S2S_stagger"]["secondary_num"],
+                len(self.configs["qs"]),
             )
         )
         return final_preds
