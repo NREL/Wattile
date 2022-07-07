@@ -1,5 +1,4 @@
 {
- "building": "Synthetic Site",
  "target_var": "Synthetic Site Electricity Main Total Power",
  "start_time": "2018-01-01T00:00:00-07:00",
  "end_time": "2022-01-01T00:00:00-07:00",
@@ -23,6 +22,7 @@
  "convert_csvs": false,
  "exp_dir": "",
  "data_dir": "",
+ "data_config": "",
  "resample_freq": 15,
  "sequence_freq_min": 15,
  "splicer": {

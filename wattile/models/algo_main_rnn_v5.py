@@ -1050,7 +1050,6 @@ def _plot_results(configs, measured, predictions):
     if configs["test_method"] == "external":
         file = os.path.join(
             configs["data_dir"],
-            configs["building"],
             "{}_external_test.h5".format(configs["target_var"]),
         )
         test_data = pd.read_hdf(file, key="df")
