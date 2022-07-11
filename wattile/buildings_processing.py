@@ -11,7 +11,10 @@ import torch
 
 # import tables
 from wattile.error import ConfigsError
-from wattile.time_processing import add_processed_time_columns
+from wattile.time_processing import (
+    add_processed_time_columns,
+    regular_interval_resample,
+)
 
 PROJECT_DIRECTORY = pathlib.Path(__file__).resolve().parent
 
@@ -356,11 +359,14 @@ def _preprocess_data(configs, data):
     # sort and trim data specified time period
     data = correct_timestamps(configs, data)
 
+    # Resample data with regular interval
+    data = regular_interval_resample(data, configs)
+
     # Add time-based features
     data = add_processed_time_columns(data, configs)
 
     # Add statistics features
-    if configs["rolling_window"]["active"]:
+    if configs["feat_stats"]["active"]:
         data = rolling_stats(data, configs)
 
     # Add lag features
@@ -403,47 +409,28 @@ def prep_for_rnn(configs, data):
 
 
 def rolling_stats(data, configs):
+
     # Convert data to rolling average (except output) and create min, mean, and max columns
     target = data[configs["target_var"]]
     X_data = data.drop(configs["target_var"], axis=1)
 
-    # inferring timestep (frequency) from the dataframe
-    dt = configs["data_time_interval_mins"]
-    windowsize = int(configs["rolling_window"]["minutes"] / dt) + 1
-    logging.debug(
-        "Feature extraction: rolling window size = {} rows".format(windowsize)
+    # adding rolling window statistics
+    mins = (
+        X_data.rolling(window=configs["feat_stats"]["window_width"], min_periods=1)
+        .min()
+        .add_suffix("_min")
     )
-
-    if configs["rolling_window"]["type"] == "rolling":
-        mins = X_data.rolling(window=windowsize, min_periods=1).min().add_suffix("_min")
-        means = (
-            X_data.rolling(window=windowsize, min_periods=1).mean().add_suffix("_mean")
-        )
-        maxs = X_data.rolling(window=windowsize, min_periods=1).max().add_suffix("_max")
-        data = pd.concat([mins, means, maxs], axis=1)
-        data[configs["target_var"]] = target
-
-    elif configs["rolling_window"]["type"] == "binned":
-        mins = (
-            X_data.resample(str(configs["rolling_window"]["minutes"]) + "T")
-            .min()
-            .add_suffix("_min")
-        )
-        means = (
-            X_data.resample(str(configs["rolling_window"]["minutes"]) + "T")
-            .mean()
-            .add_suffix("_mean")
-        )
-        maxs = (
-            X_data.resample(str(configs["rolling_window"]["minutes"]) + "T")
-            .max()
-            .add_suffix("_max")
-        )
-        data = pd.concat([mins, means, maxs], axis=1)
-        data[configs["target_var"]] = (
-            pd.DataFrame(target)
-            .resample(str(configs["rolling_window"]["minutes"]) + "T")
-            .mean()
-        )
+    means = (
+        X_data.rolling(window=configs["feat_stats"]["window_width"], min_periods=1)
+        .mean()
+        .add_suffix("_mean")
+    )
+    maxs = (
+        X_data.rolling(window=configs["feat_stats"]["window_width"], min_periods=1)
+        .max()
+        .add_suffix("_max")
+    )
+    data = pd.concat([mins, means, maxs], axis=1)
+    data[configs["target_var"]] = target
 
     return data
