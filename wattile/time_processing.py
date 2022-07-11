@@ -6,6 +6,23 @@ import pandas as pd
 from wattile.holidays import HOLIDAYS
 
 
+def regular_interval_resample(data, configs):
+    """Resample data with regular interval. Config options are
+
+    window_increment: Measurement interval
+
+    :param configs: configs
+    :type configs: dict
+    :param data: data
+    :type data: pd.dataframe
+    :return: data
+    :rtype: pd.dataframe
+    """
+    data = data.resample(rule=configs["feat_stats"]["window_increment"]).mean()
+
+    return data
+
+
 def _add_hour_based_columns(data, configs):
     """Add hour based columns to data based on "HOD" configs. Config options are
 
