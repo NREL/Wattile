@@ -11,10 +11,7 @@ import torch
 
 # import tables
 from wattile.error import ConfigsError
-from wattile.time_processing import (
-    add_processed_time_columns,
-    regular_interval_resample,
-)
+from wattile.time_processing import add_processed_time_columns
 
 PROJECT_DIRECTORY = pathlib.Path(__file__).resolve().parent
 
@@ -358,9 +355,6 @@ def _preprocess_data(configs, data):
 
     # sort and trim data specified time period
     data = correct_timestamps(configs, data)
-
-    # Resample data with regular interval
-    data = regular_interval_resample(data, configs)
 
     # Add time-based features
     data = add_processed_time_columns(data, configs)
