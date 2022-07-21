@@ -120,7 +120,11 @@ def test_rolling_stats():
         configs={
             "target_var": "target_var",
             "data_time_interval_mins": 1,
-            "rolling_window": {"active": True, "type": "binned", "minutes": 15},
+            "feat_stats": {
+                "active": True,
+                "window_width": "15min",
+                "window_increment": "15min",
+            },
         },
     )
 
