@@ -404,23 +404,46 @@ def prep_for_rnn(configs, data):
 
 def rolling_stats(data, configs):
 
+    # reading configuration parameters
+    # window_closing and window_position are hard coded for now
+    window_width = configs["feat_stats"]["window_width"]
+    window_increment = configs["feat_stats"]["window_increment"]
+    window_closing = "right"  # left, right
+    window_position = "backward"  # forward, center, backward
+
     # seperate predictors and target
     target = data[configs["target_var"]]
     X_data = data.drop(configs["target_var"], axis=1)
 
     # resampling for each statistics separately
     data_resample_min = X_data.resample(
-        rule=configs["feat_stats"]["window_increment"]
+        rule=window_increment, closed=window_closing, label=window_closing
     ).agg(["min"])
     data_resample_max = X_data.resample(
-        rule=configs["feat_stats"]["window_increment"]
+        rule=window_increment, closed=window_closing, label=window_closing
     ).agg(["max"])
     data_resample_sum = X_data.resample(
-        rule=configs["feat_stats"]["window_increment"]
+        rule=window_increment, closed=window_closing, label=window_closing
     ).agg(["sum"])
     data_resample_count = X_data.resample(
-        rule=configs["feat_stats"]["window_increment"]
+        rule=window_increment, closed=window_closing, label=window_closing
     ).agg(["count"])
+
+    # setting configuration settings depending on window_position and window_closing
+    if window_position == "backward":
+        arg_center = False
+    elif window_position == "center":
+        arg_center = True
+    elif window_position == "forward":
+        arg_center = False
+        data_resample_min = data_resample_min[::-1]
+        data_resample_max = data_resample_max[::-1]
+        data_resample_sum = data_resample_sum[::-1]
+        data_resample_count = data_resample_count[::-1]
+        if window_closing == "left":
+            window_closing = "right"
+        elif window_closing == "right":
+            window_closing = "left"
 
     # merging multiindex column header
     data_resample_min.columns = data_resample_min.columns.map("_".join)
@@ -428,52 +451,24 @@ def rolling_stats(data, configs):
     data_resample_sum.columns = data_resample_sum.columns.map("_".join)
     data_resample_count.columns = data_resample_count.columns.map("_".join)
 
-    # setting configuration settings depending on window_position and window_closing
-    if configs["feat_stats"]["window_position"] == "backward":
-        arg_center = False
-    elif configs["feat_stats"]["window_position"] == "center":
-        arg_center = True
-    elif configs["feat_stats"]["window_position"] == "forward":
-        arg_center = False
-        data_resample_min = data_resample_min[::-1]
-        data_resample_max = data_resample_max[::-1]
-        data_resample_sum = data_resample_sum[::-1]
-        data_resample_count = data_resample_count[::-1]
-        if configs["feat_stats"]["window_closing"] == "left":
-            window_closing = "right"
-        elif configs["feat_stats"]["window_closing"] == "right":
-            window_closing = "left"
-
     # adding rolling window statistics: minimum
     mins = data_resample_min.rolling(
-        window=configs["feat_stats"]["window_width"],
-        min_periods=1,
-        center=arg_center,
-        closed=window_closing,
+        window=window_width, min_periods=1, center=arg_center, closed=window_closing
     ).min()
 
     # adding rolling window statistics: maximum
     maxs = data_resample_max.rolling(
-        window=configs["feat_stats"]["window_width"],
-        min_periods=1,
-        center=arg_center,
-        closed=window_closing,
+        window=window_width, min_periods=1, center=arg_center, closed=window_closing
     ).max()
 
     # adding rolling window statistics: sum
     sums = data_resample_sum.rolling(
-        window=configs["feat_stats"]["window_width"],
-        min_periods=1,
-        center=arg_center,
-        closed=window_closing,
+        window=window_width, min_periods=1, center=arg_center, closed=window_closing
     ).sum()
 
     # adding rolling window statistics: count
     counts = data_resample_count.rolling(
-        window=configs["feat_stats"]["window_width"],
-        min_periods=1,
-        center=arg_center,
-        closed=window_closing,
+        window=window_width, min_periods=1, center=arg_center, closed=window_closing
     ).sum()  # this has to be sum for proper count calculation
 
     # adding rolling window statistics: mean
@@ -482,19 +477,15 @@ def rolling_stats(data, configs):
     np.seterr(invalid="ignore")  # supress/hide the warning
     means.loc[:, :] = sums.values / counts.values
 
-    # combining statistics
+    # combining min and max stats
     data = pd.concat([mins, maxs, means], axis=1)
 
     # reordering dataframe based on window_position
-    if (configs["feat_stats"]["window_position"] == "backward") | (
-        configs["feat_stats"]["window_position"] == "center"
-    ):
-        pass
-    elif configs["feat_stats"]["window_position"] == "forward":
+    if window_position == "forward":
         data = data[::-1]
 
     # adding target back to the dataframe
-    target = target.asfreq(freq=configs["feat_stats"]["window_increment"], method="pad")
+    target = target.asfreq(freq=window_increment, method="pad")
     data[configs["target_var"]] = target
 
     return data
