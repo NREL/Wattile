@@ -33,8 +33,6 @@
    "active": true,
    "window_width": "15min",
    "window_increment": "15min",
-   "window_position": "forward",
-   "window_closing": "left"
  },
  "window": 12,
  "EC_future_gap_min": 0,
