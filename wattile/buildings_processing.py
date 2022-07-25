@@ -417,18 +417,13 @@ def rolling_stats(data, configs):
     X_data = data.drop(configs["target_var"], axis=1)
 
     # resampling for each statistics separately
-    data_resample_min = X_data.resample(
+    data_resampler = X_data.resample(
         rule=window_increment, closed=window_closing, label=window_closing
-    ).agg(["min"])
-    data_resample_max = X_data.resample(
-        rule=window_increment, closed=window_closing, label=window_closing
-    ).agg(["max"])
-    data_resample_sum = X_data.resample(
-        rule=window_increment, closed=window_closing, label=window_closing
-    ).agg(["sum"])
-    data_resample_count = X_data.resample(
-        rule=window_increment, closed=window_closing, label=window_closing
-    ).agg(["count"])
+    )
+    data_resample_min = data_resampler.min().add_suffix("_min")
+    data_resample_max = data_resampler.max().add_suffix("_max")
+    data_resample_sum = data_resampler.sum().add_suffix("_sum")
+    data_resample_count = data_resampler.count().add_suffix("_count")
 
     # setting configuration settings depending on window_position and window_closing
     if window_position == "backward":
@@ -445,12 +440,6 @@ def rolling_stats(data, configs):
             window_closing = "right"
         elif window_closing == "right":
             window_closing = "left"
-
-    # merging multiindex column header
-    data_resample_min.columns = data_resample_min.columns.map("_".join)
-    data_resample_max.columns = data_resample_max.columns.map("_".join)
-    data_resample_sum.columns = data_resample_sum.columns.map("_".join)
-    data_resample_count.columns = data_resample_count.columns.map("_".join)
 
     # adding rolling window statistics: minimum
     mins = data_resample_min.rolling(
