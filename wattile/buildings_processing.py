@@ -406,6 +406,7 @@ def rolling_stats(data, configs):
 
     # reading configuration parameters
     # window_closing and window_position are hard coded for now
+    # default is right-closed and backward-looking window
     window_width = configs["feat_stats"]["window_width"]
     window_increment = configs["feat_stats"]["window_increment"]
     window_closing = "right"  # left, right
