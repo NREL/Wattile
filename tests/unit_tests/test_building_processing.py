@@ -119,7 +119,6 @@ def test_rolling_stats():
         input,
         configs={
             "target_var": "target_var",
-            "data_time_interval_mins": 1,
             "feat_stats": {
                 "active": True,
                 "window_width": "5min",
