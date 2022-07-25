@@ -422,7 +422,8 @@ def rolling_stats(data, configs):
     )
     data_resample_min = data_resampler.min().add_suffix("_min")
     data_resample_max = data_resampler.max().add_suffix("_max")
-    data_resample_mean = data_resampler.mean().add_suffix("_mean")
+    data_resample_sum = data_resampler.sum().add_suffix("_sum")
+    data_resample_count = data_resampler.count().add_suffix("_count")
 
     # setting configuration settings depending on window_position and window_closing
     if window_position == "backward":
@@ -433,7 +434,8 @@ def rolling_stats(data, configs):
         arg_center = False
         data_resample_min = data_resample_min[::-1]
         data_resample_max = data_resample_max[::-1]
-        data_resample_mean = data_resample_mean[::-1]
+        data_resample_sum = data_resample_sum[::-1]
+        data_resample_count = data_resample_count[::-1]
         if window_closing == "left":
             window_closing = "right"
         elif window_closing == "right":
@@ -449,10 +451,21 @@ def rolling_stats(data, configs):
         window=window_width, min_periods=1, center=arg_center, closed=window_closing
     ).max()
 
-    # adding rolling window statistics: mean
-    means = data_resample_mean.rolling(
+    # adding rolling window statistics: sum
+    sums = data_resample_sum.rolling(
         window=window_width, min_periods=1, center=arg_center, closed=window_closing
-    ).mean()
+    ).sum()
+
+    # adding rolling window statistics: count
+    counts = data_resample_count.rolling(
+        window=window_width, min_periods=1, center=arg_center, closed=window_closing
+    ).sum()  # this has to be sum for proper count calculation
+
+    # adding rolling window statistics: mean
+    means = sums.copy()
+    means.columns = means.columns.str.replace("_sum", "_mean")
+    np.seterr(invalid="ignore")  # supress/hide the warning
+    means.loc[:, :] = sums.values / counts.values
 
     # combining min and max stats
     data = pd.concat([mins, maxs, means], axis=1)
