@@ -122,8 +122,8 @@ def test_rolling_stats():
             "data_time_interval_mins": 1,
             "feat_stats": {
                 "active": True,
-                "window_width": "15min",
-                "window_increment": "15min",
+                "window_width": "5min",
+                "window_increment": "1min",
             },
         },
     )
