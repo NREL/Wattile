@@ -1,11 +1,19 @@
 import datetime as dt
+from pathlib import Path
 
 import pandas as pd
 import pytest
 from pandas.testing import assert_frame_equal
 
-from wattile.buildings_processing import correct_predictor_columns, correct_timestamps
+from wattile.buildings_processing import (
+    correct_predictor_columns,
+    correct_timestamps,
+    rolling_stats,
+)
 from wattile.error import ConfigsError
+
+TESTS_PATH = Path(__file__).parents[1]
+TESTS_FIXTURES_PATH = TESTS_PATH / "fixtures"
 
 JULY_14_CONFIG = {
     "start_time": "1997-07-14T00:00:00-00:00",
@@ -100,3 +108,33 @@ def test_correct_timestamps_reorder():
             )
         ),
     )
+
+
+def test_rolling_stats():
+    input = pd.read_csv(TESTS_FIXTURES_PATH / "rolling_stats_input.csv")
+    input["var1"] = pd.to_numeric(input["var1"], errors="coerce")
+    input["var2"] = pd.to_numeric(input["var2"], errors="coerce")
+    input["var1"] = input["var1"].astype(float)
+    input["var2"] = input["var2"].astype(float)
+    input["ts"] = pd.to_datetime(input["ts"], exact=False, utc=True)
+    input = input.set_index("ts")
+
+    output = rolling_stats(
+        input,
+        configs={
+            "target_var": "target_var",
+            "feat_stats": {
+                "active": True,
+                "window_width": "5min",
+                "window_increment": "1min",
+            },
+        },
+    )
+
+    expected_output = pd.read_csv(TESTS_FIXTURES_PATH / "rolling_stats_output.csv")
+    expected_output["ts"] = pd.to_datetime(expected_output["ts"], exact=False, utc=True)
+    expected_output = expected_output.set_index("ts")
+    expected_output = expected_output.asfreq("T")
+    expected_output = expected_output.astype("float64")
+
+    pd.testing.assert_frame_equal(output, expected_output)

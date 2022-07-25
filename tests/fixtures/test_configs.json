@@ -29,10 +29,10 @@
   "active": true,
   "time": "3h"
  },
- "rolling_window": {
-  "active": true,
-  "type": "binned",
-  "minutes": 15
+ "feat_stats": {
+   "active": true,
+   "window_width": "15min",
+   "window_increment": "15min"
  },
  "window": 12,
  "EC_future_gap_min": 0,
