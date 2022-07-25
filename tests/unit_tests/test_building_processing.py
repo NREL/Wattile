@@ -134,5 +134,7 @@ def test_rolling_stats():
     expected_output = pd.read_csv(TESTS_FIXTURES_PATH / "rolling_stats_output.csv")
     expected_output["ts"] = pd.to_datetime(expected_output["ts"], exact=False, utc=True)
     expected_output = expected_output.set_index("ts")
+    expected_output = expected_output.asfreq("T")
+    expected_output = expected_output.astype("float64")
 
     pd.testing.assert_frame_equal(output, expected_output)
