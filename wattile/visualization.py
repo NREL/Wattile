@@ -222,7 +222,7 @@ def timeseries_comparison(configs):
     fig.update_xaxes(
         title=dict(
             text="<b>Appended Multiple Time Windows</b><br>(single window size = {})".format(
-                configs["splicer"]["time"]
+                configs["sequential_splicer"]["window_width"]
             ),
             font=dict(
                 size=14,
