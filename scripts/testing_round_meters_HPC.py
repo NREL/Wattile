@@ -2,7 +2,7 @@ import json
 import os
 from multiprocessing import Process
 
-import intelcamp.entry_point as epb
+import wattile.entry_point as epb
 
 # User inputs
 meters = [
@@ -47,10 +47,10 @@ for meter_ID in meters:
     # Execute
     # target = configs["target_var"].replace(" ", "").replace("(", "-").replace(")", "")
     # python_file = (
-    #     "/projects/intelcamp20/repos/intelligentcampus-pred-analytics/entry_point.py"
+    #     "/projects/intelcamp20/repos/wattile/entry_point.py"
     # )
     # stdout_file = (
-    #     "/projects/intelcamp20/repos/intelcamp20-hpc/results/Outputs/"
+    #     "/projects/intelcamp20/repos/wattile/results/Outputs/"
     #     f"stdout_{configs['target_var'].replace(' ', '')}.txt"
     # )
     # os.system("python -u " + python_file + " > " + stdout_file + " &")

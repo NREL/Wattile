@@ -1,4 +1,4 @@
-Intelligent Campus
+Wattile
 ====
 
 Deep learning algorithms for probabilistic forecasting of time series building performance data.
@@ -30,7 +30,7 @@ poetry run pre-commit install
 Quick Start
 ----
 
-IntelCamp has two main functions:
+Wattile has two main functions:
 - `create_input_dataframe`, which creates a dataframe for model input from the configs file and raw data.
 - `run_model` which runs either training, validation, or prediction on input dataframes according to the configs.
 
@@ -43,13 +43,14 @@ Docs for the format of the output is [here](./tests/fixtures/v5_exp_dir/README.m
 ```py
 import json 
 
-from intelcamp.entry_point import create_input_dataframe, run_model
+from wattile.entry_point import create_input_dataframe, run_model
 
-with open("intelcamp/configs.json", "r") as f:
+with open("wattile/configs.json", "r") as f:
     configs = json.load(f)
 
+init_logging(configs["exp_dir"])  
 train_df, val_df = create_input_dataframe(configs)
-run_model(configs, train_val, val_df)
+run_model(configs, train_df, val_df)
 ```
 
 After running, you may use tensordboard on the results.

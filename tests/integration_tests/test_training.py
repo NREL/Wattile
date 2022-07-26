@@ -3,7 +3,7 @@ import pathlib
 
 import pytest
 
-import intelcamp.entry_point as epb
+import wattile.entry_point as epb
 
 TESTS_PATH = pathlib.Path(__file__).parents[1]
 TESTS_FIXTURES_PATH = TESTS_PATH / "fixtures"

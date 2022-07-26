@@ -5,13 +5,13 @@
  "end_time": "2022-01-01T00:00:00-07:00",
  "data_time_interval_mins": 1,
  "predictor_columns": [
-  "SRRL BMS Dew Point Temperature",
-  "SRRL BMS Diffuse Horizontal Irradiance",
-  "SRRL BMS Direct Normal Irradiance",
-  "SRRL BMS Dry Bulb Temperature",
-  "SRRL BMS Global Horizontal Irradiance",
-  "SRRL BMS Relative Humidity",
-  "SRRL BMS Wind Speed at 19'"
+  "Synthetic Weather Station Dew Point Temperature",
+  "Synthetic Weather Station Diffuse Horizontal Irradiance",
+  "Synthetic Weather Station Direct Normal Irradiance",
+  "Synthetic Weather Station Dry Bulb Temperature",
+  "Synthetic Weather Station Global Horizontal Irradiance",
+  "Synthetic Weather Station Relative Humidity",
+  "Synthetic Weather Station Wind Speed"
  ],
  "arch_version": 5,
  "exp_id": "Debugging_for_rolling_stats",
@@ -21,8 +21,8 @@
  "train_batch_size": 5,
  "val_batch_size": 1,
  "convert_csvs": false,
- "exp_dir": "tests/fixtures/v5_exp_dir",
- "data_dir": "tests/data",
+ "exp_dir": "v5_exp_dir",
+ "data_dir": "/Users/heslinge/Repos/intelligentcampus-pred-analytics/tests/data",
  "resample_freq": 15,
  "sequence_freq_min": 15,
  "splicer": {

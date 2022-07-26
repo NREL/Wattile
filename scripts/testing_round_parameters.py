@@ -13,7 +13,7 @@ iterable_type (type) - The type of variable "iterable" as it is defined in confi
 import json
 import os
 
-import intelcamp.entry_point as epb
+import wattile.entry_point as epb
 
 runs = {}
 

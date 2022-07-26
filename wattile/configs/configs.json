@@ -3,15 +3,14 @@
  "target_var": "Synthetic Site Electricity Main Total Power",
  "start_time": "2018-01-01T00:00:00-07:00",
  "end_time": "2022-01-01T00:00:00-07:00",
- "data_time_interval_mins":1,
  "predictor_columns": [
-    "SRRL BMS Dew Point Temperature",
-    "SRRL BMS Diffuse Horizontal Irradiance",
-    "SRRL BMS Direct Normal Irradiance",
-    "SRRL BMS Dry Bulb Temperature",
-    "SRRL BMS Global Horizontal Irradiance",
-    "SRRL BMS Relative Humidity",
-    "SRRL BMS Wind Speed at 19'"
+    "Synthetic Weather Station Dew Point Temperature",
+    "Synthetic Weather Station Diffuse Horizontal Irradiance",
+    "Synthetic Weather Station Direct Normal Irradiance",
+    "Synthetic Weather Station Dry Bulb Temperature",
+    "Synthetic Weather Station Global Horizontal Irradiance",
+    "Synthetic Weather Station Relative Humidity",
+    "Synthetic Weather Station Wind Speed"
  ],
  "arch_version": 4,
  "exp_id": "7-9-21",
@@ -27,18 +26,18 @@
  "sequence_freq_min": 15,
  "splicer": {
   "active": false,
-  "time": "12hr"
+  "time": "1W"
  },
- "rolling_window": {
+ "feat_stats": {
   "active": true,
-  "type": "binned",
-  "minutes": 15
+  "window_width": "15min",
+  "window_increment": "15min"
  },
  "window": 24,
  "EC_future_gap_min": 0,
- "DOW": ["binary_reg"],
+ "DOW": ["binary_reg", "binary_fuzzy"],
  "MOY": ["sincos"],
- "HOD": ["sincos"],
+ "HOD": ["sincos", "binary_reg", "binary_fuzzy"],
  "Holidays": false,
  "S2S_stagger": {
   "initial_num": 72,
@@ -47,7 +46,7 @@
  },
  "train_size_factor": 1,
  "train_val_split": "Random",
- "data_split": "80:10:10",
+ "data_split": "80:20:0",
  "random_seed": 382,
  "qs": [
   0.025,
@@ -62,7 +61,7 @@
  ],
  "use_case": "train",
  "run_resume": false,
- "num_epochs": 2,
+ "num_epochs": 100,
  "weight_decay": 0.001,
  "hidden_nodes": 25,
  "layer_dim": 1,
@@ -82,5 +81,8 @@
   "year": "2020",
   "month": [1, 2, 3, 4, 5, 6]
  },
- "trained_model_path":"./EnergyForecasting_Results/RNN_MSyntheticSiteElectricityMainTotalPower_T7-9-21"
+ "trained_model_path":"./EnergyForecasting_Results/RNN_MSyntheticSiteElectricityMainTotalPower_T7-9-21",
+ "plot_comparison":true,
+ "plot_comparison_portion_start":0.0,
+ "plot_comparison_portion_end":1.0
 }

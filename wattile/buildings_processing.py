@@ -1,5 +1,4 @@
 import datetime as dt
-import json
 import logging
 import os
 import pathlib
@@ -11,7 +10,8 @@ import seaborn as sns
 import torch
 
 # import tables
-from intelcamp.error import ConfigsError
+from wattile.error import ConfigsError
+from wattile.time_processing import add_processed_time_columns
 
 PROJECT_DIRECTORY = pathlib.Path(__file__).resolve().parent
 
@@ -26,106 +26,10 @@ def check_complete(torch_file, des_epochs):
     :return:
     """
 
-    torch_model = torch.load(torch_file)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    torch_model = torch.load(torch_file, map_location=device)
     check = des_epochs == torch_model["epoch_num"] + 1
     return check
-
-
-def time_dummies(data, configs):  # noqa: C901 TODO: remove noqa
-    """
-    Adds time-based indicator variables. Elements in configs describe what method to use.
-    regDummy: Binary indicator variables, one column for each entry.
-    fuzzy: Same as regDummy, but binary edges are smoothed.
-    sincos: Cyclic time variables are used (one sin column and one cos column)
-
-    :param data: (DataFrame)
-    :param configs: (Dictionary)
-    :return: (Dictionary)
-    """
-
-    # HOD
-    if "sincos" in configs["HOD"]:
-        data["sin_HOD"] = np.sin(
-            2
-            * np.pi
-            * (
-                data.index.hour * 3600 + data.index.minute * 60 + data.index.second
-            ).values
-            / (24 * 60 * 60)
-        )
-        data["cos_HOD"] = np.cos(
-            2
-            * np.pi
-            * (
-                data.index.hour * 3600 + data.index.minute * 60 + data.index.second
-            ).values
-            / (24 * 60 * 60)
-        )
-    if "binary_reg" in configs["HOD"]:
-        for i in range(0, 24):
-            data["HOD_binary_reg_{}".format(i)] = (data.index.hour == i).astype(int)
-
-        # data = data.join(
-        #     pd.get_dummies(
-        #         data.index.hour, prefix="HOD_binary_reg", drop_first=True
-        #     ).set_index(data.index)
-        # )
-
-    if "binary_fuzzy" in configs["HOD"]:
-        for HOD in range(0, 24):
-            data["HOD_binary_fuzzy_{}".format(HOD)] = np.maximum(
-                1 - abs((data.index.hour + data.index.minute / 60) - HOD) / 1, 0
-            )
-
-    # DOW
-    if "binary_reg" in configs["DOW"]:
-        for i in range(0, 7):
-            data["DOW_binary_reg_{}".format(i)] = (data.index.weekday == i).astype(int)
-        # data = data.join(
-        #     pd.get_dummies(
-        #         data.index.weekday, prefix="DOW_binary_reg", drop_first=True
-        #     ).set_index(data.index)
-        # )
-    if "binary_fuzzy" in configs["DOW"]:
-        for i in range(0, 7):
-            data["DOW_binary_fuzzy_{}".format(i)] = (data.index.weekday == i).astype(
-                int
-            )
-        # data = data.join(
-        #     pd.get_dummies(
-        #         data.index.weekday, prefix="DOW_binary_fuzzy", drop_first=True
-        #     ).set_index(data.index)
-        # )
-        for DOW in range(0, 7):
-            data["DOW_binary_fuzzy_{}".format(DOW)] = np.maximum(
-                1 - abs((data.index.weekday + data.index.hour / 24) - DOW) / 1, 0
-            )
-
-    # MOY
-    if "sincos" in configs["MOY"]:
-        data["sin_MOY"] = np.sin(2 * np.pi * (data.index.dayofyear).values / (365))
-        data["cos_MOY"] = np.cos(2 * np.pi * (data.index.dayofyear).values / (365))
-
-    if "Holidays" in configs and configs["Holidays"]:
-        # -----Automatic (fetches federal holidays based on dates in imported data
-        # cal = USFederalHolidayCalendar()
-        # holidays = cal.holidays(
-        #     start=data.index[0].strftime("%Y-%m-%d"),
-        #     end=data.index[-1].strftime("%Y-%m-%d"),
-        # )
-        # data['Holiday'] = pd.to_datetime(data.index.date).isin(holidays).astype(int)
-
-        # -----Read from JSON file
-        with open("holidays.json", "r") as read_file:
-            holidays = json.load(read_file)
-        data["Holiday"] = pd.to_datetime(data.index.date).isin(holidays).astype(int)
-        data["Holiday_forward"] = (
-            pd.to_datetime(data.index.date + dt.timedelta(days=1))
-            .isin(holidays)
-            .astype(int)
-        )
-
-    return data
 
 
 def input_data_split(data, configs):
@@ -453,10 +357,10 @@ def _preprocess_data(configs, data):
     data = correct_timestamps(configs, data)
 
     # Add time-based features
-    data = time_dummies(data, configs)
+    data = add_processed_time_columns(data, configs)
 
     # Add statistics features
-    if configs["rolling_window"]["active"]:
+    if configs["feat_stats"]["active"]:
         data = rolling_stats(data, configs)
 
     # Add lag features
@@ -499,47 +403,79 @@ def prep_for_rnn(configs, data):
 
 
 def rolling_stats(data, configs):
-    # Convert data to rolling average (except output) and create min, mean, and max columns
+
+    # reading configuration parameters
+    # window_closing and window_position are hard coded for now
+    # default is right-closed and backward-looking window
+    window_width = configs["feat_stats"]["window_width"]
+    window_increment = configs["feat_stats"]["window_increment"]
+    window_closing = "right"  # left, right
+    window_position = "backward"  # forward, center, backward
+
+    # seperate predictors and target
     target = data[configs["target_var"]]
     X_data = data.drop(configs["target_var"], axis=1)
 
-    # inferring timestep (frequency) from the dataframe
-    dt = configs["data_time_interval_mins"]
-    windowsize = int(configs["rolling_window"]["minutes"] / dt) + 1
-    logging.debug(
-        "Feature extraction: rolling window size = {} rows".format(windowsize)
+    # resampling for each statistics separately
+    data_resampler = X_data.resample(
+        rule=window_increment, closed=window_closing, label=window_closing
     )
+    data_resample_min = data_resampler.min().add_suffix("_min")
+    data_resample_max = data_resampler.max().add_suffix("_max")
+    data_resample_sum = data_resampler.sum().add_suffix("_sum")
+    data_resample_count = data_resampler.count().add_suffix("_count")
 
-    if configs["rolling_window"]["type"] == "rolling":
-        mins = X_data.rolling(window=windowsize, min_periods=1).min().add_suffix("_min")
-        means = (
-            X_data.rolling(window=windowsize, min_periods=1).mean().add_suffix("_mean")
-        )
-        maxs = X_data.rolling(window=windowsize, min_periods=1).max().add_suffix("_max")
-        data = pd.concat([mins, means, maxs], axis=1)
-        data[configs["target_var"]] = target
+    # setting configuration settings depending on window_position and window_closing
+    if window_position == "backward":
+        arg_center = False
+    elif window_position == "center":
+        arg_center = True
+    elif window_position == "forward":
+        arg_center = False
+        data_resample_min = data_resample_min[::-1]
+        data_resample_max = data_resample_max[::-1]
+        data_resample_sum = data_resample_sum[::-1]
+        data_resample_count = data_resample_count[::-1]
+        if window_closing == "left":
+            window_closing = "right"
+        elif window_closing == "right":
+            window_closing = "left"
 
-    elif configs["rolling_window"]["type"] == "binned":
-        mins = (
-            X_data.resample(str(configs["rolling_window"]["minutes"]) + "T")
-            .min()
-            .add_suffix("_min")
-        )
-        means = (
-            X_data.resample(str(configs["rolling_window"]["minutes"]) + "T")
-            .mean()
-            .add_suffix("_mean")
-        )
-        maxs = (
-            X_data.resample(str(configs["rolling_window"]["minutes"]) + "T")
-            .max()
-            .add_suffix("_max")
-        )
-        data = pd.concat([mins, means, maxs], axis=1)
-        data[configs["target_var"]] = (
-            pd.DataFrame(target)
-            .resample(str(configs["rolling_window"]["minutes"]) + "T")
-            .mean()
-        )
+    # adding rolling window statistics: minimum
+    mins = data_resample_min.rolling(
+        window=window_width, min_periods=1, center=arg_center, closed=window_closing
+    ).min()
+
+    # adding rolling window statistics: maximum
+    maxs = data_resample_max.rolling(
+        window=window_width, min_periods=1, center=arg_center, closed=window_closing
+    ).max()
+
+    # adding rolling window statistics: sum
+    sums = data_resample_sum.rolling(
+        window=window_width, min_periods=1, center=arg_center, closed=window_closing
+    ).sum()
+
+    # adding rolling window statistics: count
+    counts = data_resample_count.rolling(
+        window=window_width, min_periods=1, center=arg_center, closed=window_closing
+    ).sum()  # this has to be sum for proper count calculation
+
+    # adding rolling window statistics: mean
+    means = sums.copy()
+    means.columns = means.columns.str.replace("_sum", "_mean")
+    np.seterr(invalid="ignore")  # supress/hide the warning
+    means.loc[:, :] = sums.values / counts.values
+
+    # combining min and max stats
+    data = pd.concat([mins, maxs, means], axis=1)
+
+    # reordering dataframe based on window_position
+    if window_position == "forward":
+        data = data[::-1]
+
+    # adding target back to the dataframe
+    target = target.asfreq(freq=window_increment, method="pad")
+    data[configs["target_var"]] = target
 
     return data

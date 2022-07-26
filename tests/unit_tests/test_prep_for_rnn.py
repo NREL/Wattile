@@ -4,8 +4,8 @@ import pathlib
 import pandas as pd
 import pytest
 
-from intelcamp.buildings_processing import prep_for_rnn
-from intelcamp.data_reading import read_dataset_from_file
+from wattile.buildings_processing import prep_for_rnn
+from wattile.data_reading import read_dataset_from_file
 
 TESTS_PATH = pathlib.Path(__file__).parents[1]
 TESTS_FIXTURES_PATH = TESTS_PATH / "fixtures"

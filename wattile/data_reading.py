@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from intelcamp.error import ConfigsError
+from wattile.error import ConfigsError
 
 PROJECT_DIRECTORY = pathlib.Path(__file__).resolve().parent
 
