@@ -25,9 +25,9 @@
  "data_dir": "",
  "resample_freq": 15,
  "sequence_freq_min": 15,
- "splicer": {
+ "sequential_splicer": {
   "active": true,
-  "time": "3h"
+  "window_width": "3h"
  },
  "feat_time": {
   "month_of_year": ["sincos"],
