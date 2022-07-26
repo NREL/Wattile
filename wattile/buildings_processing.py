@@ -174,7 +174,7 @@ def pad_full_data(data, configs):
     temp_holder.append(data_orig)
     for i in range(1, configs["feat_timelag"]["lag_count"] + 1):
         shifted = (
-            data_orig.shift(configs["feat_timelag"]["window_interval"])
+            data_orig.shift(i * int(configs["feat_timelag"]["window_interval"]), freq="min")
             .astype("float32")
             .add_suffix("_lag{}".format(i))
         )
@@ -236,7 +236,7 @@ def pad_full_data_s2s(data, configs):
     temp_holder.append(data_orig)
     for i in range(1, configs["feat_timelag"]["lag_count"] + 1):
         shifted = (
-            data_orig.shift(configs["feat_timelag"]["window_interval"])
+            data_orig.shift(i * int(configs["feat_timelag"]["window_interval"]), freq="min")
             .astype("float32")
             .add_suffix("_lag{}".format(i))
         )
