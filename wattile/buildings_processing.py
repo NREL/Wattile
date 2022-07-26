@@ -57,7 +57,8 @@ def input_data_split(data, configs):
             # Set indices for training set
             np.random.seed(seed=configs["random_seed"])
             splicer = (
-                (data.index - data.index[0]) // pd.Timedelta(configs["sequential_splicer"]["window_width"])
+                (data.index - data.index[0])
+                // pd.Timedelta(configs["sequential_splicer"]["window_width"])
             ).values
             num_chunks = splicer[-1]
             num_train_chunks = (train_ratio * num_chunks) - (
