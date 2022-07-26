@@ -174,7 +174,7 @@ def pad_full_data(data, configs):
     temp_holder.append(data_orig)
     for i in range(1, configs["feat_timelag"]["lag_count"] + 1):
         shifted = (
-            data_orig.shift(configs["feat_timelag"]["window_interval"])
+            data_orig.shift(configs["feat_timelag"]["lag_interval"])
             .astype("float32")
             .add_suffix("_lag{}".format(i))
         )
@@ -236,7 +236,7 @@ def pad_full_data_s2s(data, configs):
     temp_holder.append(data_orig)
     for i in range(1, configs["feat_timelag"]["lag_count"] + 1):
         shifted = (
-            data_orig.shift(configs["feat_timelag"]["window_interval"])
+            data_orig.shift(configs["feat_timelag"]["lag_interval"])
             .astype("float32")
             .add_suffix("_lag{}".format(i))
         )
@@ -248,7 +248,7 @@ def pad_full_data_s2s(data, configs):
     local = pd.DataFrame()
     for i in range(0, configs["S2S_stagger"]["initial_num"]):
         local["{}_lag_{}".format(configs["target_var"], i)] = target.shift(
-            -i * int(configs["feat_timelag"]["window_interval"]), freq="min"
+            -i * int(configs["feat_timelag"]["lag_interval"]), freq="min"
         )
 
     # Do additional coarse padding for future predictions
@@ -256,7 +256,7 @@ def pad_full_data_s2s(data, configs):
         base = configs["S2S_stagger"]["initial_num"]
         new = base + configs["S2S_stagger"]["decay"] * i
         local["{}_lag_{}".format(configs["target_var"], base + i)] = target.shift(
-            -new * int(configs["feat_timelag"]["window_interval"], freq="min")
+            -new * int(configs["feat_timelag"]["lag_interval"], freq="min")
         )
 
     data = pd.concat([data, local], axis=1)
