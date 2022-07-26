@@ -79,7 +79,7 @@ def _add_month_based_columns(data, configs):
 
     sincos: Cyclic time variables are used (one sin column and one cos column)
 
-    Also, if configs.get("Holidays"), add binary "Holiday" and "Holiday_forward".
+    Also, if configs.get("holidays"), add binary "Holiday" and "Holiday_forward".
 
     :param configs: configs
     :type configs: dict
@@ -92,7 +92,7 @@ def _add_month_based_columns(data, configs):
         data["sin_MOY"] = np.sin(2 * np.pi * (data.index.dayofyear).values / (365))
         data["cos_MOY"] = np.cos(2 * np.pi * (data.index.dayofyear).values / (365))
 
-    if configs["feat_time"]["Holidays"]:
+    if configs["feat_time"]["holidays"]:
         data["Holiday"] = pd.to_datetime(data.index.date).isin(HOLIDAYS).astype(int)
 
         next_day = pd.to_datetime(data.index.date + dt.timedelta(days=1))
