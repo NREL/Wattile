@@ -28,6 +28,12 @@
   "active": false,
   "time": "1W"
  },
+ "feat_time": {
+  "month_of_year": ["sincos"],
+  "day_of_week": ["binary_reg", "binary_fuzzy"],
+  "hour_of_day": ["sincos", "binary_reg", "binary_fuzzy"],
+  "holidays": false
+ },
  "feat_stats": {
   "active": true,
   "window_width": "15min",
@@ -35,10 +41,6 @@
  },
  "window": 24,
  "EC_future_gap_min": 0,
- "DOW": ["binary_reg", "binary_fuzzy"],
- "MOY": ["sincos"],
- "HOD": ["sincos", "binary_reg", "binary_fuzzy"],
- "Holidays": false,
  "S2S_stagger": {
   "initial_num": 72,
   "decay": 0,
