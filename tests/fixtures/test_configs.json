@@ -23,8 +23,6 @@
  "convert_csvs": false,
  "exp_dir": "",
  "data_dir": "",
- "resample_freq": 15,
- "sequence_freq_min": 15,
  "sequential_splicer": {
   "active": true,
   "window_width": "3h"
@@ -40,8 +38,11 @@
    "window_width": "15min",
    "window_increment": "15min"
  },
- "window": 12,
- "EC_future_gap_min": 0,
+ "feat_timelag": {
+  "lag_interval": "15min",
+  "lag_count": 12,
+  "lag_interval_target": "0min"
+ },
  "S2S_stagger": {
   "initial_num": 72,
   "decay": 0,

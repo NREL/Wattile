@@ -172,9 +172,9 @@ def pad_full_data(data, configs):
     # Pad the exogenous variables
     temp_holder = list()
     temp_holder.append(data_orig)
-    for i in range(1, configs["window"] + 1):
+    for i in range(1, configs["feat_timelag"]["lag_count"] + 1):
         shifted = (
-            data_orig.shift(i * int(configs["sequence_freq_min"]), freq="min")
+            data_orig.shift(i * int(configs["feat_timelag"]["window_interval"]), freq="min")
             .astype("float32")
             .add_suffix("_lag{}".format(i))
         )
@@ -184,7 +184,7 @@ def pad_full_data(data, configs):
 
     # If this is a linear quantile regression model (iterative)
     if configs["arch_type"] == "quantile" and configs["iterative"]:
-        for i in range(0, configs["EC_future_gap_min"]):
+        for i in range(0, configs["feat_timelag"]["lag_interval_target"]):
             if i == 0:
                 data[configs["target_var"]] = target
             else:
@@ -196,24 +196,24 @@ def pad_full_data(data, configs):
     # If this is a linear quantile regression model (point)
     elif configs["arch_type"] == "quantile" and not configs["iterative"]:
         # Re-append the shifted target column to the dataframe
-        data[configs["target_var"]] = target.shift(-configs["EC_future_gap_min"])
+        data[configs["target_var"]] = target.shift(-configs["feat_timelag"]["lag_interval_target"])
 
         # Drop all nans
         data = data.dropna(how="any")
 
         # Adjust time index to match the EC values
-        data.index = data.index + pd.DateOffset(minutes=(configs["EC_future_gap_min"]))
+        data.index = data.index + pd.DateOffset(minutes=(configs["feat_timelag"]["lag_interval_target"]))
 
     # If this is an RNN model
     elif configs["arch_type"] == "RNN":
         # Re-append the shifted target column to the dataframe
-        data[configs["target_var"]] = target.shift(-configs["EC_future_gap_min"])
+        data[configs["target_var"]] = target.shift(-configs["feat_timelag"]["lag_interval_target"])
 
         # Drop all nans
         data = data.dropna(how="any")
 
         # Adjust time index to match the EC values
-        data.index = data.index + pd.DateOffset(minutes=(configs["EC_future_gap_min"]))
+        data.index = data.index + pd.DateOffset(minutes=(configs["feat_timelag"]["lag_interval_target"]))
 
     return data
 
@@ -234,9 +234,9 @@ def pad_full_data_s2s(data, configs):
     # Pad the exogenous variables
     temp_holder = list()
     temp_holder.append(data_orig)
-    for i in range(1, configs["window"] + 1):
+    for i in range(1, configs["feat_timelag"]["lag_count"] + 1):
         shifted = (
-            data_orig.shift(i * int(configs["sequence_freq_min"]), freq="min")
+            data_orig.shift(i * int(configs["feat_timelag"]["window_interval"]), freq="min")
             .astype("float32")
             .add_suffix("_lag{}".format(i))
         )
@@ -248,7 +248,7 @@ def pad_full_data_s2s(data, configs):
     local = pd.DataFrame()
     for i in range(0, configs["S2S_stagger"]["initial_num"]):
         local["{}_lag_{}".format(configs["target_var"], i)] = target.shift(
-            -i * int(configs["sequence_freq_min"]), freq="min"
+            -i * int(configs["feat_timelag"]["window_interval"]), freq="min"
         )
 
     # Do additional coarse padding for future predictions
@@ -256,7 +256,7 @@ def pad_full_data_s2s(data, configs):
         base = configs["S2S_stagger"]["initial_num"]
         new = base + configs["S2S_stagger"]["decay"] * i
         local["{}_lag_{}".format(configs["target_var"], base + i)] = target.shift(
-            -new * int(configs["sequence_freq_min"], freq="min")
+            -new * int(configs["feat_timelag"]["window_interval"], freq="min")
         )
 
     data = pd.concat([data, local], axis=1)
