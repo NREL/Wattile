@@ -80,7 +80,7 @@ def test_prep_for_rnn(config_for_tests, tmpdir):
     assert train_df.shape == (528, len(excepted_data_columns))
 
     assert set(val_df.columns) == set(excepted_data_columns)
-    assert val_df.shape == (72, len(excepted_data_columns))
+    assert val_df.shape == (60, len(excepted_data_columns))
 
     test_df = pd.read_hdf(exp_dir / "internal_test.h5", key="df")
     assert set(test_df.columns) == set(excepted_data_columns)
