@@ -395,8 +395,21 @@ class S2S_LA_Model(nn.Module):
 
 #################################################################################################################################################
 # main function
-def main(seed, cuda, cell_type, attention_model, la_method, window_source_size,
-            window_target_size, epochs, batch_size, hs, save_model, loss_function_qs, normalization, data, configs):
+def main(data, configs):
+    normalization = False
+    window_source_size = 12
+    window_target_size = 3
+    hs = configs["hidden_nodes"]
+    cell_type = 'lstm'
+    la_method = 'none'
+    attention_model = 'BA'
+    cuda = False
+    epochs = configs["num_epochs"]
+    batch_size = configs["train_batch_size"]
+    loss_function_qs = configs["qs"]
+    save_model = False
+    seed = configs["random_seed"]
+
     t0 = time.time()
     np.random.seed(seed)
     torch.manual_seed(seed)
