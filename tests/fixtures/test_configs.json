@@ -29,10 +29,10 @@
   "active": true,
   "time": "3h"
  },
- "resample_interval": "15min",
+ "resample_interval": "1min",
  "feat_stats": {
    "active": true,
-   "window_width": "15min"
+   "window_width": "5min"
  },
  "window": 12,
  "EC_future_gap_min": 0,
