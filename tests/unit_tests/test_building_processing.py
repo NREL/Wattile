@@ -123,10 +123,10 @@ def test_rolling_stats():
         input,
         configs={
             "target_var": "target_var",
+            "resample_interval": "1min",
             "feat_stats": {
                 "active": True,
                 "window_width": "5min",
-                "window_increment": "1min",
             },
         },
     )
