@@ -28,10 +28,10 @@
   "active": false,
   "time": "1W"
  },
+ "resample_interval": "15min",
  "feat_stats": {
   "active": true,
-  "window_width": "15min",
-  "window_increment": "15min"
+  "window_width": "15min"
  },
  "window": 24,
  "EC_future_gap_min": 0,
