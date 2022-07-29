@@ -360,7 +360,7 @@ def _preprocess_data(configs, data):
     data = add_processed_time_columns(data, configs)
 
     # Add statistics features
-    data = rolling_stats(data, configs)
+    data = resample_or_rolling_stats(data, configs)
 
     # Add lag features
     configs["input_dim"] = data.shape[1] - 1
@@ -401,17 +401,17 @@ def prep_for_rnn(configs, data):
     return train_df, val_df
 
 
-def rolling_stats(data, configs):
+def resample_or_rolling_stats(data, configs):
 
     # reading configuration parameters.
-    # resample_label_on are hard coded for now.
+    # resample_label_on is hard coded for now.
     # default is right labeled and right-closed window.
-    # window_closing and window_position are hard coded for now.
+    # window closing is currently tied to resample_label_on
+    # window_position is hard coded for now.
     # default is right-closed and backward-looking window.
     resample_interval = configs["resample_interval"]
     resample_label_on = "right"  # left, right
     window_width = configs["feat_stats"]["window_width"]
-    window_closing = "right"  # left, right
     window_position = "backward"  # forward, center, backward
 
     if configs["feat_stats"]["active"]:
@@ -422,14 +422,14 @@ def rolling_stats(data, configs):
 
         # resampling for each statistics separately
         data_resampler = X_data.resample(
-            rule=resample_interval, closed=window_closing, label=resample_label_on
+            rule=resample_interval, closed=resample_label_on, label=resample_label_on
         )
         data_resample_min = data_resampler.min().add_suffix("_min")
         data_resample_max = data_resampler.max().add_suffix("_max")
         data_resample_sum = data_resampler.sum().add_suffix("_sum")
         data_resample_count = data_resampler.count().add_suffix("_count")
 
-        # setting configuration settings depending on window_position and window_closing
+        # setting configuration settings depending on window_position and resample_label_on
         if window_position == "backward":
             arg_center = False
         elif window_position == "center":
@@ -440,29 +440,41 @@ def rolling_stats(data, configs):
             data_resample_max = data_resample_max[::-1]
             data_resample_sum = data_resample_sum[::-1]
             data_resample_count = data_resample_count[::-1]
-            if window_closing == "left":
-                window_closing = "right"
-            elif window_closing == "right":
-                window_closing = "left"
+            if resample_label_on == "left":
+                resample_label_on = "right"
+            elif resample_label_on == "right":
+                resample_label_on = "left"
 
         # adding rolling window statistics: minimum
         mins = data_resample_min.rolling(
-            window=window_width, min_periods=1, center=arg_center, closed=window_closing
+            window=window_width,
+            min_periods=1,
+            center=arg_center,
+            closed=resample_label_on,
         ).min()
 
         # adding rolling window statistics: maximum
         maxs = data_resample_max.rolling(
-            window=window_width, min_periods=1, center=arg_center, closed=window_closing
+            window=window_width,
+            min_periods=1,
+            center=arg_center,
+            closed=resample_label_on,
         ).max()
 
         # adding rolling window statistics: sum
         sums = data_resample_sum.rolling(
-            window=window_width, min_periods=1, center=arg_center, closed=window_closing
+            window=window_width,
+            min_periods=1,
+            center=arg_center,
+            closed=resample_label_on,
         ).sum()
 
         # adding rolling window statistics: count
         counts = data_resample_count.rolling(
-            window=window_width, min_periods=1, center=arg_center, closed=window_closing
+            window=window_width,
+            min_periods=1,
+            center=arg_center,
+            closed=resample_label_on,
         ).sum()  # this has to be sum for proper count calculation
 
         # adding rolling window statistics: mean
