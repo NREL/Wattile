@@ -510,13 +510,13 @@ def _resample_data(data, configs):
     resample_label_on = "right"  # left, right
 
     # resample data
+    data = data.resample(
+        rule=resample_interval, label=resample_label_on, closed=resample_label_on
+    )
+
     if resample_label_on == "left":
-        data = data.resample(
-            rule=resample_interval, label=resample_label_on, closed="left"
-        ).first()
+        data = data.first()
     elif resample_label_on == "right":
-        data = data.resample(
-            rule=resample_interval, label=resample_label_on, closed="right"
-        ).last()
+        data = data.last()
 
     return data
