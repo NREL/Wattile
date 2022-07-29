@@ -514,6 +514,7 @@ def _resample_data(data, configs):
         rule=resample_interval, label=resample_label_on, closed=resample_label_on
     )
 
+    # take the closest value from the label
     if resample_label_on == "left":
         data = data.first()
     elif resample_label_on == "right":
