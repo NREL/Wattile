@@ -267,6 +267,76 @@ def pad_full_data_s2s(data, configs):
     return data
 
 
+def roll_full_data_s2s(train_df, val_df, configs):
+
+    # reading configuration settings
+    window_source_size = 12  # TODO: replace this with configs param later
+    window_target_size = 2  # TODO: replace this with configs param later
+
+    train_df = train_df.values
+    val_df = val_df.values
+
+    # initialize lists
+    train_predictor = []
+    train_target = []
+    valid_predictor = []
+    valid_target = []
+
+    # create rolling window data for both predictor and target and for training data set
+    idxs = np.random.choice(
+        train_df.shape[0] - (window_source_size + window_target_size),
+        train_df.shape[0] - (window_source_size + window_target_size),
+        replace=False,
+    )
+    for idx in idxs:
+        train_predictor.append(
+            train_df[idx : idx + window_source_size].reshape(
+                (1, window_source_size, train_df.shape[1])
+            )
+        )
+        train_target.append(
+            train_df[
+                idx
+                + window_source_size : idx
+                + window_source_size
+                + window_target_size,
+                -1,
+            ].reshape((1, window_target_size, 1))
+        )
+    # convert to numpy array
+    train_predictor = np.concatenate(train_predictor, axis=0)
+    train_target = np.concatenate(train_target, axis=0)
+
+    # create rolling window data for both predictor and target and for validation data set
+    idxs = np.arange(
+        0,
+        len(val_df) - (window_source_size + window_target_size),
+        window_target_size,
+    )
+    for idx in idxs:
+        valid_predictor.append(
+            val_df[idx : idx + window_source_size].reshape(
+                (1, window_source_size, val_df.shape[1])
+            )
+        )
+        valid_target.append(
+            val_df[
+                idx
+                + window_source_size : idx
+                + window_source_size
+                + window_target_size,
+                -1,
+            ].reshape((1, window_target_size, 1))
+        )
+    # convert to numpy array
+    valid_predictor = np.concatenate(
+        valid_predictor, axis=0
+    )  # make them arrays and not lists
+    valid_target = np.concatenate(valid_target, axis=0)
+
+    return train_predictor, train_target, valid_predictor, valid_target
+
+
 def corr_heatmap(data):
     """
     Plot a correlation heatmap to see the (linear) relationships between exogenous variables
