@@ -36,7 +36,7 @@
  },
  "feat_timelag": {
   "lag_interval": "15min",
-  "lag_count": 24,
+  "lag_count": 12,
   "lag_interval_forecast": "0min"
  },
  "window": 12,
