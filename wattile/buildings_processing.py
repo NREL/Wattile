@@ -165,16 +165,24 @@ def pad_full_data(data, configs):
     :param configs: (Dict)
     :return: (DataFrame)
     """
-    target = data[configs["target_var"]]
-    data = data.drop(configs["target_var"], axis=1)
+
+    # reading configuration parameters
+    lag_interval = configs["feat_timelag"]["lag_interval"]
+    lag_count = configs["feat_timelag"]["lag_count"]
+    lag_interval_forecast = configs["feat_timelag"]["lag_interval_forecast"]
+    target_var = configs["target_var"]
+
+    # splitting predictors and target
+    target = data[target_var]
+    data = data.drop(target_var, axis=1)
     data_orig = data
 
-    # Pad the exogenous variables
+    # padding predictors
     temp_holder = list()
     temp_holder.append(data_orig)
-    for i in range(1, configs["window"] + 1):
+    for i in range(1, lag_count + 1):
         shifted = (
-            data_orig.shift(i * int(configs["sequence_freq_min"]), freq="min")
+            data_orig.shift(freq=i * lag_interval)
             .astype("float32")
             .add_suffix("_lag{}".format(i))
         )
@@ -182,38 +190,16 @@ def pad_full_data(data, configs):
     temp_holder.reverse()
     data = pd.concat(temp_holder, axis=1)
 
-    # If this is a linear quantile regression model (iterative)
-    if configs["arch_type"] == "quantile" and configs["iterative"]:
-        for i in range(0, configs["EC_future_gap_min"]):
-            if i == 0:
-                data[configs["target_var"]] = target
-            else:
-                data["{}_lag_{}".format(configs["target_var"], i)] = target.shift(-i)
-
-        # Drop all nans
-        data = data.dropna(how="any")
-
-    # If this is a linear quantile regression model (point)
-    elif configs["arch_type"] == "quantile" and not configs["iterative"]:
-        # Re-append the shifted target column to the dataframe
-        data[configs["target_var"]] = target.shift(-configs["EC_future_gap_min"])
-
-        # Drop all nans
-        data = data.dropna(how="any")
-
-        # Adjust time index to match the EC values
-        data.index = data.index + pd.DateOffset(minutes=(configs["EC_future_gap_min"]))
-
     # If this is an RNN model
-    elif configs["arch_type"] == "RNN":
-        # Re-append the shifted target column to the dataframe
-        data[configs["target_var"]] = target.shift(-configs["EC_future_gap_min"])
+    if configs["arch_type"] == "RNN":
+        # re-append the shifted target column to the dataframe
+        data[target_var] = target.shift(freq="-" + lag_interval_forecast)
 
-        # Drop all nans
+        # drop all nans
         data = data.dropna(how="any")
 
-        # Adjust time index to match the EC values
-        data.index = data.index + pd.DateOffset(minutes=(configs["EC_future_gap_min"]))
+        # adjust time index to match the EC values
+        data.index = data.index.shift(freq=lag_interval_forecast)
 
     return data
 
