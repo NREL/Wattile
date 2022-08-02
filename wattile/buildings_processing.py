@@ -228,15 +228,23 @@ def pad_full_data_s2s(data, configs):
     :return: (DataFrame)
     """
 
-    target = data[configs["target_var"]]
-    data = data.drop(configs["target_var"], axis=1)
+    # reading configuration parameters
+    lag_interval = configs["feat_timelag"]["lag_interval"]
+    lag_count = configs["feat_timelag"]["lag_count"]
+    initial_num = configs["S2S_stagger"]["initial_num"]
+    secondary_num = configs["S2S_stagger"]["secondary_num"]
+    decay = configs["S2S_stagger"]["decay"]
+    target_var = configs["target_var"]
+
+    target = data[target_var]
+    data = data.drop(target_var, axis=1)
     data_orig = data
     # Pad the exogenous variables
     temp_holder = list()
     temp_holder.append(data_orig)
-    for i in range(1, configs["window"] + 1):
+    for i in range(1, lag_count + 1):
         shifted = (
-            data_orig.shift(i * int(configs["sequence_freq_min"]), freq="min")
+            data_orig.shift(freq=i * lag_interval)
             .astype("float32")
             .add_suffix("_lag{}".format(i))
         )
@@ -246,17 +254,20 @@ def pad_full_data_s2s(data, configs):
 
     # Do fine padding for future predictions. Create a new df to preserve memory usage.
     local = pd.DataFrame()
-    for i in range(0, configs["S2S_stagger"]["initial_num"]):
-        local["{}_lag_{}".format(configs["target_var"], i)] = target.shift(
-            -i * int(configs["sequence_freq_min"]), freq="min"
-        )
+    for i in range(0, initial_num):
+        if i == 0:
+            local["{}_lag_{}".format(target_var, i)] = target.shift(i)
+        else:
+            local["{}_lag_{}".format(target_var, i)] = target.shift(
+                freq=i * lag_interval if i == 0 else "-" + (i * lag_interval)
+            )
 
     # Do additional coarse padding for future predictions
-    for i in range(1, configs["S2S_stagger"]["secondary_num"] + 1):
-        base = configs["S2S_stagger"]["initial_num"]
-        new = base + configs["S2S_stagger"]["decay"] * i
-        local["{}_lag_{}".format(configs["target_var"], base + i)] = target.shift(
-            -new * int(configs["sequence_freq_min"], freq="min")
+    for i in range(1, secondary_num + 1):
+        base = initial_num
+        new = int(base + decay * i)
+        local["{}_lag_{}".format(target_var, base + i)] = target.shift(
+            freq="-" + (new * lag_interval)
         )
 
     data = pd.concat([data, local], axis=1)
