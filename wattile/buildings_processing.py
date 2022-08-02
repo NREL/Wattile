@@ -53,11 +53,12 @@ def input_data_split(data, configs):
         logger.info("Creating random training mask and writing to file")
 
         # If you want to group datasets together into sequential chunks
-        if configs["splicer"]["active"]:
+        if configs["sequential_splicer"]["active"]:
             # Set indices for training set
             np.random.seed(seed=configs["random_seed"])
             splicer = (
-                (data.index - data.index[0]) // pd.Timedelta(configs["splicer"]["time"])
+                (data.index - data.index[0])
+                // pd.Timedelta(configs["sequential_splicer"]["window_width"])
             ).values
             num_chunks = splicer[-1]
             num_train_chunks = (train_ratio * num_chunks) - (
