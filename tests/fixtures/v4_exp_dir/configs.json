@@ -24,9 +24,16 @@
  "exp_dir": "tests/fixtures/v4_exp_dir",
  "data_dir": "tests/data",
  "resample_freq": 15,
- "splicer": {
+ "resample_interval": "15min",
+ "sequential_splicer": {
   "active": true,
-  "time": "3h"
+  "window_width": "3h"
+ },
+ "feat_time": {
+  "month_of_year": ["sincos"],
+  "day_of_week": ["binary_reg"],
+  "hour_of_day": ["sincos"],
+  "holidays": false
  },
  "feat_stats": {
   "active": true,
@@ -38,16 +45,6 @@
   "lag_count": 12,
   "lag_interval_forecast": "0min"
  },
- "DOW": [
-  "binary_reg"
- ],
- "MOY": [
-  "sincos"
- ],
- "HOD": [
-  "sincos"
- ],
- "Holidays": false,
  "S2S_stagger": {
   "initial_num": 72,
   "decay": 0,

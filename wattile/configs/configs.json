@@ -23,24 +23,26 @@
  "exp_dir": "exp_dir",
  "data_dir": "data",
  "resample_freq": 15,
- "splicer": {
+ "resample_interval": "15min",
+ "sequential_splicer": {
   "active": false,
-  "time": "1W"
+  "window_width": "1W"
+ },
+ "feat_time": {
+  "month_of_year": ["sincos"],
+  "day_of_week": ["binary_reg", "binary_fuzzy"],
+  "hour_of_day": ["sincos", "binary_reg", "binary_fuzzy"],
+  "holidays": false
  },
  "feat_stats": {
   "active": true,
-  "window_width": "15min",
-  "window_increment": "15min"
+  "window_width": "15min"
  },
  "feat_timelag": {
   "lag_interval": "15min",
   "lag_count": 24,
   "lag_interval_forecast": "0min"
  },
- "DOW": ["binary_reg", "binary_fuzzy"],
- "MOY": ["sincos"],
- "HOD": ["sincos", "binary_reg", "binary_fuzzy"],
- "Holidays": false,
  "S2S_stagger": {
   "initial_num": 72,
   "decay": 0,

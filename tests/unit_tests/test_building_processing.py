@@ -8,7 +8,7 @@ from pandas.testing import assert_frame_equal
 from wattile.buildings_processing import (
     correct_predictor_columns,
     correct_timestamps,
-    rolling_stats,
+    resample_or_rolling_stats,
 )
 from wattile.error import ConfigsError
 
@@ -119,14 +119,14 @@ def test_rolling_stats():
     input["ts"] = pd.to_datetime(input["ts"], exact=False, utc=True)
     input = input.set_index("ts")
 
-    output = rolling_stats(
+    output = resample_or_rolling_stats(
         input,
         configs={
             "target_var": "target_var",
+            "resample_interval": "1min",
             "feat_stats": {
                 "active": True,
                 "window_width": "5min",
-                "window_increment": "1min",
             },
         },
     )
