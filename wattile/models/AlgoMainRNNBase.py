@@ -5,6 +5,7 @@ from abc import ABC
 from pathlib import Path
 
 import pandas as pd
+import torch
 from torch.utils.tensorboard import SummaryWriter
 
 from wattile.error import ConfigsError
@@ -160,6 +161,9 @@ class AlgoMainRNNBase(ABC):
         run_resume = self.configs["run_resume"]
         tr_desired_batch_size = self.configs["train_batch_size"]
         te_desired_batch_size = self.configs["val_batch_size"]
+
+        # Setting random seed with constant
+        torch.manual_seed(self.configs["random_seed"])
 
         # Create writer object for TensorBoard
         writer_path = str(self.file_prefix)
