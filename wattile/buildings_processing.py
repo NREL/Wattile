@@ -245,7 +245,7 @@ def pad_full_data_s2s(data, configs):
             local["{}_lag_{}".format(target_var, i)] = target.shift(i)
         else:
             local["{}_lag_{}".format(target_var, i)] = target.shift(
-                freq=i * lag_interval if i == 0 else "-" + (i * lag_interval)
+                freq="-" + (i * lag_interval)
             )
 
     # Do additional coarse padding for future predictions
