@@ -23,7 +23,6 @@
  "exp_dir": "exp_dir",
  "data_dir": "data",
  "resample_freq": 15,
- "sequence_freq_min": 15,
  "splicer": {
   "active": false,
   "time": "1W"
@@ -38,8 +37,6 @@
   "lag_count": 24,
   "lag_interval_forecast": "0min"
  },
- "window": 24,
- "EC_future_gap_min": 0,
  "DOW": ["binary_reg", "binary_fuzzy"],
  "MOY": ["sincos"],
  "HOD": ["sincos", "binary_reg", "binary_fuzzy"],
