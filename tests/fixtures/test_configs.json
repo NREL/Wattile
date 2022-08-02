@@ -29,9 +29,9 @@
   "time": "3h"
  },
  "feat_stats": {
-   "active": true,
-   "window_width": "15min",
-   "window_increment": "15min"
+  "active": true,
+  "window_width": "15min",
+  "window_increment": "15min"
  },
  "feat_timelag": {
   "lag_interval": "15min",
