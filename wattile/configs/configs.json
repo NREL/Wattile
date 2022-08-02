@@ -33,7 +33,7 @@
   "window_width": "15min",
   "window_increment": "15min"
  },
- "feat_timelag:" {
+ "feat_timelag": {
   "lag_interval": "15min",
   "lag_count": 24,
   "lag_interval_forecast": "0min"
