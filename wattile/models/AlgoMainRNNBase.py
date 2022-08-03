@@ -221,7 +221,7 @@ class AlgoMainRNNBase(ABC):
                 transformation_method,
                 train_batch_size,
                 val_batch_size,
-                self.configs["window"] + 1,
+                self.configs["feat_timelag"]["lag_count"] + 1,
                 num_train_data,
             )
 
@@ -240,7 +240,7 @@ class AlgoMainRNNBase(ABC):
                 writer,
                 transformation_method,
                 val_batch_size,
-                self.configs["window"] + 1,
+                self.configs["feat_timelag"]["lag_count"] + 1,
             )
 
         elif self.configs["use_case"] == "prediction":
@@ -250,7 +250,7 @@ class AlgoMainRNNBase(ABC):
                 writer,
                 transformation_method,
                 val_batch_size,
-                self.configs["window"] + 1,
+                self.configs["feat_timelag"]["lag_count"] + 1,
             )
 
         else:
