@@ -36,7 +36,7 @@
  },
  "feat_stats": {
   "active": true,
-  "window_width": "15min",
+  "window_width": "15min"
  },
  "feat_timelag": {
   "lag_interval": "15min",
