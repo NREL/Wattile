@@ -3,7 +3,6 @@
  "target_var": "Synthetic Site Electricity Main Total Power",
  "start_time": "2018-01-01T00:00:00-07:00",
  "end_time": "2022-01-01T00:00:00-07:00",
- "data_time_interval_mins":1,   
  "predictor_columns": [
     "Synthetic Weather Station Dew Point Temperature",
     "Synthetic Weather Station Diffuse Horizontal Irradiance",
@@ -38,7 +37,6 @@
  "feat_stats": {
   "active": true,
   "window_width": "15min",
-  "window_increment": "15min"
  },
  "feat_timelag": {
   "lag_interval": "15min",
