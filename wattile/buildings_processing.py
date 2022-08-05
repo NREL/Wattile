@@ -265,6 +265,70 @@ def pad_full_data_s2s(data, configs):
     return data
 
 
+def roll_full_data_s2s(data, configs):
+    # setting configuration parameters
+    normalization = configs["normalization"]
+    window_source_size = configs["window_source_size"]
+    window_target_size = configs["window_target_size"]
+    resample_interval = configs["resample_interval"]
+    target_var = configs["target_var"]
+
+    # normalization
+    if normalization:
+        print("Transforming data to 0 mean and unit var")
+        MU = data.mean(0)  # 0 means take the mean of the column
+        data = data - MU
+        STD = data.std(0)  # same with std here
+        data = data / STD
+
+    # initialize lists
+    data_predictor = []
+    data_target = []
+
+    # calculate number of rows based on window size defined by time
+    window_source_size_count = int(
+        pd.Timedelta(window_source_size) / pd.Timedelta(resample_interval)
+    )
+    window_target_size_count = int(
+        pd.Timedelta(window_target_size) / pd.Timedelta(resample_interval)
+    )
+
+    # set aside timeindex
+    timestamp = data.iloc[
+        : -(window_source_size_count + window_target_size_count - 1), :
+    ].index
+
+    # create 3D predictor data
+    data_shifted_predictor = data.iloc[:-window_target_size_count, :]
+    for window in data_shifted_predictor.rolling(window=window_source_size):
+        if window.shape[0] == window_source_size_count:
+            data_predictor.append(
+                window.values.reshape(
+                    (1, window_source_size_count, data_shifted_predictor.shape[1])
+                )
+            )
+
+    # create 3D target data
+    data_shifted_target = data.loc[
+        data.index >= data.shift(freq=window_source_size).index[0], :
+    ][target_var]
+    for window in data_shifted_target.rolling(window=window_target_size):
+        if window.shape[0] == window_target_size_count:
+            data_target.append(window.values.reshape((1, window_target_size_count, 1)))
+
+    # reshape data dimension
+    data_predictor = np.concatenate(np.array(data_predictor), axis=0)
+    data_target = np.concatenate(np.array(data_target), axis=0)
+
+    # combine 3D predictor and target data into dictionary
+    data = {}
+    data["predictor"] = data_predictor
+    data["target"] = data_target
+    data["timestamp"] = timestamp
+
+    return data
+
+
 def corr_heatmap(data):
     """
     Plot a correlation heatmap to see the (linear) relationships between exogenous variables
