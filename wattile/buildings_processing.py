@@ -282,9 +282,9 @@ def pad_full_data_s2s(data, configs):
 
 def roll_full_data_s2s(data, configs):
     # setting configuration parameters
-    normalization = configs["normalization"]
-    window_source_size = configs["window_source_size"]
-    window_target_size = configs["window_target_size"]
+    normalization = configs["S2S_window"]["normalization"]
+    window_width_source = configs["S2S_window"]["window_width_source"]
+    window_width_target = configs["S2S_window"]["window_width_target"]
     resample_interval = configs["resample_interval"]
     target_var = configs["target_var"]
 
@@ -302,10 +302,10 @@ def roll_full_data_s2s(data, configs):
 
     # calculate number of rows based on window size defined by time
     window_source_size_count = int(
-        pd.Timedelta(window_source_size) / pd.Timedelta(resample_interval)
+        pd.Timedelta(window_width_source) / pd.Timedelta(resample_interval)
     )
     window_target_size_count = int(
-        pd.Timedelta(window_target_size) / pd.Timedelta(resample_interval)
+        pd.Timedelta(window_width_target) / pd.Timedelta(resample_interval)
     )
 
     # set aside timeindex
@@ -315,7 +315,7 @@ def roll_full_data_s2s(data, configs):
 
     # create 3D predictor data
     data_shifted_predictor = data.iloc[:-window_target_size_count, :]
-    for window in data_shifted_predictor.rolling(window=window_source_size):
+    for window in data_shifted_predictor.rolling(window=window_width_source):
         if window.shape[0] == window_source_size_count:
             data_predictor.append(
                 window.values.reshape(
@@ -325,9 +325,9 @@ def roll_full_data_s2s(data, configs):
 
     # create 3D target data
     data_shifted_target = data.loc[
-        data.index >= data.shift(freq=window_source_size).index[0], :
+        data.index >= data.shift(freq=window_width_source).index[0], :
     ][target_var]
-    for window in data_shifted_target.rolling(window=window_target_size):
+    for window in data_shifted_target.rolling(window=window_width_target):
         if window.shape[0] == window_target_size_count:
             data_target.append(window.values.reshape((1, window_target_size_count, 1)))
 
