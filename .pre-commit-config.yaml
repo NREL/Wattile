@@ -13,3 +13,5 @@ repos:
     rev: 0.1.2
     hooks:
     -   id: pylama
+        additional_dependencies:
+        -   pyflakes==2.4.0
