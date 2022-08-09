@@ -20,7 +20,7 @@ def _add_hour_based_columns(data, configs):
     :return: data
     :rtype: pd.dataframe
     """
-    HOD_configs = configs["HOD"]
+    HOD_configs = configs["feat_time"]["hour_of_day"]
 
     if "sincos" in HOD_configs:
         num_seconds_in_day = 24 * 60 * 60
@@ -59,7 +59,7 @@ def _add_day_based_columns(data, configs):
     :return: data
     :rtype: pd.dataframe
     """
-    day_of_week_configs = configs["DOW"]
+    day_of_week_configs = configs["feat_time"]["day_of_week"]
 
     if "binary_reg" in day_of_week_configs:
         for i in range(0, 7):
@@ -79,7 +79,7 @@ def _add_month_based_columns(data, configs):
 
     sincos: Cyclic time variables are used (one sin column and one cos column)
 
-    Also, if configs.get("Holidays"), add binary "Holiday" and "Holiday_forward".
+    Also, if configs.get("holidays"), add binary "Holiday" and "Holiday_forward".
 
     :param configs: configs
     :type configs: dict
@@ -88,11 +88,11 @@ def _add_month_based_columns(data, configs):
     :return: data
     :rtype: pd.dataframe
     """
-    if "sincos" in configs["MOY"]:
+    if "sincos" in configs["feat_time"]["month_of_year"]:
         data["sin_MOY"] = np.sin(2 * np.pi * (data.index.dayofyear).values / (365))
         data["cos_MOY"] = np.cos(2 * np.pi * (data.index.dayofyear).values / (365))
 
-    if configs.get("Holidays"):
+    if configs["feat_time"]["holidays"]:
         data["Holiday"] = pd.to_datetime(data.index.date).isin(HOLIDAYS).astype(int)
 
         next_day = pd.to_datetime(data.index.date + dt.timedelta(days=1))

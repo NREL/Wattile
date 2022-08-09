@@ -3,7 +3,6 @@
  "target_var": "Synthetic Site Electricity Main Total Power",
  "start_time": "2018-01-01T00:00:00-07:00",
  "end_time": "2022-01-01T00:00:00-07:00",
- "data_time_interval_mins":1,   
  "predictor_columns": [
     "Synthetic Weather Station Dew Point Temperature",
     "Synthetic Weather Station Diffuse Horizontal Irradiance",
@@ -24,22 +23,26 @@
  "exp_dir": "",
  "data_dir": "",
  "resample_freq": 15,
- "sequence_freq_min": 15,
- "splicer": {
+ "resample_interval": "15min",
+ "sequential_splicer": {
   "active": true,
-  "time": "3h"
+  "window_width": "3h"
  },
- "rolling_window": {
+ "feat_time": {
+  "month_of_year": ["sincos"],
+  "day_of_week": ["binary_reg"],
+  "hour_of_day": ["sincos"],
+  "holidays": false
+ },
+ "feat_stats": {
   "active": true,
-  "type": "binned",
-  "minutes": 15
+  "window_width": "15min"
  },
- "window": 12,
- "EC_future_gap_min": 0,
- "DOW": ["binary_reg"],
- "MOY": ["sincos"],
- "HOD": ["sincos"],
- "Holidays": false,
+ "feat_timelag": {
+  "lag_interval": "15min",
+  "lag_count": 12,
+  "lag_interval_forecast": "0min"
+ },
  "S2S_stagger": {
   "initial_num": 72,
   "decay": 0,
@@ -74,5 +77,8 @@
  },
  "smoothing_alpha": 0.001,
  "test_method": "external",
- "plot_results": false
+ "plot_results": false,
+ "plot_comparison":true,
+ "plot_comparison_portion_start":0.0,
+ "plot_comparison_portion_end":1.0
 }

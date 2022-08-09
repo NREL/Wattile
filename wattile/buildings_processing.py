@@ -53,11 +53,12 @@ def input_data_split(data, configs):
         logger.info("Creating random training mask and writing to file")
 
         # If you want to group datasets together into sequential chunks
-        if configs["splicer"]["active"]:
+        if configs["sequential_splicer"]["active"]:
             # Set indices for training set
             np.random.seed(seed=configs["random_seed"])
             splicer = (
-                (data.index - data.index[0]) // pd.Timedelta(configs["splicer"]["time"])
+                (data.index - data.index[0])
+                // pd.Timedelta(configs["sequential_splicer"]["window_width"])
             ).values
             num_chunks = splicer[-1]
             num_train_chunks = (train_ratio * num_chunks) - (
@@ -165,16 +166,24 @@ def pad_full_data(data, configs):
     :param configs: (Dict)
     :return: (DataFrame)
     """
-    target = data[configs["target_var"]]
-    data = data.drop(configs["target_var"], axis=1)
+
+    # reading configuration parameters
+    lag_interval = configs["feat_timelag"]["lag_interval"]
+    lag_count = configs["feat_timelag"]["lag_count"]
+    lag_interval_forecast = configs["feat_timelag"]["lag_interval_forecast"]
+    target_var = configs["target_var"]
+
+    # splitting predictors and target
+    target = data[target_var]
+    data = data.drop(target_var, axis=1)
     data_orig = data
 
-    # Pad the exogenous variables
+    # padding predictors
     temp_holder = list()
     temp_holder.append(data_orig)
-    for i in range(1, configs["window"] + 1):
+    for i in range(1, lag_count + 1):
         shifted = (
-            data_orig.shift(i * int(configs["sequence_freq_min"]), freq="min")
+            data_orig.shift(freq=i * lag_interval)
             .astype("float32")
             .add_suffix("_lag{}".format(i))
         )
@@ -182,38 +191,16 @@ def pad_full_data(data, configs):
     temp_holder.reverse()
     data = pd.concat(temp_holder, axis=1)
 
-    # If this is a linear quantile regression model (iterative)
-    if configs["arch_type"] == "quantile" and configs["iterative"]:
-        for i in range(0, configs["EC_future_gap_min"]):
-            if i == 0:
-                data[configs["target_var"]] = target
-            else:
-                data["{}_lag_{}".format(configs["target_var"], i)] = target.shift(-i)
-
-        # Drop all nans
-        data = data.dropna(how="any")
-
-    # If this is a linear quantile regression model (point)
-    elif configs["arch_type"] == "quantile" and not configs["iterative"]:
-        # Re-append the shifted target column to the dataframe
-        data[configs["target_var"]] = target.shift(-configs["EC_future_gap_min"])
-
-        # Drop all nans
-        data = data.dropna(how="any")
-
-        # Adjust time index to match the EC values
-        data.index = data.index + pd.DateOffset(minutes=(configs["EC_future_gap_min"]))
-
     # If this is an RNN model
-    elif configs["arch_type"] == "RNN":
-        # Re-append the shifted target column to the dataframe
-        data[configs["target_var"]] = target.shift(-configs["EC_future_gap_min"])
+    if configs["arch_type"] == "RNN":
+        # re-append the shifted target column to the dataframe
+        data[target_var] = target.shift(freq="-" + lag_interval_forecast)
 
-        # Drop all nans
+        # drop all nans
         data = data.dropna(how="any")
 
-        # Adjust time index to match the EC values
-        data.index = data.index + pd.DateOffset(minutes=(configs["EC_future_gap_min"]))
+        # adjust time index to match the EC values
+        data.index = data.index.shift(freq=lag_interval_forecast)
 
     return data
 
@@ -228,15 +215,23 @@ def pad_full_data_s2s(data, configs):
     :return: (DataFrame)
     """
 
-    target = data[configs["target_var"]]
-    data = data.drop(configs["target_var"], axis=1)
+    # reading configuration parameters
+    lag_interval = configs["feat_timelag"]["lag_interval"]
+    lag_count = configs["feat_timelag"]["lag_count"]
+    initial_num = configs["S2S_stagger"]["initial_num"]
+    secondary_num = configs["S2S_stagger"]["secondary_num"]
+    decay = configs["S2S_stagger"]["decay"]
+    target_var = configs["target_var"]
+
+    target = data[target_var]
+    data = data.drop(target_var, axis=1)
     data_orig = data
     # Pad the exogenous variables
     temp_holder = list()
     temp_holder.append(data_orig)
-    for i in range(1, configs["window"] + 1):
+    for i in range(1, lag_count + 1):
         shifted = (
-            data_orig.shift(i * int(configs["sequence_freq_min"]), freq="min")
+            data_orig.shift(freq=i * lag_interval)
             .astype("float32")
             .add_suffix("_lag{}".format(i))
         )
@@ -246,17 +241,20 @@ def pad_full_data_s2s(data, configs):
 
     # Do fine padding for future predictions. Create a new df to preserve memory usage.
     local = pd.DataFrame()
-    for i in range(0, configs["S2S_stagger"]["initial_num"]):
-        local["{}_lag_{}".format(configs["target_var"], i)] = target.shift(
-            -i * int(configs["sequence_freq_min"]), freq="min"
-        )
+    for i in range(0, initial_num):
+        if i == 0:
+            local["{}_lag_{}".format(target_var, i)] = target.shift(i)
+        else:
+            local["{}_lag_{}".format(target_var, i)] = target.shift(
+                freq="-" + (i * lag_interval)
+            )
 
     # Do additional coarse padding for future predictions
-    for i in range(1, configs["S2S_stagger"]["secondary_num"] + 1):
-        base = configs["S2S_stagger"]["initial_num"]
-        new = base + configs["S2S_stagger"]["decay"] * i
-        local["{}_lag_{}".format(configs["target_var"], base + i)] = target.shift(
-            -new * int(configs["sequence_freq_min"], freq="min")
+    for i in range(1, secondary_num + 1):
+        base = initial_num
+        new = int(base + decay * i)
+        local["{}_lag_{}".format(target_var, base + i)] = target.shift(
+            freq="-" + (new * lag_interval)
         )
 
     data = pd.concat([data, local], axis=1)
@@ -360,8 +358,7 @@ def _preprocess_data(configs, data):
     data = add_processed_time_columns(data, configs)
 
     # Add statistics features
-    if configs["rolling_window"]["active"]:
-        data = rolling_stats(data, configs)
+    data = resample_or_rolling_stats(data, configs)
 
     # Add lag features
     configs["input_dim"] = data.shape[1] - 1
@@ -402,48 +399,123 @@ def prep_for_rnn(configs, data):
     return train_df, val_df
 
 
-def rolling_stats(data, configs):
-    # Convert data to rolling average (except output) and create min, mean, and max columns
-    target = data[configs["target_var"]]
-    X_data = data.drop(configs["target_var"], axis=1)
+def resample_or_rolling_stats(data, configs):
 
-    # inferring timestep (frequency) from the dataframe
-    dt = configs["data_time_interval_mins"]
-    windowsize = int(configs["rolling_window"]["minutes"] / dt) + 1
-    logging.debug(
-        "Feature extraction: rolling window size = {} rows".format(windowsize)
-    )
+    # reading configuration parameters.
+    # resample_label_on is hard coded for now.
+    # default is right labeled and right-closed window.
+    # window closing is currently tied to resample_label_on
+    # window_position is hard coded for now.
+    # default is right-closed and backward-looking window.
+    resample_interval = configs["resample_interval"]
+    resample_label_on = "right"  # left, right
+    window_width = configs["feat_stats"]["window_width"]
+    window_position = "backward"  # forward, center, backward
 
-    if configs["rolling_window"]["type"] == "rolling":
-        mins = X_data.rolling(window=windowsize, min_periods=1).min().add_suffix("_min")
-        means = (
-            X_data.rolling(window=windowsize, min_periods=1).mean().add_suffix("_mean")
+    if configs["feat_stats"]["active"]:
+
+        # seperate predictors and target
+        target = data[configs["target_var"]]
+        X_data = data.drop(configs["target_var"], axis=1)
+
+        # resampling for each statistics separately
+        data_resampler = X_data.resample(
+            rule=resample_interval, closed=resample_label_on, label=resample_label_on
         )
-        maxs = X_data.rolling(window=windowsize, min_periods=1).max().add_suffix("_max")
-        data = pd.concat([mins, means, maxs], axis=1)
+        data_resample_min = data_resampler.min().add_suffix("_min")
+        data_resample_max = data_resampler.max().add_suffix("_max")
+        data_resample_sum = data_resampler.sum().add_suffix("_sum")
+        data_resample_count = data_resampler.count().add_suffix("_count")
+
+        # setting configuration settings depending on window_position and resample_label_on
+        if window_position == "backward":
+            arg_center = False
+        elif window_position == "center":
+            arg_center = True
+        elif window_position == "forward":
+            arg_center = False
+            data_resample_min = data_resample_min[::-1]
+            data_resample_max = data_resample_max[::-1]
+            data_resample_sum = data_resample_sum[::-1]
+            data_resample_count = data_resample_count[::-1]
+            if resample_label_on == "left":
+                resample_label_on = "right"
+            elif resample_label_on == "right":
+                resample_label_on = "left"
+
+        # adding rolling window statistics: minimum
+        mins = data_resample_min.rolling(
+            window=window_width,
+            min_periods=1,
+            center=arg_center,
+            closed=resample_label_on,
+        ).min()
+
+        # adding rolling window statistics: maximum
+        maxs = data_resample_max.rolling(
+            window=window_width,
+            min_periods=1,
+            center=arg_center,
+            closed=resample_label_on,
+        ).max()
+
+        # adding rolling window statistics: sum
+        sums = data_resample_sum.rolling(
+            window=window_width,
+            min_periods=1,
+            center=arg_center,
+            closed=resample_label_on,
+        ).sum()
+
+        # adding rolling window statistics: count
+        counts = data_resample_count.rolling(
+            window=window_width,
+            min_periods=1,
+            center=arg_center,
+            closed=resample_label_on,
+        ).sum()  # this has to be sum for proper count calculation
+
+        # adding rolling window statistics: mean
+        means = sums.copy()
+        means.columns = means.columns.str.replace("_sum", "_mean")
+        np.seterr(invalid="ignore")  # supress/hide the warning
+        means.loc[:, :] = sums.values / counts.values
+
+        # combining min and max stats
+        data = pd.concat([mins, maxs, means], axis=1)
+
+        # reordering dataframe based on window_position
+        if window_position == "forward":
+            data = data[::-1]
+
+        # adding resampled target back to the dataframe
+        target = _resample_data(target, configs)
         data[configs["target_var"]] = target
 
-    elif configs["rolling_window"]["type"] == "binned":
-        mins = (
-            X_data.resample(str(configs["rolling_window"]["minutes"]) + "T")
-            .min()
-            .add_suffix("_min")
-        )
-        means = (
-            X_data.resample(str(configs["rolling_window"]["minutes"]) + "T")
-            .mean()
-            .add_suffix("_mean")
-        )
-        maxs = (
-            X_data.resample(str(configs["rolling_window"]["minutes"]) + "T")
-            .max()
-            .add_suffix("_max")
-        )
-        data = pd.concat([mins, means, maxs], axis=1)
-        data[configs["target_var"]] = (
-            pd.DataFrame(target)
-            .resample(str(configs["rolling_window"]["minutes"]) + "T")
-            .mean()
-        )
+    else:
+
+        # resample data
+        data = _resample_data(data, configs)
+
+    return data
+
+
+def _resample_data(data, configs):
+
+    # reading configuration parameters.
+    # resample_label_on are hard coded for now. default is right labeled and right-closed window.
+    resample_interval = configs["resample_interval"]
+    resample_label_on = "right"  # left, right
+
+    # resample data
+    data = data.resample(
+        rule=resample_interval, label=resample_label_on, closed=resample_label_on
+    )
+
+    # take the closest value from the label
+    if resample_label_on == "left":
+        data = data.first()
+    elif resample_label_on == "right":
+        data = data.last()
 
     return data
