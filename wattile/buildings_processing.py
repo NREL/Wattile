@@ -120,18 +120,18 @@ def input_data_split(data, configs):
     mask_file = os.path.join(file_prefix, "mask.h5")
 
     # assign timestamp and data size depending on arch_version
-    if arch_version == 4:
+    if (arch_version == 4) | (arch_version == 5):
         timestamp = data.index
         data_size = data.shape[0]
 
-    elif arch_version == 5:
+    elif arch_version == 6:
         timestamp = data["timestamp"]
         data_size = data["predictor"].shape[0]
 
     msk = _create_split_mask(timestamp, data_size, configs)
 
     # assign train, validation, and test data
-    if arch_version == 4:
+    if (arch_version == 4) | (arch_version == 5):
         train_df = data[msk == 0]
         val_df = data[msk == 1]
         test_df = data[msk == 2]
@@ -143,7 +143,7 @@ def input_data_split(data, configs):
             os.path.join(file_prefix, "internal_test.h5"), key="df", mode="w"
         )
 
-    elif arch_version == 5:
+    elif arch_version == 6:
         train_df = {}
         val_df = {}
         train_df_predictor = data["predictor"][msk == 0, :, :]
