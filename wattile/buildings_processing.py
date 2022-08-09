@@ -365,9 +365,9 @@ def _preprocess_data(configs, data):
     logger.info("Number of features: {}".format(configs["input_dim"]))
     logger.debug("Features: {}".format(data.columns.values))
 
-    if configs["arch_version"] == 4:
+    if configs["arch_version"] == "alfa":
         data = pad_full_data(data, configs)
-    elif configs["arch_version"] == 5:
+    elif configs["arch_version"] == "bravo":
         data = pad_full_data_s2s(data, configs)
 
     return data

@@ -99,7 +99,7 @@ def run_model(configs, train_df, val_df):
     if configs["arch_type"] == "RNN":
         model_class = MODELS_DICT.get(configs["arch_version"])
         if model_class is None:
-            ValueError(f"Invalid arch version {configs['arch_version']}")
+            raise ValueError(f"Invalid arch version {configs['arch_version']}")
         else:
             model = model_class(configs)
 
