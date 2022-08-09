@@ -448,6 +448,8 @@ def _preprocess_data(configs, data):
         data = pad_full_data(data, configs)
     elif configs["arch_version"] == 5:
         data = pad_full_data_s2s(data, configs)
+    elif configs["arch_version"] == 6:
+        data = roll_full_data_s2s(data, configs)
 
     return data
 
