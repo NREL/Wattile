@@ -2,9 +2,12 @@ import json
 import pathlib
 import shutil
 
+import numpy as np
+import pandas as pd
 import pytest
 
 import wattile.entry_point as epb
+from wattile.entry_point import create_input_dataframe, run_model
 
 TESTS_PATH = pathlib.Path(__file__).parents[1]
 TESTS_FIXTURES_PATH = TESTS_PATH / "fixtures"
@@ -60,9 +63,13 @@ def test_prediction_v4(config_for_tests, tmpdir):
     data_dir = tmpdir / "data" / config_for_tests["building"]
     popluate_test_data_dir_with_prediction_data(data_dir)
 
-    results = epb.main(config_for_tests)
+    train_df, val_df = create_input_dataframe(config_for_tests)
+    results = run_model(config_for_tests, train_df, val_df)
 
-    assert results.shape[1:] == (len(config_for_tests["qs"]),)
+    assert results.shape == (val_df.shape[0], len(config_for_tests["qs"]))
+    pd.testing.assert_index_equal(results.index, val_df.index)
+    np.testing.assert_array_equal(results.columns, config_for_tests["qs"])
+
     assert (exp_dir / "output.out").exists()
 
 

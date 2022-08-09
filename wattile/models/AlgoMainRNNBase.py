@@ -175,7 +175,6 @@ class AlgoMainRNNBase(ABC):
             train_data = train_df
         val_data = val_df.copy(deep=True)
         val_data.reset_index(drop=True, inplace=True)
-        val_df.reset_index(drop=True, inplace=True)
 
         # Normalization transformation
         train_data, val_data = self.data_transform(

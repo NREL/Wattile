@@ -80,7 +80,9 @@ class AlgoMainRNNv4(AlgoMainRNNBase):
         val_target_tensor = torch.from_numpy(y_val).to(device)
 
         val = data_utils.TensorDataset(val_feat_tensor, val_target_tensor)
-        val_loader = DataLoader(dataset=val, batch_size=val_batch_size, shuffle=True)
+        val_loader = DataLoader(
+            dataset=val, batch_size=val_batch_size, shuffle=run_train
+        )
 
         return train_loader, val_loader
 
@@ -857,7 +859,7 @@ class AlgoMainRNNv4(AlgoMainRNNBase):
                 )
             )
 
-        return final_preds
+        return pd.DataFrame(final_preds, index=val_df.index, columns=self.configs["qs"])
 
     def _plot_results(self, targets, predictions):
         """Plot some stats about the predictions"""
