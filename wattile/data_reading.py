@@ -40,6 +40,7 @@ def _concat_data_from_files(filepaths, needed_columns):
             logger.info(f"Read {filepaths} and added to data ...")
 
     if not full_data.empty:
+        full_data["Timestamp"] = full_data["Timestamp"].str.split(" ", 1).str[0]
         full_data["Timestamp"] = pd.to_datetime(
             full_data["Timestamp"], format="%Y-%m-%dT%H:%M:%S%z", exact=False, utc=True
         )

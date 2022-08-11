@@ -25,18 +25,18 @@ def config_for_tests():
     return configs
 
 
-V4_EXP_DIR = TESTS_FIXTURES_PATH / "v4_exp_dir"
-V4_CONFIG_PATCH = {"arch_version": 4}
+ALFA_EXP_DIR = TESTS_FIXTURES_PATH / "alfa_exp_dir"
+ALFA_CONFIG_PATCH = {"arch_version": "alfa"}
 
-V5_EXP_DIR = TESTS_FIXTURES_PATH / "v5_exp_dir"
-V5_CONFIG_PATCH = {"arch_version": 5}
+BRAVO_EXP_DIR = TESTS_FIXTURES_PATH / "bravo_exp_dir"
+BRAVO_CONFIG_PATCH = {"arch_version": "bravo"}
 
 
 @pytest.mark.parametrize(
     "config_patch, test_exp_dir",
     [
-        (V4_CONFIG_PATCH, V4_EXP_DIR),
-        (V5_CONFIG_PATCH, V5_EXP_DIR),
+        (ALFA_CONFIG_PATCH, ALFA_EXP_DIR),
+        (BRAVO_CONFIG_PATCH, BRAVO_EXP_DIR),
     ],
 )
 def test_validation(config_for_tests, tmpdir, config_patch, test_exp_dir):

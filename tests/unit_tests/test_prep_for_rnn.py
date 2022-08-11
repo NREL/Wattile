@@ -45,7 +45,7 @@ def test_prep_for_rnn(config_for_tests, tmpdir):
         excepted_data_columns += [
             f"{pred}_{m}_lag{lag + 1}"
             for m in ["max", "min", "mean"]
-            for lag in range(config_for_tests["window"])
+            for lag in range(config_for_tests["feat_timelag"]["lag_count"])
         ]
 
     # add year and hour columns
@@ -60,7 +60,7 @@ def test_prep_for_rnn(config_for_tests, tmpdir):
         for t in ["MOY", "HOD"]
         for f in ["cos", "sin"]
         for m in ["max", "min", "mean"]
-        for lag in range(config_for_tests["window"])
+        for lag in range(config_for_tests["feat_timelag"]["lag_count"])
     ]
 
     # add week columns
@@ -71,18 +71,18 @@ def test_prep_for_rnn(config_for_tests, tmpdir):
         f"DOW_binary_reg_{i}_{m}_lag{lag + 1}"
         for i in range(0, 7)
         for m in ["max", "min", "mean"]
-        for lag in range(config_for_tests["window"])
+        for lag in range(config_for_tests["feat_timelag"]["lag_count"])
     ]
 
     # add target var
     excepted_data_columns.append(config_for_tests["target_var"])
 
     assert set(train_df.columns) == set(excepted_data_columns)
-    assert train_df.shape == (480, len(excepted_data_columns))
+    assert train_df.shape == (528, len(excepted_data_columns))
 
     assert set(val_df.columns) == set(excepted_data_columns)
-    assert val_df.shape == (84, len(excepted_data_columns))
+    assert val_df.shape == (60, len(excepted_data_columns))
 
     test_df = pd.read_hdf(exp_dir / "internal_test.h5", key="df")
     assert set(test_df.columns) == set(excepted_data_columns)
-    assert test_df.shape == (96, len(excepted_data_columns))
+    assert test_df.shape == (73, len(excepted_data_columns))
