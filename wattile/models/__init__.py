@@ -1,4 +1,4 @@
-from wattile.models.algo_main_rnn_v4 import AlgoMainRNNv4
-from wattile.models.algo_main_rnn_v5 import AlgoMainRNNv5
+from wattile.models.alfa_model import AlfaModel
+from wattile.models.bravo_model import BravoModel
 
-MODELS_DICT = {4: AlgoMainRNNv4, 5: AlgoMainRNNv5}
+MODELS_DICT = {"alfa": AlfaModel, "bravo": BravoModel}

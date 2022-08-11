@@ -38,7 +38,7 @@ Docs for the configs [here](./tests/fixtures/README.md).
 
 Docs for the format of the raw data is [here](./tests/data/README.md).
 
-Docs for the format of the output is [here](./tests/fixtures/v5_exp_dir/README.md).
+Docs for the format of the output is [here](./tests/fixtures/bravo_exp_dir/README.md).
 
 ```py
 import json 
@@ -61,7 +61,7 @@ tensorboard --logdir=<study directory>
 
 Available Models
 ----
-algo_main_rnn_v4.py
+### [Alfa](./wattile/models/alfa_model.py)
 
 * Probabilistic forecasting 
 * In one training session, predict:
@@ -69,7 +69,7 @@ algo_main_rnn_v4.py
     * Number of quantiles per time: *Q*
 * Vanilla and LSTM variants available
 
-algo_main_rnn_v5.py
+### [Bravo](./wattile/models/bravo_model.py)
 
 * Probabilistic forecasting 
 * In one training session, predict:

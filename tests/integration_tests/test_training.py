@@ -10,7 +10,7 @@ from wattile.buildings_processing import (
     resample_or_rolling_stats,
 )
 from wattile.data_reading import read_dataset_from_file
-from wattile.models.liangs_model import main as liangs_model
+from wattile.models.charlie_model import main as charlie_model
 from wattile.time_processing import add_processed_time_columns
 
 TESTS_PATH = pathlib.Path(__file__).parents[1]
@@ -32,17 +32,29 @@ def config_for_tests():
 
 
 # test model training config patches
-ARCH_VERSION_4_RNN_CONFIG_PATCH = {"arch_version": 4, "arch_type_variant": "vanilla"}
-ARCH_VERSION_4_LSTM_CONFIG_PATCH = {"arch_version": 4, "arch_type_variant": "lstm"}
-ARCH_VERSION_4_STANDARD_TRANSFORMATION_CONFIG_PATCH = {
-    "arch_version": 4,
+ARCH_VERSION_ALFA_RNN_CONFIG_PATCH = {
+    "arch_version": "alfa",
+    "arch_type_variant": "vanilla",
+}
+ARCH_VERSION_ALFA_LSTM_CONFIG_PATCH = {
+    "arch_version": "alfa",
+    "arch_type_variant": "lstm",
+}
+ARCH_VERSION_ALFA_STANDARD_TRANSFORMATION_CONFIG_PATCH = {
+    "arch_version": "alfa",
     "transformation_method": "standard",
 }
 
-ARCH_VERSION_5_RNN_CONFIG_PATCH = {"arch_version": 5, "arch_type_variant": "vanilla"}
-ARCH_VERSION_5_LSTM_CONFIG_PATCH = {"arch_version": 5, "arch_type_variant": "lstm"}
-ARCH_VERSION_5_STANDARD_TRANSFORMATION_CONFIG_PATCH = {
-    "arch_version": 5,
+ARCH_VERSION_BRAVO_RNN_CONFIG_PATCH = {
+    "arch_version": "bravo",
+    "arch_type_variant": "vanilla",
+}
+ARCH_VERSION_BRAVO_LSTM_CONFIG_PATCH = {
+    "arch_version": "bravo",
+    "arch_type_variant": "lstm",
+}
+ARCH_VERSION_BRAVO_STANDARD_TRANSFORMATION_CONFIG_PATCH = {
+    "arch_version": "bravo",
     "transformation_method": "standard",
 }
 
@@ -50,12 +62,12 @@ ARCH_VERSION_5_STANDARD_TRANSFORMATION_CONFIG_PATCH = {
 @pytest.mark.parametrize(
     "config_patch",
     [
-        ARCH_VERSION_4_RNN_CONFIG_PATCH,
-        ARCH_VERSION_4_LSTM_CONFIG_PATCH,
-        ARCH_VERSION_4_STANDARD_TRANSFORMATION_CONFIG_PATCH,
-        ARCH_VERSION_5_RNN_CONFIG_PATCH,
-        ARCH_VERSION_5_LSTM_CONFIG_PATCH,
-        ARCH_VERSION_5_STANDARD_TRANSFORMATION_CONFIG_PATCH,
+        ARCH_VERSION_ALFA_RNN_CONFIG_PATCH,
+        ARCH_VERSION_ALFA_LSTM_CONFIG_PATCH,
+        ARCH_VERSION_ALFA_STANDARD_TRANSFORMATION_CONFIG_PATCH,
+        ARCH_VERSION_BRAVO_RNN_CONFIG_PATCH,
+        ARCH_VERSION_BRAVO_LSTM_CONFIG_PATCH,
+        ARCH_VERSION_BRAVO_STANDARD_TRANSFORMATION_CONFIG_PATCH,
     ],
 )
 def test_model_trains(config_for_tests, tmpdir, config_patch):
@@ -76,7 +88,7 @@ def test_model_trains(config_for_tests, tmpdir, config_patch):
     assert (exp_dir / "train_stats.json").exists()
 
 
-def test_liangs_model_runs(config_for_tests, tmpdir):
+def test_charlie_model_runs(config_for_tests, tmpdir):
     exp_dir = pathlib.Path(tmpdir) / "train_results"
     exp_dir.mkdir()
     config_for_tests["exp_dir"] = str(exp_dir)
@@ -87,7 +99,7 @@ def test_liangs_model_runs(config_for_tests, tmpdir):
     data = add_processed_time_columns(data, config_for_tests)
     data = resample_or_rolling_stats(data, config_for_tests)
 
-    liangs_model(data=data, configs=config_for_tests)
+    charlie_model(data=data, configs=config_for_tests)
 
     # check result file were created
     assert (exp_dir / "actual.csv").exists()
