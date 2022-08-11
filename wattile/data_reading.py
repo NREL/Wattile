@@ -58,8 +58,8 @@ def _get_dataset_config(configs):
     :return: dataset config
     :rtype: pd.DataFrame
     """
-    dataset_dir = Path(configs["data_dir"]) / configs["building"]
-    configs_file_inputdata = dataset_dir / f"{configs['building']} Config.json"
+    dataset_dir = Path(configs["data_dir"])
+    configs_file_inputdata = dataset_dir / configs["data_config"]
 
     logger.info(
         "Pre-process: reading input data summary json file from {}".format(

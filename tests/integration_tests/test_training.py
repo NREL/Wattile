@@ -15,7 +15,7 @@ from wattile.time_processing import add_processed_time_columns
 
 TESTS_PATH = pathlib.Path(__file__).parents[1]
 TESTS_FIXTURES_PATH = TESTS_PATH / "fixtures"
-TESTS_DATA_PATH = TESTS_PATH / "data"
+TESTS_DATA_PATH = TESTS_PATH / "data" / "Synthetic Site"
 
 
 @pytest.fixture
@@ -27,6 +27,7 @@ def config_for_tests():
         configs = json.load(read_file)
 
     configs["data_dir"] = str(TESTS_DATA_PATH)
+    configs["data_config"] = "Synthetic Site Config.json"
 
     return configs
 
