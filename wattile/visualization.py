@@ -62,7 +62,9 @@ def timeseries_comparison(configs):
 
             for qntl in range(0, int((len(configs["qs"]) - 1) / 2)):
 
-                if (configs["arch_version"] == 5) | (configs["arch_version"] == 6):
+                if (configs["arch_version"] == "bravo") | (
+                    configs["arch_version"] == 6
+                ):
 
                     low_start = qntl * configs["S2S_stagger"]["initial_num"]
                     low_end = (
@@ -77,7 +79,7 @@ def timeseries_comparison(configs):
                     low = predictions.iloc[:, low_start:low_end].to_numpy()
                     high = predictions.iloc[:, high_start:high_end].to_numpy()
 
-                elif configs["arch_version"] == 4:
+                elif configs["arch_version"] == "alfa":
 
                     low_start = qntl
                     high_start = len_tot - low_start - 1

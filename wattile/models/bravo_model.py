@@ -24,7 +24,7 @@ from wattile.models.utils import init_model, load_model, save_model
 logger = logging.getLogger(str(os.getpid()))
 
 
-class AlgoMainRNNv5(AlgoMainRNNBase):
+class BravoModel(AlgoMainRNNBase):
     def data_iterable_random(
         self, train_data, val_data, run_train, train_batch_size, val_batch_size
     ):
