@@ -1,5 +1,4 @@
 import math
-import os
 import time
 from pathlib import Path
 
@@ -565,10 +564,10 @@ def main(data, configs):  # noqa: C901 TODO: remove noqa
     #################################################################
     # save numpy array as npy files for test validation
     #################################################################
-    np.save("../../tests/fixtures/X_train.npy", X_train)
-    np.save("../../tests/fixtures/X_test.npy", X_test)
-    np.save("../../tests/fixtures/Y_train_usage.npy", Y_train_usage)
-    np.save("../../tests/fixtures/Y_test_usage.npy", Y_test_usage)
+    # np.save("../../tests/fixtures/X_train.npy", X_train)
+    # np.save("../../tests/fixtures/X_test.npy", X_test)
+    # np.save("../../tests/fixtures/Y_train_usage.npy", Y_train_usage)
+    # np.save("../../tests/fixtures/Y_test_usage.npy", Y_test_usage)
     #################################################################
 
     print(
@@ -805,15 +804,11 @@ def main(data, configs):  # noqa: C901 TODO: remove noqa
     s2 = mae_s.std()
     print("\n\tACTUAL ACC. RESULTS: MAE, MAPE: {} and {}%".format(mae3, mape3 * 100.0))
 
-    site = configs["building"]
-    if not os.path.exists(f"results/{site}"):
-        os.makedirs(f"results/{site}")
-
     pd.DataFrame(preds, columns=[f"q{loss_function_qs}"]).to_csv(
-        f"results/{site}/q{loss_function_qs}.csv", index=None
+        f"{configs['exp_dir']}/q{loss_function_qs}.csv", index=None
     )
     pd.DataFrame(actual, columns=["actual"]).to_csv(
-        f"results/{site}/actual.csv", index=None
+        f"{configs['exp_dir']}/actual.csv", index=None
     )
 
     # total time of run
