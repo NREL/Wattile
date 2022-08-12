@@ -172,10 +172,10 @@ def input_data_split(data, configs):
     return train_df, val_df
 
 
-def pad_full_data(data, configs):
+def timelag_predictors(data, configs):
     """
-    Create lagged versions of exogenous variables in a DataFrame.
-    Used specifically for RNN and LSTM deep learning methods.
+    Create lagged versions of predictor variables in a DataFrame.
+    Used specifically for alfa learning methods.
 
     :param data: (DataFrame)
     :param configs: (Dict)
@@ -220,10 +220,10 @@ def pad_full_data(data, configs):
     return data
 
 
-def pad_full_data_s2s(data, configs):
+def timelag_predictors_target(data, configs):
     """
-    Create lagged versions of exogenous variables in a DataFrame.
-    Used specifically for Sequence to Sequence (S2S) deep learning methods.
+    Create lagged versions of predictor and target variables in a DataFrame.
+    Used specifically for bravo learning methods.
 
     :param data: (DataFrame)
     :param configs: (Dict)
@@ -280,21 +280,21 @@ def pad_full_data_s2s(data, configs):
     return data
 
 
-def roll_full_data_s2s(data, configs):
+def roll_predictors_target(data, configs):
+    """
+    Create rolling windows of predictor and target variables in a DataFrame.
+    Used specifically for charlie learning methods.
+
+    :param data: (DataFrame)
+    :param configs: (Dict)
+    :return: (Dict)
+    """
+
     # setting configuration parameters
-    normalization = configs["S2S_window"]["normalization"]
     window_width_source = configs["S2S_window"]["window_width_source"]
     window_width_target = configs["S2S_window"]["window_width_target"]
     resample_interval = configs["resample_interval"]
     target_var = configs["target_var"]
-
-    # normalization
-    if normalization:
-        print("Transforming data to 0 mean and unit var")
-        MU = data.mean(0)  # 0 means take the mean of the column
-        data = data - MU
-        STD = data.std(0)  # same with std here
-        data = data / STD
 
     # initialize lists
     data_predictor = []
@@ -445,11 +445,11 @@ def _preprocess_data(configs, data):
     logger.debug("Features: {}".format(data.columns.values))
 
     if configs["arch_version"] == 4:
-        data = pad_full_data(data, configs)
+        data = timelag_predictors(data, configs)
     elif configs["arch_version"] == 5:
-        data = pad_full_data_s2s(data, configs)
+        data = timelag_predictors_target(data, configs)
     elif configs["arch_version"] == 6:
-        data = roll_full_data_s2s(data, configs)
+        data = roll_predictors_target(data, configs)
 
     return data
 
