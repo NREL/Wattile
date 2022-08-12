@@ -444,11 +444,11 @@ def _preprocess_data(configs, data):
     logger.info("Number of features: {}".format(configs["input_dim"]))
     logger.debug("Features: {}".format(data.columns.values))
 
-    if configs["arch_version"] == 4:
+    if configs["arch_version"] == "alfa":
         data = timelag_predictors(data, configs)
-    elif configs["arch_version"] == 5:
+    elif configs["arch_version"] == "bravo":
         data = timelag_predictors_target(data, configs)
-    elif configs["arch_version"] == 6:
+    elif configs["arch_version"] == "charlie":
         data = roll_predictors_target(data, configs)
 
     return data

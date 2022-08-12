@@ -33,7 +33,6 @@ for meter_ID in meters:
     )
 
     # Test the model
-    configs["building"] = meter_ID[0]
     configs["target_var"] = meter_ID[1]
     epb.main(configs)
 

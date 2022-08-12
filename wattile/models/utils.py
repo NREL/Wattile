@@ -18,12 +18,12 @@ def save_model(model, epoch_num, n_iter, filepath):
 
 
 def _get_output_dim(configs):
-    arch_version = int(configs["arch_version"])
+    arch_version = configs["arch_version"]
 
-    if arch_version == 4:
+    if arch_version == "alfa":
         return len(configs["qs"])
 
-    elif arch_version == 5:
+    elif arch_version == "bravo":
         return (
             configs["S2S_stagger"]["initial_num"]
             + configs["S2S_stagger"]["secondary_num"]

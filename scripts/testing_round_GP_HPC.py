@@ -50,7 +50,6 @@ if __name__ == "__main__":  # noqa: C901 TODO: remove noqa
             configs["results_dir"] = testing_round_dir
 
             # Alter some configs
-            configs["building"] = meter_ID
             configs["target_var"] = meter_ID
             configs["run_resume"] = resume
 

@@ -1,5 +1,4 @@
 {
- "building": "Synthetic Site",
  "target_var": "Synthetic Site Electricity Main Total Power",
  "start_time": "2018-01-01T00:00:00-07:00",
  "end_time": "2022-01-01T00:00:00-07:00",
@@ -12,7 +11,7 @@
     "Synthetic Weather Station Relative Humidity",
     "Synthetic Weather Station Wind Speed"
  ],
- "arch_version": 4,
+ "arch_version": "alfa",
  "exp_id": "7-9-21",
  "arch_type": "RNN",
  "arch_type_variant": "lstm",
@@ -21,7 +20,8 @@
  "val_batch_size": 1,
  "convert_csvs": false,
  "exp_dir": "exp_dir",
- "data_dir": "data",
+ "data_dir": "tests/data/Synthetic Site",
+ "data_config": "Synthetic Site Config.json",
  "resample_freq": 15,
  "resample_interval": "15min",
  "sequential_splicer": {
