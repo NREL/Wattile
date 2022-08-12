@@ -63,7 +63,7 @@ def test_prediction_alfa(config_for_tests, tmpdir):
 
     results = epb.main(config_for_tests)
 
-    assert results.shape[1:] == (len(config_for_tests["qs"]),)
+    assert results.shape[1:] == (len(config_for_tests["qs"]), 1)  # one for 1 timestamp
     assert (exp_dir / "output.out").exists()
 
 
