@@ -63,7 +63,7 @@ def timeseries_comparison(configs):
             for qntl in range(0, int((len(configs["qs"]) - 1) / 2)):
 
                 if (configs["arch_version"] == "bravo") | (
-                    configs["arch_version"] == 6
+                    configs["arch_version"] == "charlie"
                 ):
 
                     low_start = qntl * configs["S2S_stagger"]["initial_num"]
