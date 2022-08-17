@@ -31,7 +31,10 @@ def _concat_data_from_files(filepaths, needed_columns):
 
     for filepaths in filepaths:
         try:
-            data = pd.read_csv(Path(filepaths))[["Timestamp"] + needed_columns]
+            if len(needed_columns) == 0:
+                data = pd.read_csv(Path(filepaths))
+            else:
+                data = pd.read_csv(Path(filepaths))[["Timestamp"] + needed_columns]
             full_data = pd.concat([full_data, data])
 
         except Exception:
