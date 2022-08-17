@@ -200,7 +200,11 @@ def data_iterable_random(
     val_target_tensor = torch.from_numpy(y_val).to(device)
 
     val = data_utils.TensorDataset(val_feat_tensor, val_target_tensor)
-    val_loader = DataLoader(dataset=val, batch_size=val_batch_size, shuffle=True)
+    if configs["use_case"] == "train":
+        shuffle = True
+    elif configs["use_case"] == "validation":
+        shuffle = False
+    val_loader = DataLoader(dataset=val, batch_size=val_batch_size, shuffle=shuffle)
 
     return train_loader, val_loader
 
@@ -855,6 +859,15 @@ def run_validation(
         configs,
         True,
         device,
+    )
+
+    # Save the final predictions and measured target to a file
+    # predictions.to_csv(self.file_prefix + '/predictions.csv', index=False)
+    pd.DataFrame(predictions).to_hdf(
+        os.path.join(file_prefix, "predictions.h5"), key="df", mode="w"
+    )
+    pd.DataFrame(targets.iloc[:, 0]).to_hdf(
+        os.path.join(file_prefix, "measured.h5"), key="df", mode="w"
     )
 
     # Save the QQ information to a file
