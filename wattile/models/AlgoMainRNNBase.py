@@ -243,6 +243,10 @@ class AlgoMainRNNBase(ABC):
                 self.configs["feat_timelag"]["lag_count"] + 1,
             )
 
+            # Create visualization
+            if self.configs["plot_comparison"]:
+                timeseries_comparison(self.configs)
+
         elif self.configs["use_case"] == "prediction":
             return self.run_prediction(
                 val_loader,
