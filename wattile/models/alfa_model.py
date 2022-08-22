@@ -82,8 +82,9 @@ class AlfaModel(AlgoMainRNNBase):
         val = data_utils.TensorDataset(val_feat_tensor, val_target_tensor)
         if self.configs["use_case"] == "train":
             shuffle = True
-        elif (self.configs["use_case"] == "validation") | (
-            self.configs["use_case"] == "prediction"
+        elif (
+            self.configs["use_case"] == "validation"
+            or self.configs["use_case"] == "prediction"
         ):
             shuffle = False
         val_loader = DataLoader(dataset=val, batch_size=val_batch_size, shuffle=shuffle)
