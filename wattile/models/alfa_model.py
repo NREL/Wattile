@@ -835,7 +835,9 @@ class AlfaModel(AlgoMainRNNBase):
             for (feats, v) in val_loader:
                 features = Variable(feats.view(-1, seq_dim, self.configs["input_dim"]))
                 outputs = model(features)
-                preds.append(outputs.cpu().numpy())
+                outputs = outputs.cpu().numpy()
+                outputs = outputs.reshape(*outputs.shape, 1)
+                preds.append(outputs)
 
         # (Normalized Data) Concatenate the predictions for the whole val set
         semifinal_preds = np.concatenate(preds)
