@@ -389,23 +389,26 @@ class S2S_LA_Model(nn.Module):
 
 ####################################################################################################
 class CharlieModel:
-    def main(self, data, configs):  # noqa: C901 TODO: remove noqa
+    def __init__(self, configs):
+        self.configs = configs
+
+    def main(self, data):  # noqa: C901 TODO: remove noqa
         """
         process the data into three-dimensional for S2S model, train the model, and test the restuls
         """
         normalization = False
         window_source_size = 12
         window_target_size = 3
-        hs = configs["hidden_nodes"]
+        hs = self.configs["hidden_nodes"]
         cell_type = "lstm"
         la_method = "none"
         attention_model = "BA"
         cuda = False
-        epochs = configs["num_epochs"]
-        batch_size = configs["train_batch_size"]
-        loss_function_qs = configs["qs"]
+        epochs = self.configs["num_epochs"]
+        batch_size = self.configs["train_batch_size"]
+        loss_function_qs = self.configs["qs"]
         save_model = False
-        seed = configs["random_seed"]
+        seed = self.configs["random_seed"]
 
         t0 = time.time()
         np.random.seed(seed)
@@ -455,9 +458,9 @@ class CharlieModel:
         dataset = data.astype(np.float32).copy()
         #################################################################
 
-        usage_actual = dataset[configs["target_var"]]
-        mu_usage = dataset[configs["target_var"]].mean()
-        std_usage = dataset[configs["target_var"]].std()
+        usage_actual = dataset[self.configs["target_var"]]
+        mu_usage = dataset[self.configs["target_var"]].mean()
+        std_usage = dataset[self.configs["target_var"]].std()
         dataset = dataset.values
 
         # Normalization
@@ -490,8 +493,8 @@ class CharlieModel:
         #     train_source = dataset[:int(dataset.shape[0]*0.80)]
         #     test_source = dataset[int(dataset.shape[0]*0.80):]
         #################################################################
-        train_source, test_source = input_data_split(data, configs)
-        usage_actual = test_source[[configs["target_var"]]].values
+        train_source, test_source = input_data_split(data, self.configs)
+        usage_actual = test_source[[self.configs["target_var"]]].values
         usage_actual = usage_actual[WINDOW_SOURCE_SIZE:]
         train_source = train_source.astype(np.float32).values
         test_source = test_source.astype(np.float32).values
@@ -819,10 +822,10 @@ class CharlieModel:
         )
 
         pd.DataFrame(preds, columns=[f"q{loss_function_qs}"]).to_csv(
-            f"{configs['exp_dir']}/q{loss_function_qs}.csv", index=None
+            f"{self.configs['exp_dir']}/q{loss_function_qs}.csv", index=None
         )
         pd.DataFrame(actual, columns=["actual"]).to_csv(
-            f"{configs['exp_dir']}/actual.csv", index=None
+            f"{self.configs['exp_dir']}/actual.csv", index=None
         )
 
         # total time of run
