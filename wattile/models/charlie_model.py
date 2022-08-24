@@ -388,324 +388,267 @@ class S2S_LA_Model(nn.Module):
 
 
 ####################################################################################################
-# main function
-def main(data, configs):  # noqa: C901 TODO: remove noqa
-    """
-    process the data into three-dimensional for S2S model, train the model, and test the restuls
-    """
-    normalization = False
-    window_source_size = 12
-    window_target_size = 3
-    hs = configs["hidden_nodes"]
-    cell_type = "lstm"
-    la_method = "none"
-    attention_model = "BA"
-    cuda = False
-    epochs = configs["num_epochs"]
-    batch_size = configs["train_batch_size"]
-    loss_function_qs = configs["qs"]
-    save_model = False
-    seed = configs["random_seed"]
-
-    t0 = time.time()
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-
-    # loss function, qs here is an integer, not a list of integer
-    def quantile_loss(output, target, qs, window_target_size):
+class CharlieModel:
+    def main(self, data, configs):  # noqa: C901 TODO: remove noqa
         """
-        loss function with quntile number as parameter.
-         For now, it cannot support list of quantiles as parameters.
-
-        :param output: (Tensor)
-        :param target: (Tensor)
-        :param qs: (int)
-        :param window_target_size: (int)
-        :return: (Tensor) Loss for this study (single number)
+        process the data into three-dimensional for S2S model, train the model, and test the restuls
         """
+        normalization = False
+        window_source_size = 12
+        window_target_size = 3
+        hs = configs["hidden_nodes"]
+        cell_type = "lstm"
+        la_method = "none"
+        attention_model = "BA"
+        cuda = False
+        epochs = configs["num_epochs"]
+        batch_size = configs["train_batch_size"]
+        loss_function_qs = configs["qs"]
+        save_model = False
+        seed = configs["random_seed"]
 
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        t0 = time.time()
+        np.random.seed(seed)
+        torch.manual_seed(seed)
 
-        resid = target - output
-        tau = torch.tensor([qs], device=device).repeat_interleave(window_target_size)
+        # loss function, qs here is an integer, not a list of integer
+        def quantile_loss(output, target, qs, window_target_size):
+            """
+            loss function with quntile number as parameter.
+            For now, it cannot support list of quantiles as parameters.
 
-        alpha = 0.001
-        log_term = torch.zeros_like(resid, device=device)
-        log_term[resid < 0] = torch.log(1 + torch.exp(resid[resid < 0] / alpha)) - (
-            resid[resid < 0] / alpha
-        )
-        log_term[resid >= 0] = torch.log(1 + torch.exp(-resid[resid >= 0] / alpha))
-        loss = resid * tau + alpha * log_term
-        loss = torch.mean(torch.mean(loss, 0))
+            :param output: (Tensor)
+            :param target: (Tensor)
+            :param qs: (int)
+            :param window_target_size: (int)
+            :return: (Tensor) Loss for this study (single number)
+            """
 
-        return loss
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    #################################################################
-    # Load dataset
-    #################################################################
-    # if site == 'cafe':
-    #     dataset = pd.read_csv("data/Cafe_dataset_2.csv").astype(np.float32)
-    # elif site == 'synthetic':
-    #     dataset = pd.read_csv("data/Synthetic Site_dataset_2.csv").astype(np.float32)
-    # else:
-    #     raise Exception("The variable of 'site' should either be 'cafe' or 'synthetic'.")
-    #################################################################
-    dataset = data.astype(np.float32).copy()
-    #################################################################
+            resid = target - output
+            tau = torch.tensor([qs], device=device).repeat_interleave(
+                window_target_size
+            )
 
-    usage_actual = dataset[configs["target_var"]]
-    mu_usage = dataset[configs["target_var"]].mean()
-    std_usage = dataset[configs["target_var"]].std()
-    dataset = dataset.values
+            alpha = 0.001
+            log_term = torch.zeros_like(resid, device=device)
+            log_term[resid < 0] = torch.log(1 + torch.exp(resid[resid < 0] / alpha)) - (
+                resid[resid < 0] / alpha
+            )
+            log_term[resid >= 0] = torch.log(1 + torch.exp(-resid[resid >= 0] / alpha))
+            loss = resid * tau + alpha * log_term
+            loss = torch.mean(torch.mean(loss, 0))
 
-    # Normalization
-    if normalization:
-        print("Transforming data to 0 mean and unit var")
-        MU = dataset.mean(0)  # 0 means take the mean of the column
-        dataset = dataset - MU
-        STD = dataset.std(0)  # same with std here
-        dataset = dataset / STD
-    else:
-        MU = dataset.mean(0)  # 0 means take the mean of the column
-        MU = 0
-        dataset = dataset - MU
-        STD = dataset.std(0)  # same with std here
-        STD = 1
-        dataset = dataset / STD
+            return loss
 
-    print("Generating training and test data...")
-    WINDOW_SOURCE_SIZE = window_source_size
-    WINDOW_TARGET_SIZE = window_target_size
+        #################################################################
+        # Load dataset
+        #################################################################
+        # if site == 'cafe':
+        #     dataset = pd.read_csv("data/Cafe_dataset_2.csv").astype(np.float32)
+        # elif site == 'synthetic':
+        #     dataset = pd.read_csv("data/Synthetic Site_dataset_2.csv").astype(np.float32)
+        # else:
+        #     raise Exception("The variable of 'site' should either be 'cafe' or 'synthetic'.")
+        #################################################################
+        dataset = data.astype(np.float32).copy()
+        #################################################################
 
-    #################################################################
-    # getting actual usage vector, aligning with predicted values vector.
-    #  Aka remove first window_source_size and remaining
-    #################################################################
-    #     usage_actual = usage_actual.values
-    #     usage_actual = usage_actual[int(dataset.shape[0]*0.80):]
-    #     usage_actual = usage_actual[WINDOW_SOURCE_SIZE:] # <--------------------------------------
-    #     # training testing split: 80% train, 20% test
-    #     train_source = dataset[:int(dataset.shape[0]*0.80)]
-    #     test_source = dataset[int(dataset.shape[0]*0.80):]
-    #################################################################
-    train_source, test_source = input_data_split(data, configs)
-    usage_actual = test_source[[configs["target_var"]]].values
-    usage_actual = usage_actual[WINDOW_SOURCE_SIZE:]
-    train_source = train_source.astype(np.float32).values
-    test_source = test_source.astype(np.float32).values
-    #################################################################
+        usage_actual = dataset[configs["target_var"]]
+        mu_usage = dataset[configs["target_var"]].mean()
+        std_usage = dataset[configs["target_var"]].std()
+        dataset = dataset.values
 
-    # A key function to convert from 2D data to 3D data.
-    def generate_windows(data):
-        """
-        an important procedure to convert 2-dimensional data into 3-dimensional for modeling
-        """
-        x_train = []
-        y_usage_train = []
-        x_test = []
-        y_usage_test = []
+        # Normalization
+        if normalization:
+            print("Transforming data to 0 mean and unit var")
+            MU = dataset.mean(0)  # 0 means take the mean of the column
+            dataset = dataset - MU
+            STD = dataset.std(0)  # same with std here
+            dataset = dataset / STD
+        else:
+            MU = dataset.mean(0)  # 0 means take the mean of the column
+            MU = 0
+            dataset = dataset - MU
+            STD = dataset.std(0)  # same with std here
+            STD = 1
+            dataset = dataset / STD
 
-        # for training data
-        idxs = np.random.choice(
-            train_source.shape[0] - (WINDOW_SOURCE_SIZE + WINDOW_TARGET_SIZE),
-            train_source.shape[0] - (WINDOW_SOURCE_SIZE + WINDOW_TARGET_SIZE),
-            replace=False,
-        )
+        print("Generating training and test data...")
+        WINDOW_SOURCE_SIZE = window_source_size
+        WINDOW_TARGET_SIZE = window_target_size
 
-        for idx in idxs:
-            x_train.append(
-                train_source[idx : idx + WINDOW_SOURCE_SIZE].reshape(
-                    (1, WINDOW_SOURCE_SIZE, train_source.shape[1])
+        #################################################################
+        # getting actual usage vector, aligning with predicted values vector.
+        #  Aka remove first window_source_size and remaining
+        #################################################################
+        #     usage_actual = usage_actual.values
+        #     usage_actual = usage_actual[int(dataset.shape[0]*0.80):]
+        #     usage_actual = usage_actual[WINDOW_SOURCE_SIZE:] # <----------------------------------
+        #     # training testing split: 80% train, 20% test
+        #     train_source = dataset[:int(dataset.shape[0]*0.80)]
+        #     test_source = dataset[int(dataset.shape[0]*0.80):]
+        #################################################################
+        train_source, test_source = input_data_split(data, configs)
+        usage_actual = test_source[[configs["target_var"]]].values
+        usage_actual = usage_actual[WINDOW_SOURCE_SIZE:]
+        train_source = train_source.astype(np.float32).values
+        test_source = test_source.astype(np.float32).values
+        #################################################################
+
+        # A key function to convert from 2D data to 3D data.
+        def generate_windows(data):
+            """
+            an important procedure to convert 2-dimensional data into 3-dimensional for modeling
+            """
+            x_train = []
+            y_usage_train = []
+            x_test = []
+            y_usage_test = []
+
+            # for training data
+            idxs = np.random.choice(
+                train_source.shape[0] - (WINDOW_SOURCE_SIZE + WINDOW_TARGET_SIZE),
+                train_source.shape[0] - (WINDOW_SOURCE_SIZE + WINDOW_TARGET_SIZE),
+                replace=False,
+            )
+
+            for idx in idxs:
+                x_train.append(
+                    train_source[idx : idx + WINDOW_SOURCE_SIZE].reshape(
+                        (1, WINDOW_SOURCE_SIZE, train_source.shape[1])
+                    )
                 )
-            )
-            y_usage_train.append(
-                train_source[
-                    idx
-                    + WINDOW_SOURCE_SIZE : idx
-                    + WINDOW_SOURCE_SIZE
-                    + WINDOW_TARGET_SIZE,
-                    -1,
-                ].reshape((1, WINDOW_TARGET_SIZE, 1))
+                y_usage_train.append(
+                    train_source[
+                        idx
+                        + WINDOW_SOURCE_SIZE : idx
+                        + WINDOW_SOURCE_SIZE
+                        + WINDOW_TARGET_SIZE,
+                        -1,
+                    ].reshape((1, WINDOW_TARGET_SIZE, 1))
+                )
+
+            x_train = np.concatenate(x_train, axis=0)  # make them arrays and not lists
+            y_usage_train = np.concatenate(y_usage_train, axis=0)
+
+            # for testing data
+            idxs = np.arange(
+                0,
+                len(test_source) - (WINDOW_SOURCE_SIZE + WINDOW_TARGET_SIZE),
+                WINDOW_TARGET_SIZE,
             )
 
-        x_train = np.concatenate(x_train, axis=0)  # make them arrays and not lists
-        y_usage_train = np.concatenate(y_usage_train, axis=0)
+            for idx in idxs:
+                x_test.append(
+                    test_source[idx : idx + WINDOW_SOURCE_SIZE].reshape(
+                        (1, WINDOW_SOURCE_SIZE, test_source.shape[1])
+                    )
+                )
+                y_usage_test.append(
+                    test_source[
+                        idx
+                        + WINDOW_SOURCE_SIZE : idx
+                        + WINDOW_SOURCE_SIZE
+                        + WINDOW_TARGET_SIZE,
+                        -1,
+                    ].reshape((1, WINDOW_TARGET_SIZE, 1))
+                )
 
-        # for testing data
+            x_test = np.concatenate(x_test, axis=0)  # make them arrays and not lists
+            y_usage_test = np.concatenate(y_usage_test, axis=0)
+
+            return x_train, y_usage_train, x_test, y_usage_test
+
+        X_train, Y_train_usage, X_test, Y_test_usage = generate_windows(dataset)
+
+        #################################################################
+        # save numpy array as npy files for test validation
+        #################################################################
+        # np.save("../../tests/fixtures/X_train.npy", X_train)
+        # np.save("../../tests/fixtures/X_test.npy", X_test)
+        # np.save("../../tests/fixtures/Y_train_usage.npy", Y_train_usage)
+        # np.save("../../tests/fixtures/Y_test_usage.npy", Y_test_usage)
+        #################################################################
+
+        print(
+            "Created {} train samples and {} test samples".format(
+                X_train.shape[0], X_test.shape[0]
+            )
+        )
         idxs = np.arange(
             0,
             len(test_source) - (WINDOW_SOURCE_SIZE + WINDOW_TARGET_SIZE),
             WINDOW_TARGET_SIZE,
         )
-
-        for idx in idxs:
-            x_test.append(
-                test_source[idx : idx + WINDOW_SOURCE_SIZE].reshape(
-                    (1, WINDOW_SOURCE_SIZE, test_source.shape[1])
-                )
-            )
-            y_usage_test.append(
-                test_source[
-                    idx
-                    + WINDOW_SOURCE_SIZE : idx
-                    + WINDOW_SOURCE_SIZE
-                    + WINDOW_TARGET_SIZE,
-                    -1,
-                ].reshape((1, WINDOW_TARGET_SIZE, 1))
-            )
-
-        x_test = np.concatenate(x_test, axis=0)  # make them arrays and not lists
-        y_usage_test = np.concatenate(y_usage_test, axis=0)
-
-        return x_train, y_usage_train, x_test, y_usage_test
-
-    X_train, Y_train_usage, X_test, Y_test_usage = generate_windows(dataset)
-
-    #################################################################
-    # save numpy array as npy files for test validation
-    #################################################################
-    # np.save("../../tests/fixtures/X_train.npy", X_train)
-    # np.save("../../tests/fixtures/X_test.npy", X_test)
-    # np.save("../../tests/fixtures/Y_train_usage.npy", Y_train_usage)
-    # np.save("../../tests/fixtures/Y_test_usage.npy", Y_test_usage)
-    #################################################################
-
-    print(
-        "Created {} train samples and {} test samples".format(
-            X_train.shape[0], X_test.shape[0]
+        remainder = len(test_source) - (
+            idxs[-1] + WINDOW_SOURCE_SIZE + WINDOW_TARGET_SIZE
         )
-    )
-    idxs = np.arange(
-        0,
-        len(test_source) - (WINDOW_SOURCE_SIZE + WINDOW_TARGET_SIZE),
-        WINDOW_TARGET_SIZE,
-    )
-    remainder = len(test_source) - (idxs[-1] + WINDOW_SOURCE_SIZE + WINDOW_TARGET_SIZE)
-    usage_actual = usage_actual[:-remainder]
-
-    ################################################################################################
-    # call the model
-    # print("Creating model...")
-    INPUT_SIZE = X_train.shape[-1]
-    HIDDEN_SIZE = hs
-    CELL_TYPE = cell_type
-    LA_METHOD = la_method
-
-    # call the respective model
-    if attention_model == "none":
-        model = S2S_Model(CELL_TYPE, INPUT_SIZE, HIDDEN_SIZE, use_cuda=cuda)
-
-    elif attention_model == "BA":
-        model = S2S_BA_Model(CELL_TYPE, INPUT_SIZE, HIDDEN_SIZE, use_cuda=cuda)
-
-    elif attention_model == "LA":
-        model = S2S_LA_Model(
-            CELL_TYPE, LA_METHOD, INPUT_SIZE, HIDDEN_SIZE, use_cuda=cuda
-        )
-
-    if cuda:
-        torch.cuda.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)
-        model.cuda()
-
-    print("MODEL ARCHITECTURE IS: ")
-    print(model)
-
-    print("\nModel parameters are on cuda: {}".format(next(model.parameters()).is_cuda))
-
-    opt = optim.Adam(model.parameters(), lr=1e-3)
-    #     loss_fn = nn.MSELoss(reduction='sum')
-    loss_fn = quantile_loss
-
-    EPOCHES = epochs
-    BATCH_SIZE = batch_size
-
-    print("\nStarting training...")
-
-    train_loss = []
-    test_loss = []
-
-    for epoch in range(EPOCHES):
-        t_one_epoch = time.time()
-        print("Epoch {}".format(epoch + 1))
-        total_usage_loss = 0
-        for b_idx in range(0, X_train.shape[0], BATCH_SIZE):
-
-            x = torch.from_numpy(X_train[b_idx : b_idx + BATCH_SIZE]).float()
-            y_usage = torch.from_numpy(
-                Y_train_usage[b_idx : b_idx + BATCH_SIZE]
-            ).float()
-
-            if cuda:
-                x = x.cuda()
-                y_usage = y_usage.cuda()
-
-            # encoder forward, for respective models (with and without attention)
-            if attention_model == "none":
-                pred_usage, h = model.consume(x)
-
-            elif attention_model == "BA":
-                pred_usage, h, encoder_outputs = model.consume(x)
-
-            elif attention_model == "LA":
-                pred_usage, h, encoder_outputs = model.consume(x)
-
-            # decoder forward, for respective models
-            if attention_model == "none":
-                preds = model.predict(pred_usage, h, WINDOW_TARGET_SIZE)
-
-            elif attention_model == "BA":
-                preds = model.predict(
-                    pred_usage, h, encoder_outputs, WINDOW_TARGET_SIZE
-                )
-
-            elif attention_model == "LA":
-                preds = model.predict(
-                    pred_usage, h, encoder_outputs, WINDOW_TARGET_SIZE
-                )
-
-            # compute lose
-            loss_usage = loss_fn(
-                preds,
-                y_usage,
-                qs=loss_function_qs,
-                window_target_size=window_target_size,
-            )
-
-            # backprop and update
-            opt.zero_grad()
-
-            loss_usage.sum().backward()
-
-            opt.step()
-
-            total_usage_loss += (
-                loss_usage.item()
-            )  # <-----------------------------------------------------------------------
-
-        train_loss.append(total_usage_loss)
-        print("\tTRAINING: {} total train USAGE loss.\n".format(total_usage_loss))
+        usage_actual = usage_actual[:-remainder]
 
         ############################################################################################
-        # TESTING
-        y_usage = None
-        pred_usage = None
-        preds = None
-        total_usage_loss = (
-            0  # <-------------------------------------------------------------------
-        )
-        all_preds = []
+        # call the model
+        # print("Creating model...")
+        INPUT_SIZE = X_train.shape[-1]
+        HIDDEN_SIZE = hs
+        CELL_TYPE = cell_type
+        LA_METHOD = la_method
 
-        for b_idx in range(0, X_test.shape[0], BATCH_SIZE):
-            with torch.no_grad():
-                x = torch.from_numpy(X_test[b_idx : b_idx + BATCH_SIZE])
-                y_usage = torch.from_numpy(Y_test_usage[b_idx : b_idx + BATCH_SIZE])
+        # call the respective model
+        if attention_model == "none":
+            model = S2S_Model(CELL_TYPE, INPUT_SIZE, HIDDEN_SIZE, use_cuda=cuda)
+
+        elif attention_model == "BA":
+            model = S2S_BA_Model(CELL_TYPE, INPUT_SIZE, HIDDEN_SIZE, use_cuda=cuda)
+
+        elif attention_model == "LA":
+            model = S2S_LA_Model(
+                CELL_TYPE, LA_METHOD, INPUT_SIZE, HIDDEN_SIZE, use_cuda=cuda
+            )
+
+        if cuda:
+            torch.cuda.manual_seed(seed)
+            torch.cuda.manual_seed_all(seed)
+            model.cuda()
+
+        print("MODEL ARCHITECTURE IS: ")
+        print(model)
+
+        print(
+            "\nModel parameters are on cuda: {}".format(
+                next(model.parameters()).is_cuda
+            )
+        )
+
+        opt = optim.Adam(model.parameters(), lr=1e-3)
+        #     loss_fn = nn.MSELoss(reduction='sum')
+        loss_fn = quantile_loss
+
+        EPOCHES = epochs
+        BATCH_SIZE = batch_size
+
+        print("\nStarting training...")
+
+        train_loss = []
+        test_loss = []
+
+        for epoch in range(EPOCHES):
+            t_one_epoch = time.time()
+            print("Epoch {}".format(epoch + 1))
+            total_usage_loss = 0
+            for b_idx in range(0, X_train.shape[0], BATCH_SIZE):
+
+                x = torch.from_numpy(X_train[b_idx : b_idx + BATCH_SIZE]).float()
+                y_usage = torch.from_numpy(
+                    Y_train_usage[b_idx : b_idx + BATCH_SIZE]
+                ).float()
 
                 if cuda:
                     x = x.cuda()
                     y_usage = y_usage.cuda()
 
-                # encoder forward, for respective models
+                # encoder forward, for respective models (with and without attention)
                 if attention_model == "none":
                     pred_usage, h = model.consume(x)
 
@@ -729,7 +672,7 @@ def main(data, configs):  # noqa: C901 TODO: remove noqa
                         pred_usage, h, encoder_outputs, WINDOW_TARGET_SIZE
                     )
 
-                # compute loss
+                # compute lose
                 loss_usage = loss_fn(
                     preds,
                     y_usage,
@@ -737,98 +680,169 @@ def main(data, configs):  # noqa: C901 TODO: remove noqa
                     window_target_size=window_target_size,
                 )
 
-                if epoch == epochs - 1:
-                    all_preds.append(preds)
+                # backprop and update
+                opt.zero_grad()
 
-                # TODOs:
-                # test
-                total_usage_loss += loss_usage.item()
+                loss_usage.sum().backward()
 
-        test_loss.append(total_usage_loss)
+                opt.step()
 
-        print("\tTESTING: {} total test USAGE loss".format(total_usage_loss))
-        print("\tTESTING:\n")
-        print("\tSample of prediction:")
-        print("\t\t TARGET: {}".format(y_usage[-1].cpu().detach().numpy().flatten()))
-        print("\t\t   PRED: {}\n\n".format(preds[-1].cpu().detach().numpy().flatten()))
+                total_usage_loss += (
+                    loss_usage.item()
+                )  # <------------------------------------------------------------------------------
 
-        y_last_usage = y_usage[-1].cpu().detach().numpy().flatten()
-        pred_last_usage = preds[-1].cpu().detach().numpy().flatten()
-        t2_one_epoch = time.time()
-        time_one_epoch = t2_one_epoch - t_one_epoch
-        print(
-            "TIME OF ONE EPOCH: {} seconds and {} minutes".format(
-                time_one_epoch, time_one_epoch / 60.0
+            train_loss.append(total_usage_loss)
+            print("\tTRAINING: {} total train USAGE loss.\n".format(total_usage_loss))
+
+            ########################################################################################
+            # TESTING
+            y_usage = None
+            pred_usage = None
+            preds = None
+            total_usage_loss = (
+                0  # <---------------------------------------------------------------
             )
+            all_preds = []
+
+            for b_idx in range(0, X_test.shape[0], BATCH_SIZE):
+                with torch.no_grad():
+                    x = torch.from_numpy(X_test[b_idx : b_idx + BATCH_SIZE])
+                    y_usage = torch.from_numpy(Y_test_usage[b_idx : b_idx + BATCH_SIZE])
+
+                    if cuda:
+                        x = x.cuda()
+                        y_usage = y_usage.cuda()
+
+                    # encoder forward, for respective models
+                    if attention_model == "none":
+                        pred_usage, h = model.consume(x)
+
+                    elif attention_model == "BA":
+                        pred_usage, h, encoder_outputs = model.consume(x)
+
+                    elif attention_model == "LA":
+                        pred_usage, h, encoder_outputs = model.consume(x)
+
+                    # decoder forward, for respective models
+                    if attention_model == "none":
+                        preds = model.predict(pred_usage, h, WINDOW_TARGET_SIZE)
+
+                    elif attention_model == "BA":
+                        preds = model.predict(
+                            pred_usage, h, encoder_outputs, WINDOW_TARGET_SIZE
+                        )
+
+                    elif attention_model == "LA":
+                        preds = model.predict(
+                            pred_usage, h, encoder_outputs, WINDOW_TARGET_SIZE
+                        )
+
+                    # compute loss
+                    loss_usage = loss_fn(
+                        preds,
+                        y_usage,
+                        qs=loss_function_qs,
+                        window_target_size=window_target_size,
+                    )
+
+                    if epoch == epochs - 1:
+                        all_preds.append(preds)
+
+                    # TODOs:
+                    # test
+                    total_usage_loss += loss_usage.item()
+
+            test_loss.append(total_usage_loss)
+
+            print("\tTESTING: {} total test USAGE loss".format(total_usage_loss))
+            print("\tTESTING:\n")
+            print("\tSample of prediction:")
+            print(
+                "\t\t TARGET: {}".format(y_usage[-1].cpu().detach().numpy().flatten())
+            )
+            print(
+                "\t\t   PRED: {}\n\n".format(preds[-1].cpu().detach().numpy().flatten())
+            )
+
+            y_last_usage = y_usage[-1].cpu().detach().numpy().flatten()
+            pred_last_usage = preds[-1].cpu().detach().numpy().flatten()
+            t2_one_epoch = time.time()
+            time_one_epoch = t2_one_epoch - t_one_epoch
+            print(
+                "TIME OF ONE EPOCH: {} seconds and {} minutes".format(
+                    time_one_epoch, time_one_epoch / 60.0
+                )
+            )
+
+        ############################################################################################
+        # SAVING MODEL
+        if save_model:
+            torch.save(
+                model.state_dict(),
+                "MODEL_w:"
+                f"__seed={seed}"
+                f"_cell_type={cell_type}"
+                f"_attention_model={attention_model}"
+                f"_la_method={la_method}"
+                f"_T={window_source_size}"
+                f"_N={window_target_size}"
+                f"_bs={batch_size}"
+                f"_hs={hs}",
+            )
+
+        ############################################################################################
+        # RESULTS
+        # for plotting and accuracy
+        preds = torch.cat(all_preds, 0)
+        preds = preds.cpu().detach().numpy().flatten()
+        actual = Y_test_usage.flatten()
+
+        # unnormalizing 1
+        if normalization:
+            preds_unnorm = (preds * std_usage) + mu_usage
+        else:
+            preds_unnorm = preds
+
+        # using the actual usage from top of script here
+        mae3 = (sum(abs(usage_actual - preds_unnorm))) / (len(usage_actual))
+        mape3 = (sum(abs((usage_actual - preds_unnorm) / usage_actual))) / (
+            len(usage_actual)
         )
 
-    ################################################################################################
-    # SAVING MODEL
-    if save_model:
-        torch.save(
-            model.state_dict(),
-            "MODEL_w:"
-            f"__seed={seed}"
-            f"_cell_type={cell_type}"
-            f"_attention_model={attention_model}"
-            f"_la_method={la_method}"
-            f"_T={window_source_size}"
-            f"_N={window_target_size}"
-            f"_bs={batch_size}"
-            f"_hs={hs}",
+        # for std
+        mape_s = abs((usage_actual - preds_unnorm) / usage_actual)
+        s = mape_s.std()
+        mae_s = abs(usage_actual - preds_unnorm)
+        s2 = mae_s.std()
+        print(
+            "\n\tACTUAL ACC. RESULTS: MAE, MAPE: {} and {}%".format(mae3, mape3 * 100.0)
         )
 
-    ################################################################################################
-    # RESULTS
-    # for plotting and accuracy
-    preds = torch.cat(all_preds, 0)
-    preds = preds.cpu().detach().numpy().flatten()
-    actual = Y_test_usage.flatten()
+        pd.DataFrame(preds, columns=[f"q{loss_function_qs}"]).to_csv(
+            f"{configs['exp_dir']}/q{loss_function_qs}.csv", index=None
+        )
+        pd.DataFrame(actual, columns=["actual"]).to_csv(
+            f"{configs['exp_dir']}/actual.csv", index=None
+        )
 
-    # unnormalizing 1
-    if normalization:
-        preds_unnorm = (preds * std_usage) + mu_usage
-    else:
-        preds_unnorm = preds
-
-    # using the actual usage from top of script here
-    mae3 = (sum(abs(usage_actual - preds_unnorm))) / (len(usage_actual))
-    mape3 = (sum(abs((usage_actual - preds_unnorm) / usage_actual))) / (
-        len(usage_actual)
-    )
-
-    # for std
-    mape_s = abs((usage_actual - preds_unnorm) / usage_actual)
-    s = mape_s.std()
-    mae_s = abs(usage_actual - preds_unnorm)
-    s2 = mae_s.std()
-    print("\n\tACTUAL ACC. RESULTS: MAE, MAPE: {} and {}%".format(mae3, mape3 * 100.0))
-
-    pd.DataFrame(preds, columns=[f"q{loss_function_qs}"]).to_csv(
-        f"{configs['exp_dir']}/q{loss_function_qs}.csv", index=None
-    )
-    pd.DataFrame(actual, columns=["actual"]).to_csv(
-        f"{configs['exp_dir']}/actual.csv", index=None
-    )
-
-    # total time of run
-    t1 = time.time()
-    total = t1 - t0
-    print("\nTIME ELAPSED: {} seconds OR {} minutes".format(total, total / 60.0))
-    print("\nEnd of run")
-    plt.show()
-    for_plotting = [usage_actual, preds_unnorm, y_last_usage, pred_last_usage]
-    return (
-        s,
-        s2,
-        mape_s,
-        mae_s,
-        mae3,
-        mape3,
-        total / 60.0,
-        train_loss,
-        test_loss,
-        for_plotting,
-        MU,
-        STD,
-    )
+        # total time of run
+        t1 = time.time()
+        total = t1 - t0
+        print("\nTIME ELAPSED: {} seconds OR {} minutes".format(total, total / 60.0))
+        print("\nEnd of run")
+        plt.show()
+        for_plotting = [usage_actual, preds_unnorm, y_last_usage, pred_last_usage]
+        return (
+            s,
+            s2,
+            mape_s,
+            mae_s,
+            mae3,
+            mape3,
+            total / 60.0,
+            train_loss,
+            test_loss,
+            for_plotting,
+            MU,
+            STD,
+        )
