@@ -10,8 +10,6 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.nn import init
 
-from wattile.buildings_processing import input_data_split
-
 PROJECT_DIRECTORY = Path().resolve().parent.parent
 
 
@@ -392,13 +390,11 @@ class CharlieModel:
     def __init__(self, configs):
         self.configs = configs
 
-    def main(self, data):  # noqa: C901 TODO: remove noqa
+    def main(self, train_df, val_df):  # noqa: C901 TODO: remove noqa
         """
         process the data into three-dimensional for S2S model, train the model, and test the restuls
         """
-        normalization = False
-        window_source_size = 12
-        window_target_size = 3
+        window_target_size = self.configs["S2S_window"]["window_width_target"]
         hs = self.configs["hidden_nodes"]
         cell_type = "lstm"
         la_method = "none"
@@ -407,8 +403,12 @@ class CharlieModel:
         epochs = self.configs["num_epochs"]
         batch_size = self.configs["train_batch_size"]
         loss_function_qs = self.configs["qs"]
-        save_model = False
+        save_model = True
         seed = self.configs["random_seed"]
+        resample_interval = self.configs["resample_interval"]
+        window_target_size_count = int(
+            pd.Timedelta(window_target_size) / pd.Timedelta(resample_interval)
+        )
 
         t0 = time.time()
         np.random.seed(seed)
@@ -445,170 +445,21 @@ class CharlieModel:
 
             return loss
 
-        #################################################################
-        # Load dataset
-        #################################################################
-        # if site == 'cafe':
-        #     dataset = pd.read_csv("data/Cafe_dataset_2.csv").astype(np.float32)
-        # elif site == 'synthetic':
-        #     dataset = pd.read_csv("data/Synthetic Site_dataset_2.csv").astype(np.float32)
-        # else:
-        #     raise Exception("The variable of 'site' should either be 'cafe' or 'synthetic'.")
-        #################################################################
-        dataset = data.astype(np.float32).copy()
-        #################################################################
-
-        usage_actual = dataset[self.configs["target_var"]]
-        mu_usage = dataset[self.configs["target_var"]].mean()
-        std_usage = dataset[self.configs["target_var"]].std()
-        dataset = dataset.values
-
-        # Normalization
-        if normalization:
-            print("Transforming data to 0 mean and unit var")
-            MU = dataset.mean(0)  # 0 means take the mean of the column
-            dataset = dataset - MU
-            STD = dataset.std(0)  # same with std here
-            dataset = dataset / STD
-        else:
-            MU = dataset.mean(0)  # 0 means take the mean of the column
-            MU = 0
-            dataset = dataset - MU
-            STD = dataset.std(0)  # same with std here
-            STD = 1
-            dataset = dataset / STD
-
-        print("Generating training and test data...")
-        WINDOW_SOURCE_SIZE = window_source_size
-        WINDOW_TARGET_SIZE = window_target_size
-
-        #################################################################
-        # getting actual usage vector, aligning with predicted values vector.
-        #  Aka remove first window_source_size and remaining
-        #################################################################
-        #     usage_actual = usage_actual.values
-        #     usage_actual = usage_actual[int(dataset.shape[0]*0.80):]
-        #     usage_actual = usage_actual[WINDOW_SOURCE_SIZE:] # <----------------------------------
-        #     # training testing split: 80% train, 20% test
-        #     train_source = dataset[:int(dataset.shape[0]*0.80)]
-        #     test_source = dataset[int(dataset.shape[0]*0.80):]
-        #################################################################
-        train_source, test_source = input_data_split(data, self.configs)
-        usage_actual = test_source[[self.configs["target_var"]]].values
-        usage_actual = usage_actual[WINDOW_SOURCE_SIZE:]
-        train_source = train_source.astype(np.float32).values
-        test_source = test_source.astype(np.float32).values
-        #################################################################
-
-        # A key function to convert from 2D data to 3D data.
-        def generate_windows(data):
-            """
-            an important procedure to convert 2-dimensional data into 3-dimensional for modeling
-            """
-            x_train = []
-            y_usage_train = []
-            x_test = []
-            y_usage_test = []
-
-            # for training data
-            idxs = np.random.choice(
-                train_source.shape[0] - (WINDOW_SOURCE_SIZE + WINDOW_TARGET_SIZE),
-                train_source.shape[0] - (WINDOW_SOURCE_SIZE + WINDOW_TARGET_SIZE),
-                replace=False,
-            )
-
-            for idx in idxs:
-                x_train.append(
-                    train_source[idx : idx + WINDOW_SOURCE_SIZE].reshape(
-                        (1, WINDOW_SOURCE_SIZE, train_source.shape[1])
-                    )
-                )
-                y_usage_train.append(
-                    train_source[
-                        idx
-                        + WINDOW_SOURCE_SIZE : idx
-                        + WINDOW_SOURCE_SIZE
-                        + WINDOW_TARGET_SIZE,
-                        -1,
-                    ].reshape((1, WINDOW_TARGET_SIZE, 1))
-                )
-
-            x_train = np.concatenate(x_train, axis=0)  # make them arrays and not lists
-            y_usage_train = np.concatenate(y_usage_train, axis=0)
-
-            # for testing data
-            idxs = np.arange(
-                0,
-                len(test_source) - (WINDOW_SOURCE_SIZE + WINDOW_TARGET_SIZE),
-                WINDOW_TARGET_SIZE,
-            )
-
-            for idx in idxs:
-                x_test.append(
-                    test_source[idx : idx + WINDOW_SOURCE_SIZE].reshape(
-                        (1, WINDOW_SOURCE_SIZE, test_source.shape[1])
-                    )
-                )
-                y_usage_test.append(
-                    test_source[
-                        idx
-                        + WINDOW_SOURCE_SIZE : idx
-                        + WINDOW_SOURCE_SIZE
-                        + WINDOW_TARGET_SIZE,
-                        -1,
-                    ].reshape((1, WINDOW_TARGET_SIZE, 1))
-                )
-
-            x_test = np.concatenate(x_test, axis=0)  # make them arrays and not lists
-            y_usage_test = np.concatenate(y_usage_test, axis=0)
-
-            return x_train, y_usage_train, x_test, y_usage_test
-
-        X_train, Y_train_usage, X_test, Y_test_usage = generate_windows(dataset)
-
-        #################################################################
-        # save numpy array as npy files for test validation
-        #################################################################
-        # np.save("../../tests/fixtures/X_train.npy", X_train)
-        # np.save("../../tests/fixtures/X_test.npy", X_test)
-        # np.save("../../tests/fixtures/Y_train_usage.npy", Y_train_usage)
-        # np.save("../../tests/fixtures/Y_test_usage.npy", Y_test_usage)
-        #################################################################
-
-        print(
-            "Created {} train samples and {} test samples".format(
-                X_train.shape[0], X_test.shape[0]
-            )
-        )
-        idxs = np.arange(
-            0,
-            len(test_source) - (WINDOW_SOURCE_SIZE + WINDOW_TARGET_SIZE),
-            WINDOW_TARGET_SIZE,
-        )
-        remainder = len(test_source) - (
-            idxs[-1] + WINDOW_SOURCE_SIZE + WINDOW_TARGET_SIZE
-        )
-        usage_actual = usage_actual[:-remainder]
-
-        ############################################################################################
-        # call the model
-        # print("Creating model...")
-        INPUT_SIZE = X_train.shape[-1]
-        HIDDEN_SIZE = hs
-        CELL_TYPE = cell_type
-        LA_METHOD = la_method
+        X_train = train_df["predictor"]
+        Y_train_usage = train_df["target"]
+        X_test = val_df["predictor"]
+        Y_test_usage = val_df["target"]
+        input_dim = self.configs["input_dim"] = X_train.shape[-1]
 
         # call the respective model
         if attention_model == "none":
-            model = S2S_Model(CELL_TYPE, INPUT_SIZE, HIDDEN_SIZE, use_cuda=cuda)
+            model = S2S_Model(cell_type, input_dim, hs, use_cuda=cuda)
 
         elif attention_model == "BA":
-            model = S2S_BA_Model(CELL_TYPE, INPUT_SIZE, HIDDEN_SIZE, use_cuda=cuda)
+            model = S2S_BA_Model(cell_type, input_dim, hs, use_cuda=cuda)
 
         elif attention_model == "LA":
-            model = S2S_LA_Model(
-                CELL_TYPE, LA_METHOD, INPUT_SIZE, HIDDEN_SIZE, use_cuda=cuda
-            )
+            model = S2S_LA_Model(cell_type, la_method, input_dim, hs, use_cuda=cuda)
 
         if cuda:
             torch.cuda.manual_seed(seed)
@@ -663,16 +514,16 @@ class CharlieModel:
 
                 # decoder forward, for respective models
                 if attention_model == "none":
-                    preds = model.predict(pred_usage, h, WINDOW_TARGET_SIZE)
+                    preds = model.predict(pred_usage, h, window_target_size_count)
 
                 elif attention_model == "BA":
                     preds = model.predict(
-                        pred_usage, h, encoder_outputs, WINDOW_TARGET_SIZE
+                        pred_usage, h, encoder_outputs, window_target_size_count
                     )
 
                 elif attention_model == "LA":
                     preds = model.predict(
-                        pred_usage, h, encoder_outputs, WINDOW_TARGET_SIZE
+                        pred_usage, h, encoder_outputs, window_target_size_count
                     )
 
                 # compute lose
@@ -680,7 +531,7 @@ class CharlieModel:
                     preds,
                     y_usage,
                     qs=loss_function_qs,
-                    window_target_size=window_target_size,
+                    window_target_size=window_target_size_count,
                 )
 
                 # backprop and update
@@ -709,7 +560,7 @@ class CharlieModel:
 
             for b_idx in range(0, X_test.shape[0], BATCH_SIZE):
                 with torch.no_grad():
-                    x = torch.from_numpy(X_test[b_idx : b_idx + BATCH_SIZE])
+                    x = torch.from_numpy(X_test[b_idx : b_idx + BATCH_SIZE]).float()
                     y_usage = torch.from_numpy(Y_test_usage[b_idx : b_idx + BATCH_SIZE])
 
                     if cuda:
@@ -728,16 +579,16 @@ class CharlieModel:
 
                     # decoder forward, for respective models
                     if attention_model == "none":
-                        preds = model.predict(pred_usage, h, WINDOW_TARGET_SIZE)
+                        preds = model.predict(pred_usage, h, window_target_size_count)
 
                     elif attention_model == "BA":
                         preds = model.predict(
-                            pred_usage, h, encoder_outputs, WINDOW_TARGET_SIZE
+                            pred_usage, h, encoder_outputs, window_target_size_count
                         )
 
                     elif attention_model == "LA":
                         preds = model.predict(
-                            pred_usage, h, encoder_outputs, WINDOW_TARGET_SIZE
+                            pred_usage, h, encoder_outputs, window_target_size_count
                         )
 
                     # compute loss
@@ -745,7 +596,7 @@ class CharlieModel:
                         preds,
                         y_usage,
                         qs=loss_function_qs,
-                        window_target_size=window_target_size,
+                        window_target_size=window_target_size_count,
                     )
 
                     if epoch == epochs - 1:
@@ -780,18 +631,7 @@ class CharlieModel:
         ############################################################################################
         # SAVING MODEL
         if save_model:
-            torch.save(
-                model.state_dict(),
-                "MODEL_w:"
-                f"__seed={seed}"
-                f"_cell_type={cell_type}"
-                f"_attention_model={attention_model}"
-                f"_la_method={la_method}"
-                f"_T={window_source_size}"
-                f"_N={window_target_size}"
-                f"_bs={batch_size}"
-                f"_hs={hs}",
-            )
+            torch.save(model.state_dict(), f"{self.configs['exp_dir']}/torch_model")
 
         ############################################################################################
         # RESULTS
@@ -800,22 +640,16 @@ class CharlieModel:
         preds = preds.cpu().detach().numpy().flatten()
         actual = Y_test_usage.flatten()
 
-        # unnormalizing 1
-        if normalization:
-            preds_unnorm = (preds * std_usage) + mu_usage
-        else:
-            preds_unnorm = preds
+        usage_actual = Y_test_usage.flatten()
 
         # using the actual usage from top of script here
-        mae3 = (sum(abs(usage_actual - preds_unnorm))) / (len(usage_actual))
-        mape3 = (sum(abs((usage_actual - preds_unnorm) / usage_actual))) / (
-            len(usage_actual)
-        )
+        mae3 = (sum(abs(usage_actual - preds))) / (len(usage_actual))
+        mape3 = (sum(abs((usage_actual - preds) / usage_actual))) / (len(usage_actual))
 
         # for std
-        mape_s = abs((usage_actual - preds_unnorm) / usage_actual)
+        mape_s = abs((usage_actual - preds) / usage_actual)
         s = mape_s.std()
-        mae_s = abs(usage_actual - preds_unnorm)
+        mae_s = abs(usage_actual - preds)
         s2 = mae_s.std()
         print(
             "\n\tACTUAL ACC. RESULTS: MAE, MAPE: {} and {}%".format(mae3, mape3 * 100.0)
@@ -834,7 +668,7 @@ class CharlieModel:
         print("\nTIME ELAPSED: {} seconds OR {} minutes".format(total, total / 60.0))
         print("\nEnd of run")
         plt.show()
-        for_plotting = [usage_actual, preds_unnorm, y_last_usage, pred_last_usage]
+        for_plotting = [usage_actual, preds, y_last_usage, pred_last_usage]
         return (
             s,
             s2,
@@ -846,6 +680,4 @@ class CharlieModel:
             train_loss,
             test_loss,
             for_plotting,
-            MU,
-            STD,
         )
