@@ -32,6 +32,79 @@ def check_complete(torch_file, des_epochs):
     return check
 
 
+def _create_split_mask(timestamp, data_size, configs):
+
+    # set configuration parameters
+    np.random.seed(seed=configs["random_seed"])
+    active_sequential = configs["sequential_splicer"]["active"]
+    train_ratio = int(configs["data_split"].split(":")[0]) / 100
+    val_ratio = int(configs["data_split"].split(":")[1]) / 100
+    test_ratio = int(configs["data_split"].split(":")[2]) / 100
+    window_witdh = configs["sequential_splicer"]["window_width"]
+    train_size_factor = configs["train_size_factor"]
+
+    # split data based on random sequential chunks
+    if active_sequential:
+        # set indices for training set
+        splicer = ((timestamp - timestamp[0]) // pd.Timedelta(window_witdh)).values
+        num_chunks = splicer[-1]
+        num_train_chunks = (train_ratio * num_chunks) - (
+            (train_ratio * num_chunks) % train_size_factor
+        )
+        if num_train_chunks == 0:
+            raise Exception(
+                "Total number of data chunks is zero. train_size_factor value might be too "
+                "large compared to the data size. Exiting.."
+            )
+        msk = np.zeros(timestamp.shape[0]) + 2
+        train_chunks = np.random.choice(
+            np.arange(num_chunks), replace=False, size=int(num_train_chunks)
+        )
+        for chunk in train_chunks:
+            indices = np.where(splicer == chunk)
+            msk[indices] = 0
+
+        # set indices for validation and test set
+        remaining_chunks = np.setdiff1d(np.arange(num_chunks), train_chunks)
+        if test_ratio == 0:
+            msk[msk != 0] = 1
+        else:
+            num_val_chunks = int(
+                (val_ratio / (1 - train_ratio)) * remaining_chunks.shape[0]
+            )
+            val_chunks = np.random.choice(
+                remaining_chunks, replace=False, size=num_val_chunks
+            )
+            for chunk in val_chunks:
+                indices = np.where(splicer == chunk)
+                msk[indices] = 1
+
+    # split data based on random timestamp sampling
+    else:
+        # set indices for training set
+        num_ones = (train_ratio * data_size) - (
+            (train_ratio * data_size) % train_size_factor
+        )
+        msk = np.zeros(data_size) + 2
+        indices = np.random.choice(
+            np.arange(data_size), replace=False, size=int(num_ones)
+        )
+        msk[indices] = 0
+
+        # set indices for validation and test set
+        remaining_indices = np.where(msk != 0)[0]
+        if test_ratio == 0:
+            msk[remaining_indices] = 1
+        else:
+            num_val = int((val_ratio / (1 - train_ratio)) * remaining_indices.shape[0])
+            val_indices = np.random.choice(
+                remaining_indices, replace=False, size=num_val
+            )
+            msk[val_indices] = 1
+
+    return msk
+
+
 def input_data_split(data, configs):
     """
     Split a data set into a training set and a validation (val) set.
@@ -41,126 +114,68 @@ def input_data_split(data, configs):
     :param configs: (Dict)
     :return:
     """
-    train_ratio = int(configs["data_split"].split(":")[0]) / 100
-    val_ratio = int(configs["data_split"].split(":")[1]) / 100
-    test_ratio = int(configs["data_split"].split(":")[2]) / 100
-
+    # setting configuration parameters
+    arch_version = configs["arch_version"]
     file_prefix = Path(configs["exp_dir"])
+    mask_file = os.path.join(file_prefix, "mask.h5")
 
-    if configs["train_val_split"] == "Random":
-        pathlib.Path(configs["data_dir"]).mkdir(parents=True, exist_ok=True)
-        mask_file = os.path.join(file_prefix, "mask.h5")
-        logger.info("Creating random training mask and writing to file")
+    # assign timestamp and data size depending on arch_version
+    if (arch_version == "alfa") | (arch_version == "bravo"):
+        timestamp = data.index
+        data_size = data.shape[0]
 
-        # If you want to group datasets together into sequential chunks
-        if configs["sequential_splicer"]["active"]:
-            # Set indices for training set
-            np.random.seed(seed=configs["random_seed"])
-            splicer = (
-                (data.index - data.index[0])
-                // pd.Timedelta(configs["sequential_splicer"]["window_width"])
-            ).values
-            num_chunks = splicer[-1]
-            num_train_chunks = (train_ratio * num_chunks) - (
-                (train_ratio * num_chunks) % configs["train_size_factor"]
-            )
-            if num_train_chunks == 0:
-                raise Exception(
-                    "Total number of data chunks is zero. train_size_factor value might be too "
-                    "large compared to the data size. Exiting.."
-                )
+    elif arch_version == "charlie":
+        timestamp = data["timestamp"]
+        data_size = data["predictor"].shape[0]
 
-            msk = np.zeros(data.shape[0]) + 2
-            train_chunks = np.random.choice(
-                np.arange(num_chunks), replace=False, size=int(num_train_chunks)
-            )
-            for chunk in train_chunks:
-                indices = np.where(splicer == chunk)
-                msk[indices] = 0
+    msk = _create_split_mask(timestamp, data_size, configs)
 
-            # Set indices for validation and test set
-            remaining_chunks = np.setdiff1d(np.arange(num_chunks), train_chunks)
-            if test_ratio == 0:
-                msk[msk != 0] = 1
-            else:
-                num_val_chunks = int(
-                    (val_ratio / (1 - train_ratio)) * remaining_chunks.shape[0]
-                )
-                val_chunks = np.random.choice(
-                    remaining_chunks, replace=False, size=num_val_chunks
-                )
-                for chunk in val_chunks:
-                    indices = np.where(splicer == chunk)
-                    msk[indices] = 1
-
-        # If you DONT want to group data into sequential chunks
-        else:
-            # Set indices for training set
-            np.random.seed(seed=configs["random_seed"])
-            data_size = data.shape[0]
-            num_ones = (train_ratio * data_size) - (
-                (train_ratio * data_size) % configs["train_size_factor"]
-            )
-            msk = np.zeros(data_size) + 2
-            indices = np.random.choice(
-                np.arange(data_size), replace=False, size=int(num_ones)
-            )
-            msk[indices] = 0
-
-            # Set indices for validation and test set
-            remaining_indices = np.where(msk != 0)[0]
-            if test_ratio == 0:
-                msk[remaining_indices] = 1
-            else:
-                num_val = int(
-                    (val_ratio / (1 - train_ratio)) * remaining_indices.shape[0]
-                )
-                val_indices = np.random.choice(
-                    remaining_indices, replace=False, size=num_val
-                )
-                msk[val_indices] = 1
-
-        logger.info(
-            "Train: {}, validation: {}, test: {}".format(
-                (msk == 0).sum() / msk.shape[0],
-                (msk == 1).sum() / msk.shape[0],
-                (msk == 2).sum() / msk.shape[0],
-            )
-        )
-        # Assign dataframes
+    # assign train, validation, and test data
+    if (arch_version == "alfa") | (arch_version == "bravo"):
         train_df = data[msk == 0]
         val_df = data[msk == 1]
         test_df = data[msk == 2]
-
-        # Save test_df to file for later use
+        # Get rid of datetime index
+        train_df.reset_index(drop=True, inplace=True)
+        val_df.reset_index(drop=True, inplace=True)
+        # save test_df to file for later use
         test_df.to_hdf(
             os.path.join(file_prefix, "internal_test.h5"), key="df", mode="w"
         )
 
-        # Still save dataframe to file to preserve timeseries index
-        mask = pd.DataFrame()
-        mask["msk"] = msk
-        mask.index = data.index
-        mask.to_hdf(mask_file, key="df", mode="w")
-
-        # Get rid of datetime index
-        train_df.reset_index(drop=True, inplace=True)
-        val_df.reset_index(drop=True, inplace=True)
-
-    else:
-        raise ConfigsError(
-            "{} is not a supported form of data splitting".format(
-                configs["train_val_split"]
-            )
+    elif arch_version == "charlie":
+        train_df = {}
+        val_df = {}
+        train_df_predictor = data["predictor"][msk == 0, :, :]
+        train_df_target = data["target"][msk == 0, :, :]
+        val_df_predictor = data["predictor"][msk == 1, :, :]
+        val_df_target = data["target"][msk == 1, :, :]
+        test_df_predictor = data["predictor"][msk == 2, :, :]
+        test_df_target = data["target"][msk == 2, :, :]
+        train_df["predictor"] = train_df_predictor
+        train_df["target"] = train_df_target
+        val_df["predictor"] = val_df_predictor
+        val_df["target"] = val_df_target
+        # save test_df to file for later use
+        np.save(
+            os.path.join(file_prefix, "internal_test_predictor.npy"), test_df_predictor
         )
+        np.save(os.path.join(file_prefix, "internal_test_target.npy"), test_df_target)
+
+    # save mask file to preserve timeseries index
+    mask = pd.DataFrame()
+    mask["msk"] = msk
+    mask["index"] = timestamp
+    mask = mask.set_index("index")
+    mask.to_hdf(mask_file, key="df", mode="w")
 
     return train_df, val_df
 
 
-def pad_full_data(data, configs):
+def timelag_predictors(data, configs):
     """
-    Create lagged versions of exogenous variables in a DataFrame.
-    Used specifically for RNN and LSTM deep learning methods.
+    Create lagged versions of predictor variables in a DataFrame.
+    Used specifically for alfa learning methods.
 
     :param data: (DataFrame)
     :param configs: (Dict)
@@ -205,10 +220,10 @@ def pad_full_data(data, configs):
     return data
 
 
-def pad_full_data_s2s(data, configs):
+def timelag_predictors_target(data, configs):
     """
-    Create lagged versions of exogenous variables in a DataFrame.
-    Used specifically for Sequence to Sequence (S2S) deep learning methods.
+    Create lagged versions of predictor and target variables in a DataFrame.
+    Used specifically for bravo learning methods.
 
     :param data: (DataFrame)
     :param configs: (Dict)
@@ -261,6 +276,70 @@ def pad_full_data_s2s(data, configs):
 
     # Drop all nans
     data = data.dropna(how="any")
+
+    return data
+
+
+def roll_predictors_target(data, configs):
+    """
+    Create rolling windows of predictor and target variables in a DataFrame.
+    Used specifically for charlie learning methods.
+
+    :param data: (DataFrame)
+    :param configs: (Dict)
+    :return: (Dict)
+    """
+
+    # setting configuration parameters
+    window_width_source = configs["S2S_window"]["window_width_source"]
+    window_width_target = configs["S2S_window"]["window_width_target"]
+    resample_interval = configs["resample_interval"]
+    target_var = configs["target_var"]
+
+    # initialize lists
+    data_predictor = []
+    data_target = []
+
+    # calculate number of rows based on window size defined by time
+    window_source_size_count = int(
+        pd.Timedelta(window_width_source) / pd.Timedelta(resample_interval)
+    )
+    window_target_size_count = int(
+        pd.Timedelta(window_width_target) / pd.Timedelta(resample_interval)
+    )
+
+    # set aside timeindex
+    timestamp = data.iloc[
+        : -(window_source_size_count + window_target_size_count - 1), :
+    ].index
+
+    # create 3D predictor data
+    data_shifted_predictor = data.iloc[:-window_target_size_count, :]
+    for window in data_shifted_predictor.rolling(window=window_width_source):
+        if window.shape[0] == window_source_size_count:
+            data_predictor.append(
+                window.values.reshape(
+                    (1, window_source_size_count, data_shifted_predictor.shape[1])
+                )
+            )
+
+    # create 3D target data
+    data_shifted_target = data.loc[
+        data.index >= data.shift(freq=window_width_source).index[0], :
+    ][target_var]
+    for window in data_shifted_target.rolling(window=window_width_target):
+        if window.shape[0] == window_target_size_count:
+            data_target.append(window.values.reshape((1, window_target_size_count, 1)))
+
+    # reshape data dimension
+    data_predictor = np.concatenate(np.array(data_predictor), axis=0)
+    data_target = np.concatenate(np.array(data_target), axis=0)
+
+    # combine 3D predictor and target data into dictionary
+    data = {}
+    data["predictor"] = data_predictor
+    data["target"] = data_target
+    data["timestamp"] = timestamp
 
     return data
 
@@ -366,9 +445,11 @@ def _preprocess_data(configs, data):
     logger.debug("Features: {}".format(data.columns.values))
 
     if configs["arch_version"] == "alfa":
-        data = pad_full_data(data, configs)
+        data = timelag_predictors(data, configs)
     elif configs["arch_version"] == "bravo":
-        data = pad_full_data_s2s(data, configs)
+        data = timelag_predictors_target(data, configs)
+    elif configs["arch_version"] == "charlie":
+        data = roll_predictors_target(data, configs)
 
     return data
 
