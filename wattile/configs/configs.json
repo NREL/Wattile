@@ -48,6 +48,15 @@
   "window_width_target": "45min",
   "normalization": false
  },
+ "S2S_learning": {
+  "cell_type": "lstm",
+  "attention_model": "BA",
+  "la_method": "none",
+  "batch_size": 256,
+  "hidden_size": 64,
+  "cuda": false,
+  "save_model": false
+ },
  "S2S_stagger": {
   "initial_num": 72,
   "decay": 0,
