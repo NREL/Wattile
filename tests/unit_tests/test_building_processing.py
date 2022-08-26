@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 from pandas.testing import assert_frame_equal
 
-from wattile.buildings_processing import (
+from wattile.data_processing import (
     correct_predictor_columns,
     correct_timestamps,
     resample_or_rolling_stats,
