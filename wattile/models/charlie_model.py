@@ -1,4 +1,5 @@
 import math
+import os
 import time
 from pathlib import Path
 
@@ -640,6 +641,14 @@ class CharlieModel:
         predictions = torch.cat(all_preds, 0)
         predictions = predictions.cpu().detach().numpy().flatten()
         measured = val_df_target.flatten()
+
+        # Save the final predictions and measured target to a file
+        pd.DataFrame(predictions).to_hdf(
+            os.path.join(self.file_prefix, "predictions.h5"), key="df", mode="w"
+        )
+        pd.DataFrame(measured.iloc[:, 0]).to_hdf(
+            os.path.join(self.file_prefix, "measured.h5"), key="df", mode="w"
+        )
 
         # using the measured usage from top of script here
         mae3 = (sum(abs(measured - predictions))) / (len(measured))
