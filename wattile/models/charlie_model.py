@@ -11,6 +11,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.nn import init
 
+from wattile.models.AlgoMainRNNBase import AlgoMainRNNBase
+
 PROJECT_DIRECTORY = Path().resolve().parent.parent
 
 
@@ -387,7 +389,7 @@ class S2S_LA_Model(nn.Module):
 
 
 ####################################################################################################
-class CharlieModel:
+class CharlieModel(AlgoMainRNNBase):
     def __init__(self, configs):
         self.configs = configs
 
