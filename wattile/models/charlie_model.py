@@ -395,7 +395,7 @@ class CharlieModel:
         process the data into three-dimensional for S2S model, train the model, and test the restuls
         """
         window_target_size = self.configs["S2S_window"]["window_width_target"]
-        hs = self.configs["hidden_nodes"]
+        hidden_size = self.configs["hidden_nodes"]
         cell_type = "lstm"
         la_method = "none"
         attention_model = "BA"
@@ -445,21 +445,25 @@ class CharlieModel:
 
             return loss
 
-        X_train = train_df["predictor"]
-        Y_train_usage = train_df["target"]
-        X_test = val_df["predictor"]
-        Y_test_usage = val_df["target"]
-        input_dim = self.configs["input_dim"] = X_train.shape[-1]
+        train_df_predictor = train_df["predictor"].astype(np.float32).copy()
+        train_df_target = train_df["target"].astype(np.float32).copy()
+        val_df_predictor = val_df["predictor"].astype(np.float32).copy()
+        val_df_target = val_df["target"].astype(np.float32).copy()
+        usage_actual = val_df_target.flatten()
+
+        input_dim = self.configs["input_dim"] = train_df_predictor.shape[-1]
 
         # call the respective model
         if attention_model == "none":
-            model = S2S_Model(cell_type, input_dim, hs, use_cuda=cuda)
+            model = S2S_Model(cell_type, input_dim, hidden_size, use_cuda=cuda)
 
         elif attention_model == "BA":
-            model = S2S_BA_Model(cell_type, input_dim, hs, use_cuda=cuda)
+            model = S2S_BA_Model(cell_type, input_dim, hidden_size, use_cuda=cuda)
 
         elif attention_model == "LA":
-            model = S2S_LA_Model(cell_type, la_method, input_dim, hs, use_cuda=cuda)
+            model = S2S_LA_Model(
+                cell_type, la_method, input_dim, hidden_size, use_cuda=cuda
+            )
 
         if cuda:
             torch.cuda.manual_seed(seed)
@@ -491,11 +495,13 @@ class CharlieModel:
             t_one_epoch = time.time()
             print("Epoch {}".format(epoch + 1))
             total_usage_loss = 0
-            for b_idx in range(0, X_train.shape[0], BATCH_SIZE):
+            for b_idx in range(0, train_df_predictor.shape[0], BATCH_SIZE):
 
-                x = torch.from_numpy(X_train[b_idx : b_idx + BATCH_SIZE]).float()
+                x = torch.from_numpy(
+                    train_df_predictor[b_idx : b_idx + BATCH_SIZE]
+                ).float()
                 y_usage = torch.from_numpy(
-                    Y_train_usage[b_idx : b_idx + BATCH_SIZE]
+                    train_df_target[b_idx : b_idx + BATCH_SIZE]
                 ).float()
 
                 if cuda:
@@ -558,10 +564,14 @@ class CharlieModel:
             )
             all_preds = []
 
-            for b_idx in range(0, X_test.shape[0], BATCH_SIZE):
+            for b_idx in range(0, val_df_predictor.shape[0], BATCH_SIZE):
                 with torch.no_grad():
-                    x = torch.from_numpy(X_test[b_idx : b_idx + BATCH_SIZE]).float()
-                    y_usage = torch.from_numpy(Y_test_usage[b_idx : b_idx + BATCH_SIZE])
+                    x = torch.from_numpy(
+                        val_df_predictor[b_idx : b_idx + BATCH_SIZE]
+                    ).float()
+                    y_usage = torch.from_numpy(
+                        val_df_target[b_idx : b_idx + BATCH_SIZE]
+                    )
 
                     if cuda:
                         x = x.cuda()
@@ -638,9 +648,9 @@ class CharlieModel:
         # for plotting and accuracy
         preds = torch.cat(all_preds, 0)
         preds = preds.cpu().detach().numpy().flatten()
-        actual = Y_test_usage.flatten()
+        actual = val_df_target.flatten()
 
-        usage_actual = Y_test_usage.flatten()
+        usage_actual = val_df_target.flatten()
 
         # using the actual usage from top of script here
         mae3 = (sum(abs(usage_actual - preds))) / (len(usage_actual))
