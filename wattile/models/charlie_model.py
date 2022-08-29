@@ -499,42 +499,42 @@ class CharlieModel:
                 x = torch.from_numpy(
                     train_df_predictor[b_idx : b_idx + BATCH_SIZE]
                 ).float()
-                y_usage = torch.from_numpy(
+                y = torch.from_numpy(
                     train_df_target[b_idx : b_idx + BATCH_SIZE]
                 ).float()
 
                 if cuda:
                     x = x.cuda()
-                    y_usage = y_usage.cuda()
+                    y = y.cuda()
 
                 # encoder forward, for respective models (with and without attention)
                 if attention_model == "none":
-                    pred_usage, h = model.consume(x)
+                    y_pred, h = model.consume(x)
 
                 elif attention_model == "BA":
-                    pred_usage, h, encoder_outputs = model.consume(x)
+                    y_pred, h, encoder_outputs = model.consume(x)
 
                 elif attention_model == "LA":
-                    pred_usage, h, encoder_outputs = model.consume(x)
+                    y_pred, h, encoder_outputs = model.consume(x)
 
                 # decoder forward, for respective models
                 if attention_model == "none":
-                    preds = model.predict(pred_usage, h, window_target_size_count)
+                    pred = model.predict(y_pred, h, window_target_size_count)
 
                 elif attention_model == "BA":
-                    preds = model.predict(
-                        pred_usage, h, encoder_outputs, window_target_size_count
+                    pred = model.predict(
+                        y_pred, h, encoder_outputs, window_target_size_count
                     )
 
                 elif attention_model == "LA":
-                    preds = model.predict(
-                        pred_usage, h, encoder_outputs, window_target_size_count
+                    pred = model.predict(
+                        y_pred, h, encoder_outputs, window_target_size_count
                     )
 
                 # compute lose
                 loss_usage = loss_fn(
-                    preds,
-                    y_usage,
+                    pred,
+                    y,
                     qs=loss_function_qs,
                     window_target_size=window_target_size_count,
                 )
@@ -546,18 +546,16 @@ class CharlieModel:
 
                 opt.step()
 
-                total_usage_loss += (
-                    loss_usage.item()
-                )  # <------------------------------------------------------------------------------
+                total_usage_loss += loss_usage.item()
 
             train_loss.append(total_usage_loss)
             print("\tTRAINING: {} total train USAGE loss.\n".format(total_usage_loss))
 
             ########################################################################################
             # TESTING
-            y_usage = None
-            pred_usage = None
-            preds = None
+            y = None
+            y_pred = None
+            pred = None
             total_usage_loss = (
                 0  # <---------------------------------------------------------------
             )
@@ -568,51 +566,47 @@ class CharlieModel:
                     x = torch.from_numpy(
                         val_df_predictor[b_idx : b_idx + BATCH_SIZE]
                     ).float()
-                    y_usage = torch.from_numpy(
-                        val_df_target[b_idx : b_idx + BATCH_SIZE]
-                    )
+                    y = torch.from_numpy(val_df_target[b_idx : b_idx + BATCH_SIZE])
 
                     if cuda:
                         x = x.cuda()
-                        y_usage = y_usage.cuda()
+                        y = y.cuda()
 
                     # encoder forward, for respective models
                     if attention_model == "none":
-                        pred_usage, h = model.consume(x)
+                        y_pred, h = model.consume(x)
 
                     elif attention_model == "BA":
-                        pred_usage, h, encoder_outputs = model.consume(x)
+                        y_pred, h, encoder_outputs = model.consume(x)
 
                     elif attention_model == "LA":
-                        pred_usage, h, encoder_outputs = model.consume(x)
+                        y_pred, h, encoder_outputs = model.consume(x)
 
                     # decoder forward, for respective models
                     if attention_model == "none":
-                        preds = model.predict(pred_usage, h, window_target_size_count)
+                        pred = model.predict(y_pred, h, window_target_size_count)
 
                     elif attention_model == "BA":
-                        preds = model.predict(
-                            pred_usage, h, encoder_outputs, window_target_size_count
+                        pred = model.predict(
+                            y_pred, h, encoder_outputs, window_target_size_count
                         )
 
                     elif attention_model == "LA":
-                        preds = model.predict(
-                            pred_usage, h, encoder_outputs, window_target_size_count
+                        pred = model.predict(
+                            y_pred, h, encoder_outputs, window_target_size_count
                         )
 
                     # compute loss
                     loss_usage = loss_fn(
-                        preds,
-                        y_usage,
+                        pred,
+                        y,
                         qs=loss_function_qs,
                         window_target_size=window_target_size_count,
                     )
 
                     if epoch == epochs - 1:
-                        all_preds.append(preds)
+                        all_preds.append(pred)
 
-                    # TODOs:
-                    # test
                     total_usage_loss += loss_usage.item()
 
             test_loss.append(total_usage_loss)
@@ -620,15 +614,13 @@ class CharlieModel:
             print("\tTESTING: {} total test USAGE loss".format(total_usage_loss))
             print("\tTESTING:\n")
             print("\tSample of prediction:")
+            print("\t\t TARGET: {}".format(y[-1].cpu().detach().numpy().flatten()))
             print(
-                "\t\t TARGET: {}".format(y_usage[-1].cpu().detach().numpy().flatten())
-            )
-            print(
-                "\t\t   PRED: {}\n\n".format(preds[-1].cpu().detach().numpy().flatten())
+                "\t\t   PRED: {}\n\n".format(pred[-1].cpu().detach().numpy().flatten())
             )
 
-            y_last_usage = y_usage[-1].cpu().detach().numpy().flatten()
-            pred_last_usage = preds[-1].cpu().detach().numpy().flatten()
+            y_last = y[-1].cpu().detach().numpy().flatten()
+            pred_last = pred[-1].cpu().detach().numpy().flatten()
             t2_one_epoch = time.time()
             time_one_epoch = t2_one_epoch - t_one_epoch
             print(
@@ -645,28 +637,28 @@ class CharlieModel:
         ############################################################################################
         # RESULTS
         # for plotting and accuracy
-        preds = torch.cat(all_preds, 0)
-        preds = preds.cpu().detach().numpy().flatten()
-        actual = val_df_target.flatten()
+        predictions = torch.cat(all_preds, 0)
+        predictions = predictions.cpu().detach().numpy().flatten()
+        measured = val_df_target.flatten()
 
-        # using the actual usage from top of script here
-        mae3 = (sum(abs(actual - preds))) / (len(actual))
-        mape3 = (sum(abs((actual - preds) / actual))) / (len(actual))
+        # using the measured usage from top of script here
+        mae3 = (sum(abs(measured - predictions))) / (len(measured))
+        mape3 = (sum(abs((measured - predictions) / measured))) / (len(measured))
 
         # for std
-        mape_s = abs((actual - preds) / actual)
+        mape_s = abs((measured - predictions) / measured)
         s = mape_s.std()
-        mae_s = abs(actual - preds)
+        mae_s = abs(measured - predictions)
         s2 = mae_s.std()
         print(
             "\n\tACTUAL ACC. RESULTS: MAE, MAPE: {} and {}%".format(mae3, mape3 * 100.0)
         )
 
-        pd.DataFrame(preds, columns=[f"q{loss_function_qs}"]).to_csv(
+        pd.DataFrame(predictions, columns=[f"q{loss_function_qs}"]).to_csv(
             f"{self.configs['exp_dir']}/q{loss_function_qs}.csv", index=None
         )
-        pd.DataFrame(actual, columns=["actual"]).to_csv(
-            f"{self.configs['exp_dir']}/actual.csv", index=None
+        pd.DataFrame(measured, columns=["measured"]).to_csv(
+            f"{self.configs['exp_dir']}/measured.csv", index=None
         )
 
         # total time of run
@@ -675,7 +667,7 @@ class CharlieModel:
         print("\nTIME ELAPSED: {} seconds OR {} minutes".format(total, total / 60.0))
         print("\nEnd of run")
         plt.show()
-        for_plotting = [actual, preds, y_last_usage, pred_last_usage]
+        for_plotting = [measured, predictions, y_last, pred_last]
         return (
             s,
             s2,
