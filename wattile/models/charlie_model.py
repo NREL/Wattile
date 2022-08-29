@@ -395,7 +395,7 @@ class CharlieModel:
         process the data into three-dimensional for S2S model, train the model, and test the restuls
         """
         window_target_size = self.configs["S2S_window"]["window_width_target"]
-        hs = self.configs["hidden_nodes"]
+        hidden_size = self.configs["hidden_nodes"]
         cell_type = "lstm"
         la_method = "none"
         attention_model = "BA"
@@ -445,21 +445,24 @@ class CharlieModel:
 
             return loss
 
-        X_train = train_df["predictor"]
-        Y_train_usage = train_df["target"]
-        X_test = val_df["predictor"]
-        Y_test_usage = val_df["target"]
-        input_dim = self.configs["input_dim"] = X_train.shape[-1]
+        train_df_predictor = train_df["predictor"].astype(np.float32).copy()
+        train_df_target = train_df["target"].astype(np.float32).copy()
+        val_df_predictor = val_df["predictor"].astype(np.float32).copy()
+        val_df_target = val_df["target"].astype(np.float32).copy()
+
+        input_dim = self.configs["input_dim"] = train_df_predictor.shape[-1]
 
         # call the respective model
         if attention_model == "none":
-            model = S2S_Model(cell_type, input_dim, hs, use_cuda=cuda)
+            model = S2S_Model(cell_type, input_dim, hidden_size, use_cuda=cuda)
 
         elif attention_model == "BA":
-            model = S2S_BA_Model(cell_type, input_dim, hs, use_cuda=cuda)
+            model = S2S_BA_Model(cell_type, input_dim, hidden_size, use_cuda=cuda)
 
         elif attention_model == "LA":
-            model = S2S_LA_Model(cell_type, la_method, input_dim, hs, use_cuda=cuda)
+            model = S2S_LA_Model(
+                cell_type, la_method, input_dim, hidden_size, use_cuda=cuda
+            )
 
         if cuda:
             torch.cuda.manual_seed(seed)
@@ -491,45 +494,47 @@ class CharlieModel:
             t_one_epoch = time.time()
             print("Epoch {}".format(epoch + 1))
             total_usage_loss = 0
-            for b_idx in range(0, X_train.shape[0], BATCH_SIZE):
+            for b_idx in range(0, train_df_predictor.shape[0], BATCH_SIZE):
 
-                x = torch.from_numpy(X_train[b_idx : b_idx + BATCH_SIZE]).float()
-                y_usage = torch.from_numpy(
-                    Y_train_usage[b_idx : b_idx + BATCH_SIZE]
+                x = torch.from_numpy(
+                    train_df_predictor[b_idx : b_idx + BATCH_SIZE]
+                ).float()
+                y = torch.from_numpy(
+                    train_df_target[b_idx : b_idx + BATCH_SIZE]
                 ).float()
 
                 if cuda:
                     x = x.cuda()
-                    y_usage = y_usage.cuda()
+                    y = y.cuda()
 
                 # encoder forward, for respective models (with and without attention)
                 if attention_model == "none":
-                    pred_usage, h = model.consume(x)
+                    y_pred, h = model.consume(x)
 
                 elif attention_model == "BA":
-                    pred_usage, h, encoder_outputs = model.consume(x)
+                    y_pred, h, encoder_outputs = model.consume(x)
 
                 elif attention_model == "LA":
-                    pred_usage, h, encoder_outputs = model.consume(x)
+                    y_pred, h, encoder_outputs = model.consume(x)
 
                 # decoder forward, for respective models
                 if attention_model == "none":
-                    preds = model.predict(pred_usage, h, window_target_size_count)
+                    pred = model.predict(y_pred, h, window_target_size_count)
 
                 elif attention_model == "BA":
-                    preds = model.predict(
-                        pred_usage, h, encoder_outputs, window_target_size_count
+                    pred = model.predict(
+                        y_pred, h, encoder_outputs, window_target_size_count
                     )
 
                 elif attention_model == "LA":
-                    preds = model.predict(
-                        pred_usage, h, encoder_outputs, window_target_size_count
+                    pred = model.predict(
+                        y_pred, h, encoder_outputs, window_target_size_count
                     )
 
                 # compute lose
                 loss_usage = loss_fn(
-                    preds,
-                    y_usage,
+                    pred,
+                    y,
                     qs=loss_function_qs,
                     window_target_size=window_target_size_count,
                 )
@@ -541,69 +546,67 @@ class CharlieModel:
 
                 opt.step()
 
-                total_usage_loss += (
-                    loss_usage.item()
-                )  # <------------------------------------------------------------------------------
+                total_usage_loss += loss_usage.item()
 
             train_loss.append(total_usage_loss)
             print("\tTRAINING: {} total train USAGE loss.\n".format(total_usage_loss))
 
             ########################################################################################
             # TESTING
-            y_usage = None
-            pred_usage = None
-            preds = None
+            y = None
+            y_pred = None
+            pred = None
             total_usage_loss = (
                 0  # <---------------------------------------------------------------
             )
             all_preds = []
 
-            for b_idx in range(0, X_test.shape[0], BATCH_SIZE):
+            for b_idx in range(0, val_df_predictor.shape[0], BATCH_SIZE):
                 with torch.no_grad():
-                    x = torch.from_numpy(X_test[b_idx : b_idx + BATCH_SIZE]).float()
-                    y_usage = torch.from_numpy(Y_test_usage[b_idx : b_idx + BATCH_SIZE])
+                    x = torch.from_numpy(
+                        val_df_predictor[b_idx : b_idx + BATCH_SIZE]
+                    ).float()
+                    y = torch.from_numpy(val_df_target[b_idx : b_idx + BATCH_SIZE])
 
                     if cuda:
                         x = x.cuda()
-                        y_usage = y_usage.cuda()
+                        y = y.cuda()
 
                     # encoder forward, for respective models
                     if attention_model == "none":
-                        pred_usage, h = model.consume(x)
+                        y_pred, h = model.consume(x)
 
                     elif attention_model == "BA":
-                        pred_usage, h, encoder_outputs = model.consume(x)
+                        y_pred, h, encoder_outputs = model.consume(x)
 
                     elif attention_model == "LA":
-                        pred_usage, h, encoder_outputs = model.consume(x)
+                        y_pred, h, encoder_outputs = model.consume(x)
 
                     # decoder forward, for respective models
                     if attention_model == "none":
-                        preds = model.predict(pred_usage, h, window_target_size_count)
+                        pred = model.predict(y_pred, h, window_target_size_count)
 
                     elif attention_model == "BA":
-                        preds = model.predict(
-                            pred_usage, h, encoder_outputs, window_target_size_count
+                        pred = model.predict(
+                            y_pred, h, encoder_outputs, window_target_size_count
                         )
 
                     elif attention_model == "LA":
-                        preds = model.predict(
-                            pred_usage, h, encoder_outputs, window_target_size_count
+                        pred = model.predict(
+                            y_pred, h, encoder_outputs, window_target_size_count
                         )
 
                     # compute loss
                     loss_usage = loss_fn(
-                        preds,
-                        y_usage,
+                        pred,
+                        y,
                         qs=loss_function_qs,
                         window_target_size=window_target_size_count,
                     )
 
                     if epoch == epochs - 1:
-                        all_preds.append(preds)
+                        all_preds.append(pred)
 
-                    # TODOs:
-                    # test
                     total_usage_loss += loss_usage.item()
 
             test_loss.append(total_usage_loss)
@@ -611,15 +614,13 @@ class CharlieModel:
             print("\tTESTING: {} total test USAGE loss".format(total_usage_loss))
             print("\tTESTING:\n")
             print("\tSample of prediction:")
+            print("\t\t TARGET: {}".format(y[-1].cpu().detach().numpy().flatten()))
             print(
-                "\t\t TARGET: {}".format(y_usage[-1].cpu().detach().numpy().flatten())
-            )
-            print(
-                "\t\t   PRED: {}\n\n".format(preds[-1].cpu().detach().numpy().flatten())
+                "\t\t   PRED: {}\n\n".format(pred[-1].cpu().detach().numpy().flatten())
             )
 
-            y_last_usage = y_usage[-1].cpu().detach().numpy().flatten()
-            pred_last_usage = preds[-1].cpu().detach().numpy().flatten()
+            y_last = y[-1].cpu().detach().numpy().flatten()
+            pred_last = pred[-1].cpu().detach().numpy().flatten()
             t2_one_epoch = time.time()
             time_one_epoch = t2_one_epoch - t_one_epoch
             print(
@@ -636,30 +637,28 @@ class CharlieModel:
         ############################################################################################
         # RESULTS
         # for plotting and accuracy
-        preds = torch.cat(all_preds, 0)
-        preds = preds.cpu().detach().numpy().flatten()
-        actual = Y_test_usage.flatten()
+        predictions = torch.cat(all_preds, 0)
+        predictions = predictions.cpu().detach().numpy().flatten()
+        measured = val_df_target.flatten()
 
-        usage_actual = Y_test_usage.flatten()
-
-        # using the actual usage from top of script here
-        mae3 = (sum(abs(usage_actual - preds))) / (len(usage_actual))
-        mape3 = (sum(abs((usage_actual - preds) / usage_actual))) / (len(usage_actual))
+        # using the measured usage from top of script here
+        mae3 = (sum(abs(measured - predictions))) / (len(measured))
+        mape3 = (sum(abs((measured - predictions) / measured))) / (len(measured))
 
         # for std
-        mape_s = abs((usage_actual - preds) / usage_actual)
+        mape_s = abs((measured - predictions) / measured)
         s = mape_s.std()
-        mae_s = abs(usage_actual - preds)
+        mae_s = abs(measured - predictions)
         s2 = mae_s.std()
         print(
             "\n\tACTUAL ACC. RESULTS: MAE, MAPE: {} and {}%".format(mae3, mape3 * 100.0)
         )
 
-        pd.DataFrame(preds, columns=[f"q{loss_function_qs}"]).to_csv(
+        pd.DataFrame(predictions, columns=[f"q{loss_function_qs}"]).to_csv(
             f"{self.configs['exp_dir']}/q{loss_function_qs}.csv", index=None
         )
-        pd.DataFrame(actual, columns=["actual"]).to_csv(
-            f"{self.configs['exp_dir']}/actual.csv", index=None
+        pd.DataFrame(measured, columns=["measured"]).to_csv(
+            f"{self.configs['exp_dir']}/measured.csv", index=None
         )
 
         # total time of run
@@ -668,7 +667,7 @@ class CharlieModel:
         print("\nTIME ELAPSED: {} seconds OR {} minutes".format(total, total / 60.0))
         print("\nEnd of run")
         plt.show()
-        for_plotting = [usage_actual, preds, y_last_usage, pred_last_usage]
+        for_plotting = [measured, predictions, y_last, pred_last]
         return (
             s,
             s2,
