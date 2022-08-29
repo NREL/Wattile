@@ -390,8 +390,8 @@ class S2S_LA_Model(nn.Module):
 
 ####################################################################################################
 class CharlieModel(AlgoMainRNNBase):
-    def __init__(self, configs):
-        self.configs = configs
+    # def __init__(self, configs):
+    #     self.configs = configs
 
     def main(self, train_df, val_df):  # noqa: C901 TODO: remove noqa
         """
