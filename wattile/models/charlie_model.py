@@ -390,9 +390,6 @@ class S2S_LA_Model(nn.Module):
 
 ####################################################################################################
 class CharlieModel(AlgoMainRNNBase):
-    # def __init__(self, configs):
-    #     self.configs = configs
-
     def main(self, train_df, val_df):  # noqa: C901 TODO: remove noqa
         """
         process the data into three-dimensional for S2S model, train the model, and test the restuls
@@ -648,7 +645,7 @@ class CharlieModel(AlgoMainRNNBase):
         pd.DataFrame(predictions).to_hdf(
             os.path.join(self.file_prefix, "predictions.h5"), key="df", mode="w"
         )
-        pd.DataFrame(measured.iloc[:, 0]).to_hdf(
+        pd.DataFrame(measured).to_hdf(
             os.path.join(self.file_prefix, "measured.h5"), key="df", mode="w"
         )
 
