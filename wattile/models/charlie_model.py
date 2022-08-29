@@ -449,7 +449,6 @@ class CharlieModel:
         train_df_target = train_df["target"].astype(np.float32).copy()
         val_df_predictor = val_df["predictor"].astype(np.float32).copy()
         val_df_target = val_df["target"].astype(np.float32).copy()
-        usage_actual = val_df_target.flatten()
 
         input_dim = self.configs["input_dim"] = train_df_predictor.shape[-1]
 
@@ -650,16 +649,14 @@ class CharlieModel:
         preds = preds.cpu().detach().numpy().flatten()
         actual = val_df_target.flatten()
 
-        usage_actual = val_df_target.flatten()
-
         # using the actual usage from top of script here
-        mae3 = (sum(abs(usage_actual - preds))) / (len(usage_actual))
-        mape3 = (sum(abs((usage_actual - preds) / usage_actual))) / (len(usage_actual))
+        mae3 = (sum(abs(actual - preds))) / (len(actual))
+        mape3 = (sum(abs((actual - preds) / actual))) / (len(actual))
 
         # for std
-        mape_s = abs((usage_actual - preds) / usage_actual)
+        mape_s = abs((actual - preds) / actual)
         s = mape_s.std()
-        mae_s = abs(usage_actual - preds)
+        mae_s = abs(actual - preds)
         s2 = mae_s.std()
         print(
             "\n\tACTUAL ACC. RESULTS: MAE, MAPE: {} and {}%".format(mae3, mape3 * 100.0)
@@ -678,7 +675,7 @@ class CharlieModel:
         print("\nTIME ELAPSED: {} seconds OR {} minutes".format(total, total / 60.0))
         print("\nEnd of run")
         plt.show()
-        for_plotting = [usage_actual, preds, y_last_usage, pred_last_usage]
+        for_plotting = [actual, preds, y_last_usage, pred_last_usage]
         return (
             s,
             s2,
