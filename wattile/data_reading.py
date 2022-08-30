@@ -120,6 +120,9 @@ def read_dataset_from_file(configs):
         needed_columns=configs["predictor_columns"],
     )
 
+    if configs["predictor_columns"] == []:
+        configs["predictor_columns"] = list(data_full_p.columns)
+
     # read in target data
     target_data_info = df_inputdata[df_inputdata.contentType == "targets"]
     data_full_t = _concat_data_from_files(
@@ -146,4 +149,4 @@ def read_dataset_from_file(configs):
     else:
         data_full = pd.merge(data_full_p, data_full_t, how="outer", on="Timestamp")
 
-    return data_full
+    return data_full, configs
