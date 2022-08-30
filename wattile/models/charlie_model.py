@@ -1,4 +1,6 @@
+import json
 import math
+import os
 import time
 from pathlib import Path
 
@@ -633,6 +635,13 @@ class CharlieModel:
         # SAVING MODEL
         if save_model:
             torch.save(model.state_dict(), f"{self.configs['exp_dir']}/torch_model")
+
+        ############################################################################################
+        # saving configs
+        # Write the configurations used for this training process to a json file
+        path = os.path.join(self.file_prefix, "configs.json")
+        with open(path, "w") as fp:
+            json.dump(self.configs, fp, indent=1)
 
         ############################################################################################
         # RESULTS
