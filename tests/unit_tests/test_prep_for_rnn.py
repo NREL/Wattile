@@ -33,10 +33,10 @@ def test_prep_for_rnn(config_for_tests, tmpdir):
     exp_dir.mkdir(parents=True, exist_ok=True)
 
     # get data
-    data, configs = read_dataset_from_file(config_for_tests)
+    data, config_for_tests = read_dataset_from_file(config_for_tests)
 
     # creat data frame
-    train_df, val_df, configs = prep_for_rnn(config_for_tests, data)
+    train_df, val_df = prep_for_rnn(config_for_tests, data)
 
     excepted_data_columns = []
     # add weather columns
