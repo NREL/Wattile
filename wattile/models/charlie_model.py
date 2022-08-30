@@ -12,6 +12,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.nn import init
 
+from wattile.models.AlgoMainRNNBase import AlgoMainRNNBase
+
 PROJECT_DIRECTORY = Path().resolve().parent.parent
 
 
@@ -388,10 +390,7 @@ class S2S_LA_Model(nn.Module):
 
 
 ####################################################################################################
-class CharlieModel:
-    def __init__(self, configs):
-        self.configs = configs
-
+class CharlieModel(AlgoMainRNNBase):
     def main(self, train_df, val_df):  # noqa: C901 TODO: remove noqa
         """
         process the data into three-dimensional for S2S model, train the model, and test the restuls
