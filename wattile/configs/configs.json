@@ -43,6 +43,20 @@
   "lag_count": 24,
   "lag_interval_forecast": "0min"
  },
+ "S2S_window": {
+  "window_width_source": "180min",
+  "window_width_target": "45min",
+  "normalization": false
+ },
+ "S2S_learning": {
+  "cell_type": "lstm",
+  "attention_model": "BA",
+  "la_method": "none",
+  "batch_size": 256,
+  "hidden_size": 64,
+  "cuda": false,
+  "save_model": false
+ },
  "S2S_stagger": {
   "initial_num": 72,
   "decay": 0,

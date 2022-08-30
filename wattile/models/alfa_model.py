@@ -80,7 +80,14 @@ class AlfaModel(AlgoMainRNNBase):
         val_target_tensor = torch.from_numpy(y_val).to(device)
 
         val = data_utils.TensorDataset(val_feat_tensor, val_target_tensor)
-        val_loader = DataLoader(dataset=val, batch_size=val_batch_size, shuffle=True)
+        if self.configs["use_case"] == "train":
+            shuffle = True
+        elif (
+            self.configs["use_case"] == "validation"
+            or self.configs["use_case"] == "prediction"
+        ):
+            shuffle = False
+        val_loader = DataLoader(dataset=val, batch_size=val_batch_size, shuffle=shuffle)
 
         return train_loader, val_loader
 
@@ -761,6 +768,15 @@ class AlfaModel(AlgoMainRNNBase):
             device,
         )
 
+        # Save the final predictions and measured target to a file
+        # predictions.to_csv(self.file_prefix + '/predictions.csv', index=False)
+        pd.DataFrame(predictions).to_hdf(
+            os.path.join(self.file_prefix, "predictions.h5"), key="df", mode="w"
+        )
+        pd.DataFrame(targets.iloc[:, 0]).to_hdf(
+            os.path.join(self.file_prefix, "measured.h5"), key="df", mode="w"
+        )
+
         # Save the QQ information to a file
         Q_vals.to_hdf(
             os.path.join(self.file_prefix, "QQ_data_Test.h5"), key="df", mode="w"
@@ -819,7 +835,9 @@ class AlfaModel(AlgoMainRNNBase):
             for (feats, v) in val_loader:
                 features = Variable(feats.view(-1, seq_dim, self.configs["input_dim"]))
                 outputs = model(features)
-                preds.append(outputs.cpu().numpy())
+                outputs = outputs.cpu().numpy()
+                outputs = outputs.reshape(*outputs.shape, 1)
+                preds.append(outputs)
 
         # (Normalized Data) Concatenate the predictions for the whole val set
         semifinal_preds = np.concatenate(preds)
