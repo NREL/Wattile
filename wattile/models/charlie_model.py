@@ -1,6 +1,5 @@
 import json
 import math
-import os
 import time
 from pathlib import Path
 
@@ -11,8 +10,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.nn import init
-
-from wattile.models.AlgoMainRNNBase import AlgoMainRNNBase
 
 PROJECT_DIRECTORY = Path().resolve().parent.parent
 
@@ -390,7 +387,12 @@ class S2S_LA_Model(nn.Module):
 
 
 ####################################################################################################
-class CharlieModel(AlgoMainRNNBase):
+class CharlieModel:
+    def __init__(self, configs):
+        self.configs = configs
+        self.file_prefix = Path(configs["exp_dir"])
+        self.file_prefix.mkdir(parents=True, exist_ok=True)
+
     def main(self, train_df, val_df):  # noqa: C901 TODO: remove noqa
         """
         process the data into three-dimensional for S2S model, train the model, and test the restuls
@@ -635,10 +637,8 @@ class CharlieModel(AlgoMainRNNBase):
         if save_model:
             torch.save(model.state_dict(), f"{self.configs['exp_dir']}/torch_model")
 
-        ############################################################################################
-        # saving configs
         # Write the configurations used for this training process to a json file
-        path = os.path.join(self.file_prefix, "configs.json")
+        path = self.file_prefix / "configs.json"
         with open(path, "w") as fp:
             json.dump(self.configs, fp, indent=1)
 
