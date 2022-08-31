@@ -186,7 +186,7 @@ def timelag_predictors(data, configs):
     lag_interval = configs["feat_timelag"]["lag_interval"]
     lag_count = configs["feat_timelag"]["lag_count"]
     lag_interval_forecast = configs["feat_timelag"]["lag_interval_forecast"]
-    target_var = configs["target_var"]
+    target_var = configs["data_handling"]["target_var"]
 
     # splitting predictors and target
     target = data[target_var]
@@ -236,7 +236,7 @@ def timelag_predictors_target(data, configs):
     initial_num = configs["S2S_stagger"]["initial_num"]
     secondary_num = configs["S2S_stagger"]["secondary_num"]
     decay = configs["S2S_stagger"]["decay"]
-    target_var = configs["target_var"]
+    target_var = configs["data_handling"]["target_var"]
 
     target = data[target_var]
     data = data.drop(target_var, axis=1)
@@ -294,7 +294,7 @@ def roll_predictors_target(data, configs):
     window_width_source = configs["S2S_window"]["window_width_source"]
     window_width_target = configs["S2S_window"]["window_width_target"]
     resample_interval = configs["resample_interval"]
-    target_var = configs["target_var"]
+    target_var = configs["data_handling"]["target_var"]
 
     # initialize lists
     data_predictor = []
@@ -369,7 +369,7 @@ def correct_predictor_columns(configs, data):
     :return: data with correct columns
     :rtype: pandas.DataFrame
     """
-    keep_cols = configs["predictor_columns"] + [configs["target_var"]]
+    keep_cols = configs["predictor_columns"] + [configs["data_handling"]["target_var"]]
 
     # raise error if missing columns
     missing_colums = set(keep_cols).difference(set(data.columns))
@@ -496,8 +496,8 @@ def resample_or_rolling_stats(data, configs):
     if configs["feat_stats"]["active"]:
 
         # seperate predictors and target
-        target = data[configs["target_var"]]
-        X_data = data.drop(configs["target_var"], axis=1)
+        target = data[configs["data_handling"]["target_var"]]
+        X_data = data.drop(configs["data_handling"]["target_var"], axis=1)
 
         # resampling for each statistics separately
         data_resampler = X_data.resample(
@@ -571,7 +571,7 @@ def resample_or_rolling_stats(data, configs):
 
         # adding resampled target back to the dataframe
         target = _resample_data(target, configs)
-        data[configs["target_var"]] = target
+        data[configs["data_handling"]["target_var"]] = target
 
     else:
 
