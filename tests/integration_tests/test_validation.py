@@ -27,10 +27,14 @@ def config_for_tests():
 
 
 ALFA_EXP_DIR = TESTS_FIXTURES_PATH / "alfa_exp_dir"
-ALFA_CONFIG_PATCH = {"learning_algorithm": {"arch_version": "alfa"}}
+ALFA_CONFIG_PATCH = {
+    "learning_algorithm": {"arch_version": "alfa", "test_method": "external"}
+}
 
 BRAVO_EXP_DIR = TESTS_FIXTURES_PATH / "bravo_exp_dir"
-BRAVO_CONFIG_PATCH = {"learning_algorithm": {"arch_version": "bravo"}}
+BRAVO_CONFIG_PATCH = {
+    "learning_algorithm": {"arch_version": "bravo", "test_method": "external"}
+}
 
 
 @pytest.mark.parametrize(
