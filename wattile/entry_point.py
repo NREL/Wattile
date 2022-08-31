@@ -51,9 +51,8 @@ def create_input_dataframe(configs):
     configs["target_feat_name"] = [configs["target_var"]]
 
     # Get the dataset
-    if (
-        configs["learning_algorithm"]["use_case"] == "validation"
-        and configs["learning_algorithm"]["test_method"] == "internal"
+    if (configs["learning_algorithm"]["use_case"] == "validation") and (
+        configs["learning_algorithm"]["test_method"] == "internal"
     ):
         data = pd.read_hdf(os.path.join(local_results_dir, "internal_test.h5"))
     else:
