@@ -129,7 +129,9 @@ def read_dataset_from_file(configs):
 
         raise ConfigsError(message)
 
-    elif data_full_t.empty and configs["use_case"] != "prediction":
+    elif (
+        data_full_t.empty and configs["learning_algorithm"]["use_case"] != "prediction"
+    ):
         message = "No target data found in dataset for specified timeframe."
         logger.info(f"{message} Exiting process...")
 
@@ -137,7 +139,7 @@ def read_dataset_from_file(configs):
 
     # the rest of the code expects a shape with a predictor column.
     # TODO: remove if
-    if configs["use_case"] == "prediction":
+    if configs["learning_algorithm"]["use_case"] == "prediction":
         data_full = data_full_p
         data_full[configs["target_var"]] = -999
     else:
