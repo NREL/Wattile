@@ -11,6 +11,41 @@
     "Synthetic Weather Station Relative Humidity",
     "Synthetic Weather Station Wind Speed"
  ],
+ "data_processing": {
+    "feat_time": {
+    "month_of_year": ["sincos"],
+    "day_of_week": ["binary_reg", "binary_fuzzy"],
+    "hour_of_day": ["sincos", "binary_reg", "binary_fuzzy"],
+    "holidays": false
+   },
+   "resample_interval": "15min",
+   "feat_stats": {
+    "active": true,
+    "window_width": "15min"
+   },
+   "feat_timelag": {
+    "lag_interval": "15min",
+    "lag_count": 24,
+    "lag_interval_forecast": "0min"
+   },
+   "S2S_stagger": {
+    "initial_num": 72,
+    "decay": 0,
+    "secondary_num": 0
+   },
+   "S2S_window": {
+    "window_width_source": "180min",
+    "window_width_target": "45min",
+    "normalization": false
+   },
+   "random_seed": 382,
+   "sequential_splicer": {
+    "active": false,
+    "window_width": "1W"
+   },
+   "data_split": "80:20:0",
+   "train_size_factor": 1
+ },
  "arch_version": "alfa",
  "exp_id": "7-9-21",
  "arch_type": "RNN",
@@ -23,31 +58,6 @@
  "data_dir": "tests/data/Synthetic Site",
  "data_config": "Synthetic Site Config.json",
  "resample_freq": 15,
- "resample_interval": "15min",
- "sequential_splicer": {
-  "active": false,
-  "window_width": "1W"
- },
- "feat_time": {
-  "month_of_year": ["sincos"],
-  "day_of_week": ["binary_reg", "binary_fuzzy"],
-  "hour_of_day": ["sincos", "binary_reg", "binary_fuzzy"],
-  "holidays": false
- },
- "feat_stats": {
-  "active": true,
-  "window_width": "15min"
- },
- "feat_timelag": {
-  "lag_interval": "15min",
-  "lag_count": 24,
-  "lag_interval_forecast": "0min"
- },
- "S2S_window": {
-  "window_width_source": "180min",
-  "window_width_target": "45min",
-  "normalization": false
- },
  "S2S_learning": {
   "cell_type": "lstm",
   "attention_model": "BA",
@@ -57,15 +67,7 @@
   "cuda": false,
   "save_model": false
  },
- "S2S_stagger": {
-  "initial_num": 72,
-  "decay": 0,
-  "secondary_num": 0
- },
- "train_size_factor": 1,
  "train_val_split": "Random",
- "data_split": "80:20:0",
- "random_seed": 382,
  "qs": [
   0.025,
   0.05,
