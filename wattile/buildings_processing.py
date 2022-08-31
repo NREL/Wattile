@@ -468,7 +468,7 @@ def prep_for_rnn(configs, data):
     # if validatate with external data, write data to h5 for future testing.
     if configs["use_case"] == "validation" and configs["test_method"] == "external":
         filepath = (
-            pathlib.Path(configs["data_dir"])
+            pathlib.Path(configs["data_handling"]["data_dir"])
             / f"{configs['target_var']}_external_test.h5"
         )
         data.to_hdf(filepath, key="df", mode="w")
