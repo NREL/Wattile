@@ -66,14 +66,16 @@ def timeseries_comparison(configs):
                     configs["arch_version"] == "charlie"
                 ):
 
-                    low_start = qntl * configs["S2S_stagger"]["initial_num"]
-                    low_end = (
-                        qntl * configs["S2S_stagger"]["initial_num"]
-                        + configs["S2S_stagger"]["initial_num"]
+                    low_start = (
+                        qntl * configs["data_processing"]["S2S_stagger"]["initial_num"]
                     )
-                    high_start = (len_tot - low_start) - configs["S2S_stagger"][
-                        "initial_num"
-                    ]
+                    low_end = (
+                        qntl * configs["data_processing"]["S2S_stagger"]["initial_num"]
+                        + configs["data_processing"]["S2S_stagger"]["initial_num"]
+                    )
+                    high_start = (len_tot - low_start) - configs["data_processing"][
+                        "S2S_stagger"
+                    ]["initial_num"]
                     high_end = len_tot - low_start
 
                     low = predictions.iloc[:, low_start:low_end].to_numpy()
@@ -224,7 +226,7 @@ def timeseries_comparison(configs):
     fig.update_xaxes(
         title=dict(
             text="<b>Appended Multiple Time Windows</b><br>(single window size = {})".format(
-                configs["sequential_splicer"]["window_width"]
+                configs["data_processing"]["sequential_splicer"]["window_width"]
             ),
             font=dict(
                 size=14,
