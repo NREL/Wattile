@@ -11,6 +11,41 @@
   "Synthetic Weather Station Relative Humidity",
   "Synthetic Weather Station Wind Speed"
  ],
+ "data_processing": {
+  "feat_time": {
+   "month_of_year": ["sincos"],
+   "day_of_week": ["binary_reg"],
+   "hour_of_day": ["sincos"],
+   "holidays": false
+  },
+  "resample_interval": "15min",
+  "feat_stats": {
+   "active": true,
+   "window_width": "15min"
+  },
+  "feat_timelag": {
+   "lag_interval": "15min",
+   "lag_count": 12,
+   "lag_interval_forecast": "0min"
+  },
+  "S2S_stagger": {
+   "initial_num": 72,
+   "decay": 0,
+   "secondary_num": 0
+  },
+  "S2S_window": {
+   "window_width_source": "180min",
+   "window_width_target": "45min",
+   "normalization": false
+  },
+  "random_seed": 1,
+  "sequential_splicer": {
+   "active": false,
+   "window_width": "3h"
+  },
+  "data_split": "80:10:10",
+  "train_size_factor": 4
+ },
  "arch_version": "bravo",
  "exp_id": "Debugging_for_rolling_stats",
  "arch_type": "RNN",
@@ -28,35 +63,7 @@
   "active": true,
   "window_width": "3h"
  },
- "feat_time": {
-  "month_of_year": ["sincos"],
-  "day_of_week": ["binary_reg"],
-  "hour_of_day": ["sincos"],
-  "holidays": false
- },
- "feat_stats": {
-  "active": true,
-  "window_width": "15min"
- },
- "feat_timelag": {
-  "lag_interval": "15min",
-  "lag_count": 12,
-  "lag_interval_forecast": "0min"
- },
- "S2S_window": {
-  "window_width_source": "180min",
-  "window_width_target": "45min",
-  "normalization": false
- },
- "S2S_stagger": {
-  "initial_num": 72,
-  "decay": 0,
-  "secondary_num": 0
- },
- "train_size_factor": 4,
  "train_val_split": "Random",
- "data_split": "80:10:10",
- "random_seed": 1,
  "qs": [
   0.025,
   0.25,
