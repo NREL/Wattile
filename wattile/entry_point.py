@@ -50,6 +50,10 @@ def create_input_dataframe(configs):
 
     configs["target_feat_name"] = [configs["target_var"]]
 
+    # DEBUGGING
+    print("#####################################################")
+    print(configs)
+
     # Get the dataset
     if (
         configs["learning_algorithm"]["use_case"] == "validation"
