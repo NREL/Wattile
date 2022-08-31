@@ -37,7 +37,7 @@ def timeseries_comparison(configs):
 
     # color
     c_target = "rgb(228,26,28)"
-    len_c_list = int((len(configs["qs"]) - 1) / 2)
+    len_c_list = int((len(configs["learning_algorithm"]["quantiles"]) - 1) / 2)
     c_list = n_colors(color_base, color_accent, len_c_list, colortype="rgb")
     list_c_low_penalty = c_list.copy()
     list_c_high_penalty = c_list.copy()
@@ -60,10 +60,12 @@ def timeseries_comparison(configs):
 
             count_qntl = 0
 
-            for qntl in range(0, int((len(configs["qs"]) - 1) / 2)):
+            for qntl in range(
+                0, int((len(configs["learning_algorithm"]["quantiles"]) - 1) / 2)
+            ):
 
-                if (configs["arch_version"] == "bravo") | (
-                    configs["arch_version"] == "charlie"
+                if (configs["learning_algorithm"]["arch_version"] == "bravo") | (
+                    configs["learning_algorithm"]["arch_version"] == "charlie"
                 ):
 
                     low_start = qntl * configs["S2S_stagger"]["initial_num"]
@@ -79,7 +81,7 @@ def timeseries_comparison(configs):
                     low = predictions.iloc[:, low_start:low_end].to_numpy()
                     high = predictions.iloc[:, high_start:high_end].to_numpy()
 
-                elif configs["arch_version"] == "alfa":
+                elif configs["learning_algorithm"]["arch_version"] == "alfa":
 
                     low_start = qntl
                     high_start = len_tot - low_start - 1
@@ -87,7 +89,10 @@ def timeseries_comparison(configs):
                     low = predictions.iloc[:, low_start].to_numpy()
                     high = predictions.iloc[:, high_start].to_numpy()
 
-                alph = 1 - (configs["qs"][-(qntl + 1)] - configs["qs"][qntl])
+                alph = 1 - (
+                    configs["learning_algorithm"]["quantiles"][-(qntl + 1)]
+                    - configs["learning_algorithm"]["quantiles"][qntl]
+                )
                 IS = (
                     (high - low)
                     + (2 / alph) * (low - target) * (target < low)
