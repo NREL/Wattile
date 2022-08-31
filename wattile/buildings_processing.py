@@ -369,7 +369,9 @@ def correct_predictor_columns(configs, data):
     :return: data with correct columns
     :rtype: pandas.DataFrame
     """
-    keep_cols = configs["predictor_columns"] + [configs["data_handling"]["target_var"]]
+    keep_cols = configs["data_handling"]["predictor_columns"] + [
+        configs["data_handling"]["target_var"]
+    ]
 
     # raise error if missing columns
     missing_colums = set(keep_cols).difference(set(data.columns))
