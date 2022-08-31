@@ -14,7 +14,7 @@
      "Synthetic Weather Station Relative Humidity",
      "Synthetic Weather Station Wind Speed"
    ],
-   "target_var": "Synthetic Site Electricity Main Total Power",
+   "target_var": "Synthetic Site Electricity Main Total Power"
  },
  "arch_version": "alfa",
  "exp_id": "7-9-21",
