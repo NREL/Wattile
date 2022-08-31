@@ -18,16 +18,16 @@ def save_model(model, epoch_num, n_iter, filepath):
 
 
 def _get_output_dim(configs):
-    arch_version = configs["arch_version"]
+    arch_version = configs["learning_algorithm"]["arch_version"]
 
     if arch_version == "alfa":
-        return len(configs["qs"])
+        return len(configs["learning_algorithm"]["quantiles"])
 
     elif arch_version == "bravo":
         return (
             configs["S2S_stagger"]["initial_num"]
             + configs["S2S_stagger"]["secondary_num"]
-        ) * len(configs["qs"])
+        ) * len(configs["learning_algorithm"]["quantiles"])
 
     else:
         ConfigsError(f"{arch_version} not a valid arch_version")
@@ -43,10 +43,10 @@ def init_model(configs):
             f"{configs['arch_type_variant']} is not a supported architecture variant"
         )
 
-    hidden_dim = int(configs["hidden_nodes"])
+    hidden_dim = int(configs["learning_algorithm"]["hidden_nodes"])
     output_dim = _get_output_dim(configs)
     input_dim = configs["input_dim"]
-    layer_dim = configs["layer_dim"]
+    layer_dim = configs["learning_algorithm"]["layer_dim"]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     return model(input_dim, hidden_dim, layer_dim, output_dim, device=device)
