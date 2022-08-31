@@ -98,8 +98,8 @@ class BravoModel(AlgoMainRNNBase):
 
     def pinball_np(self, output, target):
         num_future_time_instances = (
-            self.configs["S2S_stagger"]["initial_num"]
-            + self.configs["S2S_stagger"]["secondary_num"]
+            self.configs["data_processing"]["S2S_stagger"]["initial_num"]
+            + self.configs["data_processing"]["S2S_stagger"]["secondary_num"]
         )
         resid = target - output
         tau = np.repeat(self.configs["qs"], num_future_time_instances)
@@ -123,8 +123,8 @@ class BravoModel(AlgoMainRNNBase):
         """
 
         num_future_time_instances = (
-            self.configs["S2S_stagger"]["initial_num"]
-            + self.configs["S2S_stagger"]["secondary_num"]
+            self.configs["data_processing"]["S2S_stagger"]["initial_num"]
+            + self.configs["data_processing"]["S2S_stagger"]["secondary_num"]
         )
         resid = target - output
 
@@ -181,8 +181,8 @@ class BravoModel(AlgoMainRNNBase):
         with torch.no_grad():
             # Plug the val set into the model
             num_timestamps = (
-                self.configs["S2S_stagger"]["initial_num"]
-                + self.configs["S2S_stagger"]["secondary_num"]
+                self.configs["data_processing"]["S2S_stagger"]["initial_num"]
+                + self.configs["data_processing"]["S2S_stagger"]["secondary_num"]
             )
             model.eval()
             preds = []
@@ -938,8 +938,8 @@ class BravoModel(AlgoMainRNNBase):
                 )
 
         num_timestamps = (
-            self.configs["S2S_stagger"]["initial_num"]
-            + self.configs["S2S_stagger"]["secondary_num"]
+            self.configs["data_processing"]["S2S_stagger"]["initial_num"]
+            + self.configs["data_processing"]["S2S_stagger"]["secondary_num"]
         )
         final_preds = np.array(final_preds)
         final_preds = final_preds.reshape(
@@ -965,8 +965,8 @@ class BravoModel(AlgoMainRNNBase):
             )
 
         num_timestamps = (
-            self.configs["S2S_stagger"]["initial_num"]
-            + self.configs["S2S_stagger"]["secondary_num"]
+            self.configs["data_processing"]["S2S_stagger"]["initial_num"]
+            + self.configs["data_processing"]["S2S_stagger"]["secondary_num"]
         )
         data = np.array(predictions)
         data = data.reshape((data.shape[0], len(self.configs["qs"]), num_timestamps))
@@ -979,7 +979,7 @@ class BravoModel(AlgoMainRNNBase):
         for j in range(1, 100):
             time_index = pd.date_range(
                 start=test_data.index[j],
-                periods=self.configs["S2S_stagger"]["initial_num"],
+                periods=self.configs["data_processing"]["S2S_stagger"]["initial_num"],
                 freq="{}min".format(self.configs["resample_freq"]),
             )
             ax1.plot(time_index, measured[j, :], color="black", lw=1, zorder=5)
