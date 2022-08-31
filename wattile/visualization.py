@@ -14,8 +14,8 @@ color_accent = "rgb(80,70,69)"
 
 
 def timeseries_comparison(configs):
-    predictions = pd.read_hdf(configs["exp_dir"] + "/predictions.h5")
-    measured = pd.read_hdf(configs["exp_dir"] + "/measured.h5")
+    predictions = pd.read_hdf(configs["data_handling"]["exp_dir"] + "/predictions.h5")
+    measured = pd.read_hdf(configs["data_handling"]["exp_dir"] + "/measured.h5")
 
     plot_comparison_portion_start = configs["plot_comparison_portion_start"]
     plot_comparison_portion_end = configs["plot_comparison_portion_end"]
@@ -297,7 +297,11 @@ def timeseries_comparison(configs):
         showgrid=False,
     )
 
-    timeseries_comparison = configs["exp_dir"] + "/Vis_TimeseriesComparisons.svg"
+    timeseries_comparison = (
+        configs["data_handling"]["exp_dir"] + "/Vis_TimeseriesComparisons.svg"
+    )
     print("saving timeseries comparison in {}".format(timeseries_comparison))
     pio.write_image(fig, timeseries_comparison)
-    fig.write_html(configs["exp_dir"] + "/Vis_TimeseriesComparisons.html")
+    fig.write_html(
+        configs["data_handling"]["exp_dir"] + "/Vis_TimeseriesComparisons.html"
+    )
