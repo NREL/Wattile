@@ -115,7 +115,7 @@ def run_model(configs, train_df, val_df):
             configs["arch_type"],
             configs["arch_type_variant"],
             configs["data_handling"]["target_var"],
-            configs["data_handling"]["exp_id"],
+            configs["exp_id"],
         )
     )
     return results
