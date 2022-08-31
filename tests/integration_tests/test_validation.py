@@ -27,10 +27,10 @@ def config_for_tests():
 
 
 ALFA_EXP_DIR = TESTS_FIXTURES_PATH / "alfa_exp_dir"
-ALFA_CONFIG_PATCH = {"learning_algorithm": {"arch_version": "alfa"}}
+ALFA_CONFIG_PATCH = "alfa"
 
 BRAVO_EXP_DIR = TESTS_FIXTURES_PATH / "bravo_exp_dir"
-BRAVO_CONFIG_PATCH = {"learning_algorithm": {"arch_version": "bravo"}}
+BRAVO_CONFIG_PATCH = "bravo"
 
 
 @pytest.mark.parametrize(
@@ -41,7 +41,7 @@ BRAVO_CONFIG_PATCH = {"learning_algorithm": {"arch_version": "bravo"}}
     ],
 )
 def test_validation(config_for_tests, tmpdir, config_patch, test_exp_dir):
-    config_for_tests.update(config_patch)
+    config_for_tests["learning_algorithm"]["arch_version"] = config_patch
     config_for_tests["learning_algorithm"]["use_case"] = "validation"
 
     exp_dir = pathlib.Path(tmpdir) / "train_results"
