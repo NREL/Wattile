@@ -116,7 +116,7 @@ def input_data_split(data, configs):
     """
     # setting configuration parameters
     arch_version = configs["arch_version"]
-    file_prefix = Path(configs["exp_dir"])
+    file_prefix = Path(configs["data_handling"]["end_time"])
     mask_file = os.path.join(file_prefix, "mask.h5")
 
     # assign timestamp and data size depending on arch_version
