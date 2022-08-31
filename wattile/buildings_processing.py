@@ -405,8 +405,8 @@ def correct_timestamps(configs, data):
     data = data.sort_index()
 
     # TODO: think about timezones.
-    start_time = dt.datetime.fromisoformat((configs["start_time"]))
-    end_time = dt.datetime.fromisoformat(configs["end_time"])
+    start_time = dt.datetime.fromisoformat((configs["data_handling"]["start_time"]))
+    end_time = dt.datetime.fromisoformat(configs["data_handling"]["end_time"])
     data = data[start_time:end_time]
 
     if data.shape[0] == 0:
