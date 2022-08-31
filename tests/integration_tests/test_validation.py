@@ -42,7 +42,7 @@ BRAVO_CONFIG_PATCH = {"arch_version": "bravo"}
 )
 def test_validation(config_for_tests, tmpdir, config_patch, test_exp_dir):
     config_for_tests.update(config_patch)
-    config_for_tests["use_case"] = "validation"
+    config_for_tests["learning_algorithm"]["use_case"] = "validation"
 
     exp_dir = pathlib.Path(tmpdir) / "train_results"
     config_for_tests["exp_dir"] = str(exp_dir)
