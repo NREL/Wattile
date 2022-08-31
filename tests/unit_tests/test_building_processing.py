@@ -133,7 +133,7 @@ def test_rolling_stats():
     output = resample_or_rolling_stats(
         input,
         configs={
-            "target_var": "target_var",
+            "data_handling": {"target_var": "target_var"},
             "resample_interval": "1min",
             "feat_stats": {
                 "active": True,
