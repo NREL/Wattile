@@ -16,8 +16,10 @@ TESTS_PATH = Path(__file__).parents[1]
 TESTS_FIXTURES_PATH = TESTS_PATH / "fixtures"
 
 JULY_14_CONFIG = {
-    "start_time": "1997-07-14T00:00:00-00:00",
-    "end_time": "1997-07-15T00:00:00-00:00",
+    "data_handling": {
+        "start_time": "1997-07-14T00:00:00-00:00",
+        "end_time": "1997-07-15T00:00:00-00:00",
+    }
 }
 JULY_14_MIDNIGHT = pd.Timestamp(year=1997, month=7, day=14, tz=dt.timezone.utc)
 
