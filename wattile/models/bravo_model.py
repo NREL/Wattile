@@ -909,7 +909,10 @@ class BravoModel(AlgoMainRNNBase):
                 outputs = model(features)
                 preds.append(outputs.cpu().numpy())
 
-            file_path = pathlib.Path(self.configs["exp_dir"]) / "train_stats.json"
+            file_path = (
+                pathlib.Path(self.configs["data_handling"]["exp_dir"])
+                / "train_stats.json"
+            )
             with open(file_path, "r") as f:
                 train_stats = json.load(f)
 
