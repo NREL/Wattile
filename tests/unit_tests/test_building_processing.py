@@ -23,7 +23,12 @@ JULY_14_MIDNIGHT = pd.Timestamp(year=1997, month=7, day=14, tz=dt.timezone.utc)
 
 
 def test_correct_columns_too_few_columns():
-    configs = {"predictor_columns": ["a", "b", "c"], "target_var": "target_var"}
+    configs = {
+        "data_handling": {
+            "predictor_columns": ["a", "b", "c"],
+            "target_var": "target_var",
+        }
+    }
     data = pd.DataFrame({"a": [], "b": [], "target_var": []})
 
     with pytest.raises(ConfigsError):
@@ -31,7 +36,9 @@ def test_correct_columns_too_few_columns():
 
 
 def test_correct_columns_too_many_columns():
-    configs = {"predictor_columns": ["a"], "target_var": "target_var"}
+    configs = {
+        "data_handling": {"predictor_columns": ["a"], "target_var": "target_var"}
+    }
     data = pd.DataFrame({"a": [], "b": [], "target_var": []})
 
     data = correct_predictor_columns(configs, data)
@@ -39,7 +46,9 @@ def test_correct_columns_too_many_columns():
 
 
 def test_correct_columns_reorder_columns():
-    configs = {"predictor_columns": ["a", "b"], "target_var": "target_var"}
+    configs = {
+        "data_handling": {"predictor_columns": ["a", "b"], "target_var": "target_var"}
+    }
     data = pd.DataFrame({"b": [], "a": [], "target_var": []})
 
     data = correct_predictor_columns(configs, data)
