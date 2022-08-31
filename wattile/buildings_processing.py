@@ -115,7 +115,7 @@ def input_data_split(data, configs):
     :return:
     """
     # setting configuration parameters
-    arch_version = configs["arch_version"]
+    arch_version = configs["learning_algorithm"]["arch_version"]
     file_prefix = Path(configs["exp_dir"])
     mask_file = os.path.join(file_prefix, "mask.h5")
 
@@ -444,11 +444,11 @@ def _preprocess_data(configs, data):
     logger.info("Number of features: {}".format(configs["input_dim"]))
     logger.debug("Features: {}".format(data.columns.values))
 
-    if configs["arch_version"] == "alfa":
+    if configs["learning_algorithm"]["arch_version"] == "alfa":
         data = timelag_predictors(data, configs)
-    elif configs["arch_version"] == "bravo":
+    elif configs["learning_algorithm"]["arch_version"] == "bravo":
         data = timelag_predictors_target(data, configs)
-    elif configs["arch_version"] == "charlie":
+    elif configs["learning_algorithm"]["arch_version"] == "charlie":
         data = roll_predictors_target(data, configs)
 
     return data
@@ -464,14 +464,17 @@ def prep_for_rnn(configs, data):
     data = _preprocess_data(configs, data)
 
     # if validatate with external data, write data to h5 for future testing.
-    if configs["use_case"] == "validation" and configs["test_method"] == "external":
+    if (
+        configs["learning_algorithm"]["use_case"] == "validation"
+        and configs["learning_algorithm"]["test_method"] == "external"
+    ):
         filepath = (
             pathlib.Path(configs["data_dir"])
             / f"{configs['target_var']}_external_test.h5"
         )
         data.to_hdf(filepath, key="df", mode="w")
 
-    if configs["use_case"] == "train":
+    if configs["learning_algorithm"]["use_case"] == "train":
         train_df, val_df = input_data_split(data, configs)
 
     else:
