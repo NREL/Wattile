@@ -46,9 +46,9 @@ def create_input_dataframe(configs):
     :return: data
     :rtype: DataFrame
     """
-    local_results_dir = pathlib.Path(configs["exp_dir"])
+    local_results_dir = pathlib.Path(configs["data_handling"]["exp_dir"])
 
-    configs["target_feat_name"] = [configs["target_var"]]
+    configs["target_feat_name"] = [configs["data_handling"]["target_var"]]
 
     # Get the dataset
     if configs["use_case"] == "validation" and configs["test_method"] == "internal":
@@ -71,7 +71,7 @@ def run_model(configs, train_df, val_df):
     :param val_df: input data for validation
     :type val_df: DataFrame
     """
-    local_results_dir = pathlib.Path(configs["exp_dir"])
+    local_results_dir = pathlib.Path(configs["data_handling"]["exp_dir"])
 
     if configs["use_case"] == "train":
         # Check the model training process
@@ -81,7 +81,9 @@ def run_model(configs, train_df, val_df):
             # If we already have the desired number of epochs, don't do anything else
             if check:
                 print(
-                    "{} already completed. Moving on...".format(configs["target_var"])
+                    "{} already completed. Moving on...".format(
+                        configs["data_handling"]["target_var"]
+                    )
                 )
                 return
         # If the torch file doesnt exist yet, and run_resume=True, then reset it to false so it can
@@ -91,7 +93,7 @@ def run_model(configs, train_df, val_df):
                 configs["run_resume"] = False
                 print(
                     "Model for {} doesnt exist yet. Resetting run_resume to False".format(
-                        configs["target_var"]
+                        configs["data_handling"]["target_var"]
                     )
                 )
 
@@ -112,8 +114,8 @@ def run_model(configs, train_df, val_df):
         "Run with arch {}({}), on {}, with session ID {}, is done!".format(
             configs["arch_type"],
             configs["arch_type_variant"],
-            configs["target_var"],
-            configs["exp_id"],
+            configs["data_handling"]["target_var"],
+            configs["data_handling"]["exp_id"],
         )
     )
     return results
@@ -127,7 +129,7 @@ def main(configs):
     :param configs: Dictionary
     :return: None
     """
-    init_logging(local_results_dir=pathlib.Path(configs["exp_dir"]))
+    init_logging(local_results_dir=pathlib.Path(configs["data_handling"]["exp_dir"]))
     train_df, val_df = create_input_dataframe(configs)
 
     return run_model(configs, train_df, val_df)
