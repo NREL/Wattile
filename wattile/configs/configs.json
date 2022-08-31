@@ -12,7 +12,7 @@
     "Synthetic Weather Station Wind Speed"
  ],
  "data_processing": {
-    "feat_time": {
+   "feat_time": {
     "month_of_year": ["sincos"],
     "day_of_week": ["binary_reg", "binary_fuzzy"],
     "hour_of_day": ["sincos", "binary_reg", "binary_fuzzy"],
