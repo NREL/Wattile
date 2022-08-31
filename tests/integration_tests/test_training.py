@@ -80,5 +80,5 @@ def test_model_trains(config_for_tests, tmpdir, config_patch):
     # check result file were created
     assert (exp_dir / "output.out").exists()
     assert (exp_dir / "torch_model").exists()
-    if config_for_tests["arch_version"] != "charlie":
+    if config_for_tests["learning_algorithm"]["arch_version"] != "charlie":
         assert (exp_dir / "train_stats.json").exists()
