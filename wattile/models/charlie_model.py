@@ -632,7 +632,10 @@ class CharlieModel:
         ############################################################################################
         # SAVING MODEL
         if save_model:
-            torch.save(model.state_dict(), f"{self.configs['exp_dir']}/torch_model")
+            torch.save(
+                model.state_dict(),
+                "{}/torch_model".format(self.configs["data_handling"]["exp_dir"]),
+            )
 
         ############################################################################################
         # RESULTS
@@ -655,10 +658,14 @@ class CharlieModel:
         )
 
         pd.DataFrame(predictions, columns=[f"q{loss_function_qs}"]).to_csv(
-            f"{self.configs['exp_dir']}/q{loss_function_qs}.csv", index=None
+            "{}/q{}.csv".format(
+                self.configs["data_handling"]["exp_dir"], loss_function_qs
+            ),
+            index=None,
         )
         pd.DataFrame(measured, columns=["measured"]).to_csv(
-            f"{self.configs['exp_dir']}/measured.csv", index=None
+            "{}/measured.csv".format(self.configs["data_handling"]["exp_dir"]),
+            index=None,
         )
 
         # total time of run
