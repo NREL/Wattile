@@ -599,8 +599,12 @@ class AlfaModel(AlgoMainRNNBase):
 
                     # Add parody plot to TensorBoard
                     fig1, ax1 = plt.subplots()
+                    if len(self.configs["qs"]) == 1:
+                        idx_med = 0
+                    else:
+                        idx_med = int(len(self.configs["qs"]) / 2)
                     ax1.scatter(
-                        predictions[:, int(len(self.configs["qs"]) / 2)],
+                        predictions[:, idx_med],
                         val_df[self.configs["target_var"]],
                         s=5,
                         alpha=0.3,
