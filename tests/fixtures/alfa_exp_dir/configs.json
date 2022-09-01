@@ -82,7 +82,6 @@
  },
  "smoothing_alpha": 0.001,
  "test_method": "external",
- "plot_results": false,
  "target_feat_name": [
   "Synthetic Site Electricity Main Total Power"
  ],
