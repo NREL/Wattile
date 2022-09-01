@@ -18,7 +18,6 @@
  "transformation_method": "minmaxscale",
  "train_batch_size": 5,
  "val_batch_size": 1,
- "convert_csvs": false,
  "exp_dir": "",
  "data_dir": "",
  "data_config": "",

@@ -18,7 +18,6 @@
  "transformation_method": "minmaxscale",
  "train_batch_size": 26,
  "val_batch_size": 1,
- "convert_csvs": false,
  "exp_dir": "exp_dir",
  "data_dir": "tests/data/Synthetic Site",
  "data_config": "Synthetic Site Config.json",
