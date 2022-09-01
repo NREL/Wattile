@@ -12,7 +12,6 @@
     "Synthetic Weather Station Wind Speed"
  ],
  "arch_version": "alfa",
- "exp_id": "7-9-21",
  "arch_type": "RNN",
  "arch_type_variant": "lstm",
  "transformation_method": "minmaxscale",
