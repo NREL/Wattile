@@ -21,7 +21,6 @@
  "exp_dir": "",
  "data_dir": "",
  "data_config": "",
- "resample_freq": 15,
  "resample_interval": "15min",
  "sequential_splicer": {
   "active": true,

@@ -21,7 +21,6 @@
  "exp_dir": "exp_dir",
  "data_dir": "tests/data/Synthetic Site",
  "data_config": "Synthetic Site Config.json",
- "resample_freq": 15,
  "resample_interval": "15min",
  "sequential_splicer": {
   "active": false,
