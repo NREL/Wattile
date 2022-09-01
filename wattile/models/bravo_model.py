@@ -663,7 +663,7 @@ class BravoModel(AlgoMainRNNBase):
                                     val_df.columns.str.contains(
                                         self.configs["target_var"]
                                     ),
-                                ]
+                                ].min()
                             ),
                         ),
                         max(
@@ -674,7 +674,7 @@ class BravoModel(AlgoMainRNNBase):
                                     val_df.columns.str.contains(
                                         self.configs["target_var"]
                                     ),
-                                ]
+                                ].max()
                             ),
                         ),
                         5,
