@@ -649,7 +649,7 @@ class BravoModel(AlgoMainRNNBase):
                     fig1, ax1 = plt.subplots()
                     for lag in range(self.configs["S2S_stagger"]["initial_num"]):
                         ax1.scatter(
-                            predictions[:, lag],
+                            predictions[:, lag * len(self.configs["qs"])],
                             val_df[self.configs["target_var"] + "_lag_" + str(lag)],
                             s=5,
                             alpha=0.3,
