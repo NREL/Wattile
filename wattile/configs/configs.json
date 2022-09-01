@@ -1,5 +1,5 @@
 {
- "data_handling": {
+ "data_input": {
    "data_dir": "tests/data/Synthetic Site",
    "exp_dir": "exp_dir",
    "data_config": "Synthetic Site Config.json",

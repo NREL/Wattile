@@ -1,7 +1,6 @@
 {
-  "data_handling": {
+  "data_input": {
     "data_dir": "",
-    "exp_dir": "",
     "data_config": "",
     "start_time": "2018-01-01T00:00:00-07:00",
     "end_time": "2022-01-01T00:00:00-07:00",
@@ -16,6 +15,7 @@
     ],
     "target_var": "Synthetic Site Electricity Main Total Power"
   },
+  "exp_dir": "",
  "arch_version": "alfa",
  "exp_id": "Debugging_for_rolling_stats",
  "arch_type": "RNN",
