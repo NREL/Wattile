@@ -654,9 +654,16 @@ class BravoModel(AlgoMainRNNBase):
 
                     # Add parody plot to TensorBoard
                     fig1, ax1 = plt.subplots()
-                    ax1.scatter(
-                        predictions, val_df[self.configs["target_var"]], s=5, alpha=0.3
-                    )
+                    for lag in range(self.configs["S2S_stagger"]["initial_num"]):
+                        ax1.scatter(
+                            predictions[lag],
+                            val_df[self.configs["target_var"] + "_lag_" + str(lag)],
+                            s=5,
+                            alpha=0.3,
+                        )
+                    # ax1.scatter(
+                    #     predictions, val_df[self.configs["target_var"]], s=5, alpha=0.3
+                    # )
                     strait_line = np.linspace(
                         min(min(predictions), min(val_df[self.configs["target_var"]])),
                         max(max(predictions), max(val_df[self.configs["target_var"]])),
