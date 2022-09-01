@@ -645,13 +645,6 @@ class BravoModel(AlgoMainRNNBase):
                     # val_rmse.append(errors['rmse'])
                     writer.add_scalars("Loss", {"val": errors["pinball_loss"]}, n_iter)
 
-                    # debugging
-                    print("###################################################")
-                    print("predictions = {}".format(predictions.shape()))
-                    print("###################################################")
-                    print("val_df = {}".format(val_df.shape()))
-                    print("###################################################")
-
                     # Add parody plot to TensorBoard
                     fig1, ax1 = plt.subplots()
                     for lag in range(self.configs["S2S_stagger"]["initial_num"]):
