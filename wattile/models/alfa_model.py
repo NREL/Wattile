@@ -598,22 +598,22 @@ class AlfaModel(AlgoMainRNNBase):
                     writer.add_scalars("Loss", {"val": errors["pinball_loss"]}, n_iter)
 
                     # Add parody plot to TensorBoard
-                    # fig1, ax1 = plt.subplots()
-                    # ax1.scatter(
-                    #     predictions, val_df[self.configs["target_var"]], s=5, alpha=0.3
-                    # )
-                    # strait_line = np.linspace(
-                    #     min(min(predictions), min(val_df[self.configs["target_var"]])),
-                    #     max(max(predictions), max(val_df[self.configs["target_var"]])),
-                    #     5,
-                    # )
-                    # ax1.plot(strait_line, strait_line, c="k")
-                    # ax1.set_xlabel("Predicted")
-                    # ax1.set_ylabel("Observed")
-                    # ax1.axhline(y=0, color="k")
-                    # ax1.axvline(x=0, color="k")
-                    # ax1.axis("equal")
-                    # writer.add_figure("Parody", fig1, n_iter)
+                    fig1, ax1 = plt.subplots()
+                    ax1.scatter(
+                        predictions, val_df[self.configs["target_var"]], s=5, alpha=0.3
+                    )
+                    strait_line = np.linspace(
+                        min(min(predictions), min(val_df[self.configs["target_var"]])),
+                        max(max(predictions), max(val_df[self.configs["target_var"]])),
+                        5,
+                    )
+                    ax1.plot(strait_line, strait_line, c="k")
+                    ax1.set_xlabel("Predicted")
+                    ax1.set_ylabel("Observed")
+                    ax1.axhline(y=0, color="k")
+                    ax1.axvline(x=0, color="k")
+                    ax1.axis("equal")
+                    writer.add_figure("Parody", fig1, n_iter)
 
                     # Add QQ plot to TensorBoard
                     fig2, ax2 = plt.subplots()
