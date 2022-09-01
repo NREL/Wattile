@@ -659,7 +659,7 @@ class BravoModel(AlgoMainRNNBase):
                     # )
                     strait_line = np.linspace(
                         min(
-                            min(predictions),
+                            np.amin(predictions),
                             min(
                                 val_df.loc[
                                     :,
@@ -670,7 +670,7 @@ class BravoModel(AlgoMainRNNBase):
                             ),
                         ),
                         max(
-                            max(predictions),
+                            np.amax(predictions),
                             max(
                                 val_df.loc[
                                     :,
