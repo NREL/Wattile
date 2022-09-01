@@ -597,27 +597,10 @@ class AlfaModel(AlgoMainRNNBase):
                     val_iter.append(n_iter)
                     writer.add_scalars("Loss", {"val": errors["pinball_loss"]}, n_iter)
 
-                    # debugging
-                    print("###################################################")
-                    print("predictions = {}".format(predictions))
-                    print(
-                        "predictions.shape = {}".format(
-                            (pd.DataFrame(predictions)).shape
-                        )
-                    )
-                    print("qs = {}".format(self.configs["qs"]))
-                    print("###################################################")
-                    print("val_df = {}".format(val_df))
-                    print("###################################################")
-
                     # Add parody plot to TensorBoard
                     fig1, ax1 = plt.subplots()
-                    if len(self.configs["qs"]) == 1:
-                        idx_med = 0
-                    else:
-                        idx_med = int(len(self.configs["qs"]) / 2)
                     ax1.scatter(
-                        predictions[:, idx_med],
+                        predictions,
                         val_df[self.configs["target_var"]],
                         s=5,
                         alpha=0.3,
