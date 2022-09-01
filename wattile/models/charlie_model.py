@@ -227,7 +227,7 @@ class S2S_BA_Model(nn.Module):
         return preds
 
 
-#############################################################################################
+#########################################################################################
 # Luong Attention module
 class Attn(torch.nn.Module):
     def __init__(self, method, hidden_size):
@@ -385,7 +385,7 @@ class S2S_LA_Model(nn.Module):
         return preds
 
 
-####################################################################################################
+#########################################################################################
 class CharlieModel:
     def __init__(self, configs):
         self.configs = configs
@@ -495,6 +495,8 @@ class CharlieModel:
         for epoch in range(EPOCHES):
             t_one_epoch = time.time()
             print("Epoch {}".format(epoch + 1))
+
+            # training
             total_usage_loss = 0
             for b_idx in range(0, train_df_predictor.shape[0], BATCH_SIZE):
 
@@ -553,16 +555,12 @@ class CharlieModel:
             train_loss.append(total_usage_loss)
             print("\tTRAINING: {} total train USAGE loss.\n".format(total_usage_loss))
 
-            ########################################################################################
-            # TESTING
+            # testing
             y = None
             y_pred = None
             pred = None
-            total_usage_loss = (
-                0  # <---------------------------------------------------------------
-            )
+            total_usage_loss = 0
             all_preds = []
-
             for b_idx in range(0, val_df_predictor.shape[0], BATCH_SIZE):
                 with torch.no_grad():
                     x = torch.from_numpy(
@@ -629,14 +627,11 @@ class CharlieModel:
                 )
             )
 
-        ############################################################################################
-        # SAVING MODEL
+        # saving model
         if save_model:
             torch.save(model.state_dict(), f"{self.configs['exp_dir']}/torch_model")
 
-        ########################################################################################
         # saving results
-        # for plotting and accuracy
         predictions = pd.DataFrame(all_preds[0].numpy().squeeze())
         predictions = predictions.add_prefix("{}_".format(str(loss_function_qs)))
         targets = pd.DataFrame(val_df_target.squeeze())
