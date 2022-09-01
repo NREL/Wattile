@@ -658,8 +658,28 @@ class BravoModel(AlgoMainRNNBase):
                     #     predictions, val_df[self.configs["target_var"]], s=5, alpha=0.3
                     # )
                     strait_line = np.linspace(
-                        min(min(predictions), min(val_df[self.configs["target_var"]])),
-                        max(max(predictions), max(val_df[self.configs["target_var"]])),
+                        min(
+                            min(predictions),
+                            min(
+                                val_df.loc[
+                                    :,
+                                    val_df.columns.str.containg(
+                                        self.configs["target_var"]
+                                    ),
+                                ]
+                            ),
+                        ),
+                        max(
+                            max(predictions),
+                            max(
+                                val_df.loc[
+                                    :,
+                                    val_df.columns.str.containg(
+                                        self.configs["target_var"]
+                                    ),
+                                ]
+                            ),
+                        ),
                         5,
                     )
                     ax1.plot(strait_line, strait_line, c="k")
