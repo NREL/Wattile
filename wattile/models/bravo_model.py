@@ -57,7 +57,7 @@ class BravoModel(AlgoMainRNNBase):
             # Define input feature matrix
             X_train = train_data.drop(
                 train_data.filter(
-                    like=self.configs["data_handling"]["target_var"], axis=1
+                    like=self.configs["data_input"]["target_var"], axis=1
                 ).columns,
                 axis=1,
             ).values.astype(dtype="float32")
@@ -65,7 +65,7 @@ class BravoModel(AlgoMainRNNBase):
             # Output variable (batch*72), then (batch*(72*num of qs))
             y_train = train_data[
                 train_data.filter(
-                    like=self.configs["data_handling"]["target_var"], axis=1
+                    like=self.configs["data_input"]["target_var"], axis=1
                 ).columns
             ].values.astype(dtype="float32")
             y_train = np.tile(y_train, len(self.configs["qs"]))
@@ -85,14 +85,14 @@ class BravoModel(AlgoMainRNNBase):
         # X_val = val_data.drop(self.configs['target_var'], axis=1).values.astype(dtype='float32')
         X_val = val_data.drop(
             val_data.filter(
-                like=self.configs["data_handling"]["target_var"], axis=1
+                like=self.configs["data_input"]["target_var"], axis=1
             ).columns,
             axis=1,
         ).values.astype(dtype="float32")
 
         y_val = val_data[
             val_data.filter(
-                like=self.configs["data_handling"]["target_var"], axis=1
+                like=self.configs["data_input"]["target_var"], axis=1
             ).columns
         ].values.astype(dtype="float32")
         y_val = np.tile(y_val, len(self.configs["qs"]))
@@ -228,7 +228,7 @@ class BravoModel(AlgoMainRNNBase):
                 maxs = np.tile(
                     train_max[
                         train_max.filter(
-                            like=self.configs["data_handling"]["target_var"], axis=0
+                            like=self.configs["data_input"]["target_var"], axis=0
                         ).index
                     ].values,
                     len(self.configs["qs"]),
@@ -236,7 +236,7 @@ class BravoModel(AlgoMainRNNBase):
                 mins = np.tile(
                     train_min[
                         train_min.filter(
-                            like=self.configs["data_handling"]["target_var"], axis=0
+                            like=self.configs["data_input"]["target_var"], axis=0
                         ).index
                     ].values,
                     len(self.configs["qs"]),
@@ -251,7 +251,7 @@ class BravoModel(AlgoMainRNNBase):
                 stds = np.tile(
                     train_std[
                         train_std.filter(
-                            like=self.configs["data_handling"]["target_var"], axis=0
+                            like=self.configs["data_input"]["target_var"], axis=0
                         ).index
                     ].values,
                     len(self.configs["qs"]),
@@ -259,7 +259,7 @@ class BravoModel(AlgoMainRNNBase):
                 means = np.tile(
                     train_mean[
                         train_mean.filter(
-                            like=self.configs["data_handling"]["target_var"], axis=0
+                            like=self.configs["data_input"]["target_var"], axis=0
                         ).index
                     ].values,
                     len(self.configs["qs"]),
@@ -679,14 +679,14 @@ class BravoModel(AlgoMainRNNBase):
                     # Add parody plot to TensorBoard
                     # fig2, ax2 = plt.subplots()
                     # ax2.scatter(predictions, val_df[
-                    #   self.configs["data_handling"]["target_var"]],
+                    #   self.configs["data_input"]["target_var"]],
                     #   s=5,
                     #   alpha=0.3)
                     # strait_line = np.linspace(
                     #     min(min(predictions), min(val_df[
-                    #       self.configs["data_handling"]["target_var"]])),
+                    #       self.configs["data_input"]["target_var"]])),
                     #     max(max(predictions), max(
-                    #   val_df[self.configs["data_handling"]["target_var"]])),
+                    #   val_df[self.configs["data_input"]["target_var"]])),
                     #     5,
                     # )
                     # ax2.plot(strait_line, strait_line, c="k")
@@ -909,10 +909,7 @@ class BravoModel(AlgoMainRNNBase):
                 outputs = model(features)
                 preds.append(outputs.cpu().numpy())
 
-            file_path = (
-                pathlib.Path(self.configs["data_handling"]["exp_dir"])
-                / "train_stats.json"
-            )
+            file_path = pathlib.Path(self.configs["exp_dir"]) / "train_stats.json"
             with open(file_path, "r") as f:
                 train_stats = json.load(f)
 
@@ -929,7 +926,7 @@ class BravoModel(AlgoMainRNNBase):
                 maxs = np.tile(
                     train_max[
                         train_max.filter(
-                            like=self.configs["data_handling"]["target_var"], axis=0
+                            like=self.configs["data_input"]["target_var"], axis=0
                         ).index
                     ].values,
                     len(self.configs["qs"]),
@@ -937,7 +934,7 @@ class BravoModel(AlgoMainRNNBase):
                 mins = np.tile(
                     train_min[
                         train_min.filter(
-                            like=self.configs["data_handling"]["target_var"], axis=0
+                            like=self.configs["data_input"]["target_var"], axis=0
                         ).index
                     ].values,
                     len(self.configs["qs"]),
@@ -949,7 +946,7 @@ class BravoModel(AlgoMainRNNBase):
                 stds = np.tile(
                     train_std[
                         train_std.filter(
-                            like=self.configs["data_handling"]["target_var"], axis=0
+                            like=self.configs["data_input"]["target_var"], axis=0
                         ).index
                     ].values,
                     len(self.configs["qs"]),
@@ -957,7 +954,7 @@ class BravoModel(AlgoMainRNNBase):
                 means = np.tile(
                     train_mean[
                         train_mean.filter(
-                            like=self.configs["data_handling"]["target_var"], axis=0
+                            like=self.configs["data_input"]["target_var"], axis=0
                         ).index
                     ].values,
                     len(self.configs["qs"]),
@@ -989,9 +986,7 @@ class BravoModel(AlgoMainRNNBase):
             file = os.path.join(
                 self.configs["data_dir"],
                 self.configs["building"],
-                "{}_external_test.h5".format(
-                    self.configs["data_handling"]["target_var"]
-                ),
+                "{}_external_test.h5".format(self.configs["data_input"]["target_var"]),
             )
             test_data = pd.read_hdf(file, key="df")
         else:

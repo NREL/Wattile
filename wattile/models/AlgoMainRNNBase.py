@@ -19,7 +19,7 @@ logger = logging.getLogger(str(os.getpid()))
 class AlgoMainRNNBase(ABC):
     def __init__(self, configs):
         self.configs = configs
-        self.file_prefix = Path(configs["data_handling"]["exp_dir"])
+        self.file_prefix = Path(configs["exp_dir"])
         self.file_prefix.mkdir(parents=True, exist_ok=True)
 
     def size_the_batches(

@@ -634,7 +634,7 @@ class CharlieModel:
         if save_model:
             torch.save(
                 model.state_dict(),
-                "{}/torch_model".format(self.configs["data_handling"]["exp_dir"]),
+                "{}/torch_model".format(self.configs["exp_dir"]),
             )
 
         ############################################################################################
@@ -658,13 +658,11 @@ class CharlieModel:
         )
 
         pd.DataFrame(predictions, columns=[f"q{loss_function_qs}"]).to_csv(
-            "{}/q{}.csv".format(
-                self.configs["data_handling"]["exp_dir"], loss_function_qs
-            ),
+            "{}/q{}.csv".format(self.configs["exp_dir"], loss_function_qs),
             index=None,
         )
         pd.DataFrame(measured, columns=["measured"]).to_csv(
-            "{}/measured.csv".format(self.configs["data_handling"]["exp_dir"]),
+            "{}/measured.csv".format(self.configs["exp_dir"]),
             index=None,
         )
 
