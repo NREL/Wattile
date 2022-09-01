@@ -52,12 +52,12 @@ def test_prediction_alfa(config_for_tests, tmpdir):
 
     # use a temp result dir
     exp_dir = tmpdir / "train_results"
-    config_for_tests["data_handling"]["exp_dir"] = str(exp_dir)
+    config_for_tests["exp_dir"] = str(exp_dir)
     shutil.copytree(TESTS_FIXTURES_PATH / "alfa_exp_dir", exp_dir)
 
     # create a temp data dir
-    config_for_tests["data_handling"]["data_dir"] = str(tmpdir / "data")
-    config_for_tests["data_handling"]["data_config"] = "Synthetic Site Config.json"
+    config_for_tests["data_input"]["data_dir"] = str(tmpdir / "data")
+    config_for_tests["data_input"]["data_config"] = "Synthetic Site Config.json"
     data_dir = tmpdir / "data"
     popluate_test_data_dir_with_prediction_data(data_dir)
 
@@ -74,12 +74,12 @@ def test_prediction_bravo(config_for_tests, tmpdir):
 
     # use a temp result dir
     exp_dir = pathlib.Path(tmpdir) / "train_results"
-    config_for_tests["data_handling"]["exp_dir"] = str(exp_dir)
+    config_for_tests["exp_dir"] = str(exp_dir)
     shutil.copytree(TESTS_FIXTURES_PATH / "bravo_exp_dir", exp_dir)
 
     # create a temp data dir
-    config_for_tests["data_handling"]["data_dir"] = str(tmpdir / "data")
-    config_for_tests["data_handling"]["data_config"] = "Synthetic Site Config.json"
+    config_for_tests["data_input"]["data_dir"] = str(tmpdir / "data")
+    config_for_tests["data_input"]["data_config"] = "Synthetic Site Config.json"
     data_dir = tmpdir / "data"
     popluate_test_data_dir_with_prediction_data(data_dir)
 

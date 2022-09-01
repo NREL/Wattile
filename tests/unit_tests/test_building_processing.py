@@ -16,7 +16,7 @@ TESTS_PATH = Path(__file__).parents[1]
 TESTS_FIXTURES_PATH = TESTS_PATH / "fixtures"
 
 JULY_14_CONFIG = {
-    "data_handling": {
+    "data_input": {
         "start_time": "1997-07-14T00:00:00-00:00",
         "end_time": "1997-07-15T00:00:00-00:00",
     }
@@ -26,7 +26,7 @@ JULY_14_MIDNIGHT = pd.Timestamp(year=1997, month=7, day=14, tz=dt.timezone.utc)
 
 def test_correct_columns_too_few_columns():
     configs = {
-        "data_handling": {
+        "data_input": {
             "predictor_columns": ["a", "b", "c"],
             "target_var": "target_var",
         }
@@ -38,9 +38,7 @@ def test_correct_columns_too_few_columns():
 
 
 def test_correct_columns_too_many_columns():
-    configs = {
-        "data_handling": {"predictor_columns": ["a"], "target_var": "target_var"}
-    }
+    configs = {"data_input": {"predictor_columns": ["a"], "target_var": "target_var"}}
     data = pd.DataFrame({"a": [], "b": [], "target_var": []})
 
     data = correct_predictor_columns(configs, data)
@@ -49,7 +47,7 @@ def test_correct_columns_too_many_columns():
 
 def test_correct_columns_reorder_columns():
     configs = {
-        "data_handling": {"predictor_columns": ["a", "b"], "target_var": "target_var"}
+        "data_input": {"predictor_columns": ["a", "b"], "target_var": "target_var"}
     }
     data = pd.DataFrame({"b": [], "a": [], "target_var": []})
 
@@ -133,7 +131,7 @@ def test_rolling_stats():
     output = resample_or_rolling_stats(
         input,
         configs={
-            "data_handling": {"target_var": "target_var"},
+            "data_input": {"target_var": "target_var"},
             "resample_interval": "1min",
             "feat_stats": {
                 "active": True,

@@ -19,9 +19,9 @@ def config_for_tests():
     with open(TESTS_FIXTURES_PATH / "test_configs.json", "r") as read_file:
         configs = json.load(read_file)
 
-    configs["data_handling"]["data_dir"] = str(TESTS_DATA_PATH)
+    configs["data_input"]["data_dir"] = str(TESTS_DATA_PATH)
     configs["plot_comparison"] = False
-    configs["data_handling"]["data_config"] = "Synthetic Site Config.json"
+    configs["data_input"]["data_config"] = "Synthetic Site Config.json"
 
     return configs
 
@@ -45,7 +45,7 @@ def test_validation(config_for_tests, tmpdir, config_patch, test_exp_dir):
     config_for_tests["use_case"] = "validation"
 
     exp_dir = pathlib.Path(tmpdir) / "train_results"
-    config_for_tests["data_handling"]["exp_dir"] = str(exp_dir)
+    config_for_tests["exp_dir"] = str(exp_dir)
     shutil.copytree(test_exp_dir, exp_dir)
 
     epb.main(config_for_tests)
