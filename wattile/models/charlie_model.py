@@ -3,15 +3,12 @@ import os
 import time
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.nn import init
-
-from wattile.models.AlgoMainRNNBase import AlgoMainRNNBase
 
 PROJECT_DIRECTORY = Path().resolve().parent.parent
 
@@ -389,7 +386,12 @@ class S2S_LA_Model(nn.Module):
 
 
 ####################################################################################################
-class CharlieModel(AlgoMainRNNBase):
+class CharlieModel:
+    def __init__(self, configs):
+        self.configs = configs
+        self.file_prefix = Path(configs["exp_dir"])
+        self.file_prefix.mkdir(parents=True, exist_ok=True)
+
     def main(self, train_df, val_df):  # noqa: C901 TODO: remove noqa
         """
         process the data into three-dimensional for S2S model, train the model, and test the restuls
@@ -619,8 +621,6 @@ class CharlieModel(AlgoMainRNNBase):
                 "\t\t   PRED: {}\n\n".format(pred[-1].cpu().detach().numpy().flatten())
             )
 
-            y_last = y[-1].cpu().detach().numpy().flatten()
-            pred_last = pred[-1].cpu().detach().numpy().flatten()
             t2_one_epoch = time.time()
             time_one_epoch = t2_one_epoch - t_one_epoch
             print(
@@ -634,39 +634,17 @@ class CharlieModel(AlgoMainRNNBase):
         if save_model:
             torch.save(model.state_dict(), f"{self.configs['exp_dir']}/torch_model")
 
-        ############################################################################################
-        # RESULTS
+        ########################################################################################
+        # saving results
         # for plotting and accuracy
-        predictions = torch.cat(all_preds, 0)
-        predictions = predictions.cpu().detach().numpy().flatten()
-        measured = val_df_target.flatten()
-
-        # Save the final predictions and measured target to a file
-        pd.DataFrame(predictions).to_hdf(
+        predictions = pd.DataFrame(all_preds[0].numpy().squeeze())
+        predictions = predictions.add_prefix("{}_".format(str(loss_function_qs)))
+        targets = pd.DataFrame(val_df_target.squeeze())
+        predictions.to_hdf(
             os.path.join(self.file_prefix, "predictions.h5"), key="df", mode="w"
         )
-        pd.DataFrame(measured).to_hdf(
+        targets.to_hdf(
             os.path.join(self.file_prefix, "measured.h5"), key="df", mode="w"
-        )
-
-        # using the measured usage from top of script here
-        mae3 = (sum(abs(measured - predictions))) / (len(measured))
-        mape3 = (sum(abs((measured - predictions) / measured))) / (len(measured))
-
-        # for std
-        mape_s = abs((measured - predictions) / measured)
-        s = mape_s.std()
-        mae_s = abs(measured - predictions)
-        s2 = mae_s.std()
-        print(
-            "\n\tACTUAL ACC. RESULTS: MAE, MAPE: {} and {}%".format(mae3, mape3 * 100.0)
-        )
-
-        pd.DataFrame(predictions, columns=[f"q{loss_function_qs}"]).to_csv(
-            f"{self.configs['exp_dir']}/q{loss_function_qs}.csv", index=None
-        )
-        pd.DataFrame(measured, columns=["measured"]).to_csv(
-            f"{self.configs['exp_dir']}/measured.csv", index=None
         )
 
         # total time of run
@@ -674,17 +652,3 @@ class CharlieModel(AlgoMainRNNBase):
         total = t1 - t0
         print("\nTIME ELAPSED: {} seconds OR {} minutes".format(total, total / 60.0))
         print("\nEnd of run")
-        plt.show()
-        for_plotting = [measured, predictions, y_last, pred_last]
-        return (
-            s,
-            s2,
-            mape_s,
-            mae_s,
-            mae3,
-            mape3,
-            total / 60.0,
-            train_loss,
-            test_loss,
-            for_plotting,
-        )
