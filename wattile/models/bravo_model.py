@@ -645,6 +645,13 @@ class BravoModel(AlgoMainRNNBase):
                     # val_rmse.append(errors['rmse'])
                     writer.add_scalars("Loss", {"val": errors["pinball_loss"]}, n_iter)
 
+                    # debugging
+                    print("###################################################")
+                    print("predictions = {}".format(predictions))
+                    print("###################################################")
+                    print("val_df = {}".format(val_df))
+                    print("###################################################")
+
                     # Add parody plot to TensorBoard
                     fig1, ax1 = plt.subplots()
                     ax1.scatter(
