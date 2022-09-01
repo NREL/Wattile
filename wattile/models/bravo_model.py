@@ -647,9 +647,9 @@ class BravoModel(AlgoMainRNNBase):
 
                     # debugging
                     print("###################################################")
-                    print("predictions = {}".format(predictions))
+                    print("predictions = {}".format(predictions.shape()))
                     print("###################################################")
-                    print("val_df = {}".format(val_df))
+                    print("val_df = {}".format(val_df.shape()))
                     print("###################################################")
 
                     # Add parody plot to TensorBoard
