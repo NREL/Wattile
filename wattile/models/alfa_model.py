@@ -600,7 +600,10 @@ class AlfaModel(AlgoMainRNNBase):
                     # Add parody plot to TensorBoard
                     fig1, ax1 = plt.subplots()
                     ax1.scatter(
-                        predictions, val_df[self.configs["target_var"]], s=5, alpha=0.3
+                        predictions[:, int(len(self.configs["qs"]) / 2)],
+                        val_df[self.configs["target_var"]],
+                        s=5,
+                        alpha=0.3,
                     )
                     strait_line = np.linspace(
                         min(min(predictions), min(val_df[self.configs["target_var"]])),
