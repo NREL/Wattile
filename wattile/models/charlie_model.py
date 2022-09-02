@@ -415,12 +415,8 @@ class CharlieModel:
             self.configs["qs"], list
         ):  # override to 0.5 if any arbitrary list is defined
             loss_function_qs = 0.5
-            print("### is list !!!")
-            print("loss_function_qs = {}".format(loss_function_qs))
         elif type(self.configs["qs"]) == float:
             loss_function_qs = self.configs["qs"]
-            print("### is float !!!")
-            print("loss_function_qs = {}".format(loss_function_qs))
 
         t0 = time.time()
         np.random.seed(seed)
