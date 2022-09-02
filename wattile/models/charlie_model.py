@@ -404,13 +404,19 @@ class CharlieModel:
         cuda = False
         epochs = self.configs["num_epochs"]
         batch_size = self.configs["train_batch_size"]
-        loss_function_qs = self.configs["qs"]
         save_model = True
         seed = self.configs["random_seed"]
         resample_interval = self.configs["resample_interval"]
         window_target_size_count = int(
             pd.Timedelta(window_target_size) / pd.Timedelta(resample_interval)
         )
+        # currently, only supporting single float number for loss_function_qs
+        if isinstance(
+            self.configs["qs"], list
+        ):  # override to 0.5 if any arbitrary list is defined
+            loss_function_qs = 0.5
+        elif type(self.configs["qs"]) == float:
+            loss_function_qs = self.configs["qs"]
 
         t0 = time.time()
         np.random.seed(seed)
