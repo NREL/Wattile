@@ -19,18 +19,18 @@ def config_for_tests():
     with open(TESTS_FIXTURES_PATH / "test_configs.json", "r") as read_file:
         configs = json.load(read_file)
 
-    configs["data_dir"] = str(TESTS_DATA_PATH)
+    configs["data_input"]["data_dir"] = str(TESTS_DATA_PATH)
     configs["plot_comparison"] = False
-    configs["data_config"] = "Synthetic Site Config.json"
+    configs["data_input"]["data_config"] = "Synthetic Site Config.json"
 
     return configs
 
 
 ALFA_EXP_DIR = TESTS_FIXTURES_PATH / "alfa_exp_dir"
-ALFA_CONFIG_PATCH = {"arch_version": "alfa"}
+ALFA_CONFIG_PATCH = "alfa"
 
 BRAVO_EXP_DIR = TESTS_FIXTURES_PATH / "bravo_exp_dir"
-BRAVO_CONFIG_PATCH = {"arch_version": "bravo"}
+BRAVO_CONFIG_PATCH = "bravo"
 
 
 @pytest.mark.parametrize(
@@ -41,8 +41,8 @@ BRAVO_CONFIG_PATCH = {"arch_version": "bravo"}
     ],
 )
 def test_validation(config_for_tests, tmpdir, config_patch, test_exp_dir):
-    config_for_tests.update(config_patch)
-    config_for_tests["use_case"] = "validation"
+    config_for_tests["learning_algorithm"]["arch_version"] = config_patch
+    config_for_tests["learning_algorithm"]["use_case"] = "validation"
 
     exp_dir = pathlib.Path(tmpdir) / "train_results"
     config_for_tests["exp_dir"] = str(exp_dir)

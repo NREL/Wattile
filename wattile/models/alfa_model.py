@@ -45,14 +45,16 @@ class AlfaModel(AlgoMainRNNBase):
 
         if run_train:
             # Define input feature matrix
-            X_train = train_data.drop(self.configs["target_var"], axis=1).values.astype(
-                dtype="float32"
-            )
+            X_train = train_data.drop(
+                self.configs["data_input"]["target_var"], axis=1
+            ).values.astype(dtype="float32")
 
             # Output variable
-            y_train = train_data[self.configs["target_var"]]
+            y_train = train_data[self.configs["data_input"]["target_var"]]
             y_train = y_train.values.astype(dtype="float32")
-            y_train = np.tile(y_train, (len(self.configs["qs"]), 1))
+            y_train = np.tile(
+                y_train, (len(self.configs["learning_algorithm"]["quantiles"]), 1)
+            )
             y_train = np.transpose(y_train)
 
             # Convert to iterable tensors
@@ -67,24 +69,26 @@ class AlfaModel(AlgoMainRNNBase):
             train_loader = []
 
         # Do the same as above, but for the val set
-        X_val = val_data.drop(self.configs["target_var"], axis=1).values.astype(
-            dtype="float32"
-        )
+        X_val = val_data.drop(
+            self.configs["data_input"]["target_var"], axis=1
+        ).values.astype(dtype="float32")
 
-        y_val = val_data[self.configs["target_var"]]
+        y_val = val_data[self.configs["data_input"]["target_var"]]
         y_val = y_val.values.astype(dtype="float32")
-        y_val = np.tile(y_val, (len(self.configs["qs"]), 1))
+        y_val = np.tile(
+            y_val, (len(self.configs["learning_algorithm"]["quantiles"]), 1)
+        )
         y_val = np.transpose(y_val)
 
         val_feat_tensor = torch.from_numpy(X_val).to(device)
         val_target_tensor = torch.from_numpy(y_val).to(device)
 
         val = data_utils.TensorDataset(val_feat_tensor, val_target_tensor)
-        if self.configs["use_case"] == "train":
+        if self.configs["learning_algorithm"]["use_case"] == "train":
             shuffle = True
         elif (
-            self.configs["use_case"] == "validation"
-            or self.configs["use_case"] == "prediction"
+            self.configs["learning_algorithm"]["use_case"] == "validation"
+            or self.configs["learning_algorithm"]["use_case"] == "prediction"
         ):
             shuffle = False
         val_loader = DataLoader(dataset=val, batch_size=val_batch_size, shuffle=shuffle)
@@ -93,8 +97,8 @@ class AlfaModel(AlgoMainRNNBase):
 
     def pinball_np(self, output, target):
         resid = target - output
-        tau = np.array(self.configs["qs"])
-        alpha = self.configs["smoothing_alpha"]
+        tau = np.array(self.configs["learning_algorithm"]["quantiles"])
+        alpha = self.configs["learning_algorithm"]["smoothing_alpha"]
         log_term = np.zeros_like(resid)
         log_term[resid < 0] = np.log(1 + np.exp(resid[resid < 0] / alpha)) - (
             resid[resid < 0] / alpha
@@ -114,8 +118,10 @@ class AlfaModel(AlgoMainRNNBase):
         """
 
         resid = target - output
-        tau = torch.tensor(self.configs["qs"], device=device)
-        alpha = self.configs["smoothing_alpha"]
+        tau = torch.tensor(
+            self.configs["learning_algorithm"]["quantiles"], device=device
+        )
+        alpha = self.configs["learning_algorithm"]["smoothing_alpha"]
         log_term = torch.zeros_like(resid, device=device)
         log_term[resid < 0] = torch.log(1 + torch.exp(resid[resid < 0] / alpha)) - (
             resid[resid < 0] / alpha
@@ -192,25 +198,27 @@ class AlfaModel(AlgoMainRNNBase):
             if transformation_method == "minmaxscale":
                 final_preds = (
                     (
-                        train_max[self.configs["target_var"]]
-                        - train_min[self.configs["target_var"]]
+                        train_max[self.configs["data_input"]["target_var"]]
+                        - train_min[self.configs["data_input"]["target_var"]]
                     )
                     * semifinal_preds
-                ) + train_min[self.configs["target_var"]]
+                ) + train_min[self.configs["data_input"]["target_var"]]
                 final_targs = (
                     (
-                        train_max[self.configs["target_var"]]
-                        - train_min[self.configs["target_var"]]
+                        train_max[self.configs["data_input"]["target_var"]]
+                        - train_min[self.configs["data_input"]["target_var"]]
                     )
                     * semifinal_targs
-                ) + train_min[self.configs["target_var"]]
+                ) + train_min[self.configs["data_input"]["target_var"]]
             elif transformation_method == "standard":
                 final_preds = (
-                    semifinal_preds * train_std[self.configs["target_var"]]
-                ) + train_mean[self.configs["target_var"]]
+                    semifinal_preds
+                    * train_std[self.configs["data_input"]["target_var"]]
+                ) + train_mean[self.configs["data_input"]["target_var"]]
                 final_targs = (
-                    semifinal_targs * train_std[self.configs["target_var"]]
-                ) + train_mean[self.configs["target_var"]]
+                    semifinal_targs
+                    * train_std[self.configs["data_input"]["target_var"]]
+                ) + train_mean[self.configs["data_input"]["target_var"]]
             else:
                 raise self.configsError(
                     "{} is not a supported form of data normalization".format(
@@ -228,24 +236,42 @@ class AlfaModel(AlgoMainRNNBase):
             QS = loss.mean()
             # PICP (single point for each bound)
             target_1D = target[:, 0]
-            bounds = np.zeros((target.shape[0], int(len(self.configs["qs"]) / 2)))
+            bounds = np.zeros(
+                (
+                    target.shape[0],
+                    int(len(self.configs["learning_algorithm"]["quantiles"]) / 2),
+                )
+            )
             PINC = []
-            for i, q in enumerate(self.configs["qs"]):
+            for i, q in enumerate(self.configs["learning_algorithm"]["quantiles"]):
                 if q == 0.5:
                     break
                 bounds[:, i] = np.logical_and(
                     output[:, i] < target_1D, target_1D < output[:, -(i + 1)]
                 )
-                PINC.append(self.configs["qs"][-(i + 1)] - self.configs["qs"][i])
+                PINC.append(
+                    self.configs["learning_algorithm"]["quantiles"][-(i + 1)]
+                    - self.configs["learning_algorithm"]["quantiles"][i]
+                )
             PINC = np.array(PINC)
             PICP = bounds.mean(axis=0)
             # ACE (single point)
             ACE = np.sum(np.abs(PICP - PINC))
             # IS (single point)
-            lower = output[:, : int(len(self.configs["qs"]) / 2)]
-            upper = np.flip(output[:, int(len(self.configs["qs"]) / 2) + 1 :], 1)
+            lower = output[
+                :, : int(len(self.configs["learning_algorithm"]["quantiles"]) / 2)
+            ]
+            upper = np.flip(
+                output[
+                    :,
+                    int(len(self.configs["learning_algorithm"]["quantiles"]) / 2) + 1 :,
+                ],
+                1,
+            )
             alph = 1 - PINC
-            x = target[:, : int(len(self.configs["qs"]) / 2)]
+            x = target[
+                :, : int(len(self.configs["learning_algorithm"]["quantiles"]) / 2)
+            ]
             IS = (
                 (upper - lower)
                 + (2 / alph) * (lower - x) * (x < lower)
@@ -256,7 +282,7 @@ class AlfaModel(AlgoMainRNNBase):
             # Compare theoretical and actual Q's
             act_prob = (output > target).sum(axis=0) / (target.shape[0])
             Q_vals = pd.DataFrame()
-            Q_vals["q_requested"] = self.configs["qs"]
+            Q_vals["q_requested"] = self.configs["learning_algorithm"]["quantiles"]
             Q_vals["q_actual"] = act_prob
 
             # Do quantile-related (q == 0.5) error statistics
@@ -288,7 +314,7 @@ class AlfaModel(AlgoMainRNNBase):
                 # resid = target - output
                 resid = semifinal_targs - semifinal_preds
                 hist_data = pd.DataFrame()
-                for i, q in enumerate(self.configs["qs"]):
+                for i, q in enumerate(self.configs["learning_algorithm"]["quantiles"]):
                     tester = np.histogram(resid[:, i], bins=200)
                     y_vals = tester[0]
                     x_vals = 0.5 * (tester[1][1:] + tester[1][:-1])
@@ -346,7 +372,7 @@ class AlfaModel(AlgoMainRNNBase):
         :return: None
         """
         num_epochs = num_epochs
-        weight_decay = float(self.configs["weight_decay"])
+        weight_decay = float(self.configs["learning_algorithm"]["weight_decay"])
         input_dim = self.configs["input_dim"]
 
         # Write the configurations used for this training process to a json file
@@ -385,46 +411,47 @@ class AlfaModel(AlgoMainRNNBase):
         # Instantiate Optimizer Class
         optimizer = torch.optim.Adam(
             model.parameters(),
-            lr=self.configs["lr_config"]["base"],
+            lr=self.configs["learning_algorithm"]["lr_config"]["base"],
             weight_decay=weight_decay,
         )
 
         # Set up learning rate scheduler
-        if not self.configs["lr_config"]["schedule"]:
+        if not self.configs["learning_algorithm"]["lr_config"]["schedule"]:
             pass
         elif (
-            self.configs["lr_config"]["schedule"]
-            and self.configs["lr_config"]["type"] == "performance"
+            self.configs["learning_algorithm"]["lr_config"]["schedule"]
+            and self.configs["learning_algorithm"]["lr_config"]["type"] == "performance"
         ):
             # Patience (for our case) is # of iterations, not epochs,
             # but self.configs specification is num epochs
             scheduler = ReduceLROnPlateau(
                 optimizer,
                 mode="min",
-                factor=self.configs["lr_config"]["factor"],
-                min_lr=self.configs["lr_config"]["min"],
+                factor=self.configs["learning_algorithm"]["lr_config"]["factor"],
+                min_lr=self.configs["learning_algorithm"]["lr_config"]["min"],
                 patience=int(
-                    self.configs["lr_config"]["patience"]
+                    self.configs["learning_algorithm"]["lr_config"]["patience"]
                     * (num_train_data / train_batch_size)
                 ),
                 verbose=True,
             )
         elif (
-            self.configs["lr_config"]["schedule"]
-            and self.configs["lr_config"]["type"] == "absolute"
+            self.configs["learning_algorithm"]["lr_config"]["schedule"]
+            and self.configs["learning_algorithm"]["lr_config"]["type"] == "absolute"
         ):
             # scheduler = StepLR(
             #     optimizer,
             #     step_size=int(
-            #         self.configs["lr_config"]["step_size"] * (num_train_data / train_batch_size)
+            #         self.configs["learning_algorithm"]["lr_config"]["step_size"]
+            #           * (num_train_data / train_batch_size)
             #     ),
-            #     gamma=self.configs["lr_config"]["factor"],
+            #     gamma=self.configs["learning_algorithm"]["lr_config"]["factor"],
             # )
             pass
         else:
             raise self.configsError(
                 "{} is not a supported method of LR scheduling".format(
-                    self.configs["lr_config"]["type"]
+                    self.configs["learning_algorithm"]["lr_config"]["type"]
                 )
             )
 
@@ -474,14 +501,18 @@ class AlfaModel(AlgoMainRNNBase):
 
             # Do manual learning rate scheduling, if requested
             if (
-                self.configs["lr_config"]["schedule"]
-                and self.configs["lr_config"]["type"] == "absolute"
-                and epoch_num % self.configs["lr_config"]["step_size"] == 0
+                self.configs["learning_algorithm"]["lr_config"]["schedule"]
+                and self.configs["learning_algorithm"]["lr_config"]["type"]
+                == "absolute"
+                and epoch_num
+                % self.configs["learning_algorithm"]["lr_config"]["step_size"]
+                == 0
             ):
                 for param_group in optimizer.param_groups:
                     old_lr = param_group["lr"]
                     param_group["lr"] = (
-                        param_group["lr"] * self.configs["lr_config"]["factor"]
+                        param_group["lr"]
+                        * self.configs["learning_algorithm"]["lr_config"]["factor"]
                     )
                     new_lr = param_group["lr"]
                 logger.info(
@@ -537,8 +568,9 @@ class AlfaModel(AlgoMainRNNBase):
                 time5 = timeit.default_timer()
 
                 if (
-                    self.configs["lr_config"]["schedule"]
-                    and self.configs["lr_config"]["type"] == "performance"
+                    self.configs["learning_algorithm"]["lr_config"]["schedule"]
+                    and self.configs["learning_algorithm"]["lr_config"]["type"]
+                    == "performance"
                 ):
                     scheduler.step(loss)
 
@@ -563,12 +595,12 @@ class AlfaModel(AlgoMainRNNBase):
                 )
 
                 # Save the model every ___ iterations
-                if n_iter % self.configs["eval_frequency"] == 0:
+                if n_iter % self.configs["learning_algorithm"]["eval_frequency"] == 0:
                     filepath = os.path.join(self.file_prefix, "torch_model")
                     save_model(model, epoch, n_iter, filepath)
 
                 # Do a val batch every ___ iterations
-                if n_iter % self.configs["eval_frequency"] == 0:
+                if n_iter % self.configs["learning_algorithm"]["eval_frequency"] == 0:
                     # Evaluate val set
                     (
                         predictions,
@@ -853,16 +885,16 @@ class AlfaModel(AlgoMainRNNBase):
         if transformation_method == "minmaxscale":
             final_preds = (
                 (
-                    train_max[self.configs["target_var"]]
-                    - train_min[self.configs["target_var"]]
+                    train_max[self.configs["data_input"]["target_var"]]
+                    - train_min[self.configs["data_input"]["target_var"]]
                 )
                 * semifinal_preds
-            ) + train_min[self.configs["target_var"]]
+            ) + train_min[self.configs["data_input"]["target_var"]]
 
         elif transformation_method == "standard":
             final_preds = (
-                semifinal_preds * train_std[self.configs["target_var"]]
-            ) + train_mean[self.configs["target_var"]]
+                semifinal_preds * train_std[self.configs["data_input"]["target_var"]]
+            ) + train_mean[self.configs["data_input"]["target_var"]]
 
         else:
             raise ConfigsError(

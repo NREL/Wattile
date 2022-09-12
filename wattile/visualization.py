@@ -13,10 +13,17 @@ color_base = "rgb(236,200,178)"
 color_accent = "rgb(80,70,69)"
 
 
-def timeseries_comparison(configs):
+def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
+
+    ######################################################################
+    # reading measured and prediction files
+    ######################################################################
     predictions = pd.read_hdf(configs["exp_dir"] + "/predictions.h5")
     measured = pd.read_hdf(configs["exp_dir"] + "/measured.h5")
 
+    ######################################################################
+    # filter data based on portion defined in configs.json
+    ######################################################################
     plot_comparison_portion_start = configs["plot_comparison_portion_start"]
     plot_comparison_portion_end = configs["plot_comparison_portion_end"]
     predictions = predictions.iloc[
@@ -32,18 +39,29 @@ def timeseries_comparison(configs):
         :,
     ]
 
+    ######################################################################
+    # plot setting
+    ######################################################################
     len_tot = len(predictions.columns)
     target = measured.to_numpy()
-
-    # color
     c_target = "rgb(228,26,28)"
-    len_c_list = int((len(configs["qs"]) - 1) / 2)
-    c_list = n_colors(color_base, color_accent, len_c_list, colortype="rgb")
+    len_c_list = int((len(configs["learning_algorithm"]["quantiles"]) - 1) / 2)
+    if len_c_list == 1:
+        c_list = [color_base]
+    else:
+        c_list = n_colors(color_base, color_accent, len_c_list, colortype="rgb")
     list_c_low_penalty = c_list.copy()
     list_c_high_penalty = c_list.copy()
     list_c_is = c_list.copy()
     list_c_is.reverse()
+    y_min = 10000000
+    y_max = 0
+    window_target_size = configs["data_processing"]["S2S_window"]["window_width_target"]
+    resample_interval = configs["data_processing"]["resample_interval"]
 
+    ######################################################################
+    # initialize plotting area
+    ######################################################################
     fig = make_subplots(
         rows=4,
         cols=1,
@@ -52,152 +70,283 @@ def timeseries_comparison(configs):
         row_heights=[0.5, 0.15, 0.15, 0.15],
     )
 
-    y_min = 10000000
-    y_max = 0
-    for ahd in range(len(measured.columns)):
+    ######################################################################
+    # if quantiles were only defined with median
+    ######################################################################
+    if len(configs["learning_algorithm"]["quantiles"]) == 1:
 
-        if ahd == 0:
+        # -----------------------------------------------------------------
+        # extracting median prediction
+        # -----------------------------------------------------------------
+        prediction_median = predictions.iloc[:, 0].values
 
-            count_qntl = 0
+        if min(prediction_median.min(), measured.iloc[:, 0].min()) < y_min:
+            y_min = min(prediction_median.min(), measured.iloc[:, 0].min())
 
-            for qntl in range(0, int((len(configs["qs"]) - 1) / 2)):
+        if max(prediction_median.max(), measured.iloc[:, 0].max()) > y_max:
+            y_max = max(prediction_median.max(), measured.iloc[:, 0].max())
 
-                if (configs["arch_version"] == "bravo") | (
-                    configs["arch_version"] == "charlie"
-                ):
+    ######################################################################
+    # if quantiles were defined properly
+    ######################################################################
+    else:
 
-                    low_start = qntl * configs["S2S_stagger"]["initial_num"]
-                    low_end = (
-                        qntl * configs["S2S_stagger"]["initial_num"]
-                        + configs["S2S_stagger"]["initial_num"]
-                    )
-                    high_start = (len_tot - low_start) - configs["S2S_stagger"][
-                        "initial_num"
-                    ]
-                    high_end = len_tot - low_start
+        # -----------------------------------------------------------------
+        # extracting median prediction
+        # -----------------------------------------------------------------
+        if configs["learning_algorithm"]["arch_version"] == "alfa":
 
-                    low = predictions.iloc[:, low_start:low_end].to_numpy()
-                    high = predictions.iloc[:, high_start:high_end].to_numpy()
+            idx_col_med = len_c_list
+            prediction_median = predictions.iloc[:, idx_col_med].values
+            time_ahead = 0
 
-                elif configs["arch_version"] == "alfa":
+        elif configs["learning_algorithm"]["arch_version"] == "bravo":
 
-                    low_start = qntl
-                    high_start = len_tot - low_start - 1
+            idx_col_med_start = (
+                len_c_list * configs["data_processing"]["S2S_stagger"]["initial_num"]
+            )
+            idx_col_med_end = (
+                idx_col_med_start
+                + configs["data_processing"]["S2S_stagger"]["initial_num"]
+            )
+            prediction_median = (
+                predictions.iloc[:, idx_col_med_start:idx_col_med_end]
+                .iloc[:, time_ahead]
+                .values
+            )
 
-                    low = predictions.iloc[:, low_start].to_numpy()
-                    high = predictions.iloc[:, high_start].to_numpy()
+        elif configs["learning_algorithm"]["arch_version"] == "charlie":
 
-                alph = 1 - (configs["qs"][-(qntl + 1)] - configs["qs"][qntl])
-                IS = (
-                    (high - low)
-                    + (2 / alph) * (low - target) * (target < low)
-                    + (2 / alph) * (target - high) * (target > high)
-                )  # (batches * time) for a single quantile
+            window_target_size_count = window_target_size_count = int(
+                pd.Timedelta(window_target_size) / pd.Timedelta(resample_interval)
+            )
+            idx_col_med_start = len_c_list * window_target_size_count
+            idx_col_med_end = idx_col_med_start + window_target_size_count
+            prediction_median = (
+                predictions.iloc[:, idx_col_med_start:idx_col_med_end]
+                .iloc[:, time_ahead]
+                .values
+            )
 
-                df_low = pd.DataFrame(low)
-                df_high = pd.DataFrame(high)
-                df_x = pd.DataFrame(target)
-                df_is = pd.DataFrame(IS)
+        # -----------------------------------------------------------------
+        # extracting quantile predictions
+        # -----------------------------------------------------------------
+        count_qntl = 0
+        for qntl in range(
+            0, int((len(configs["learning_algorithm"]["quantiles"]) - 1) / 2)
+        ):
 
-                df_viol_l = (df_low[ahd] - df_x[ahd]) * (df_low[ahd] > df_x[ahd])
-                df_viol_u = (df_x[ahd] - df_high[ahd]) * (df_x[ahd] > df_high[ahd])
+            # -------------------------------------------------------------
+            # filtering data for correct quantile
+            # -------------------------------------------------------------
+            if configs["learning_algorithm"]["arch_version"] == "alfa":
 
-                if df_low[ahd].min() < y_min:
-                    y_min = df_low[ahd].min()
+                idx_col_low_start = qntl
+                idx_col_high_start = len_tot - idx_col_low_start - 1
 
-                if df_high[ahd].max() > y_max:
-                    y_max = df_high[ahd].max()
+                prediction_low = predictions.iloc[:, idx_col_low_start].to_numpy()
+                prediction_high = predictions.iloc[:, idx_col_high_start].to_numpy()
 
-                fig.add_trace(
-                    go.Scatter(
-                        y=df_low[ahd],
-                        mode="lines",
-                        name="Quantile{}".format(qntl),
-                        legendgroup="Quantile{}".format(qntl),
-                        showlegend=True,
-                        xaxis="x",
-                        opacity=0.1,
-                        line=dict(color=c_list[qntl], width=0),
-                    ),
-                    row=1,
-                    col=1,
+            elif configs["learning_algorithm"]["arch_version"] == "bravo":
+
+                idx_col_low_start = (
+                    qntl * configs["data_processing"]["S2S_stagger"]["initial_num"]
+                )
+                idx_col_low_end = (
+                    qntl * configs["data_processing"]["S2S_stagger"]["initial_num"]
+                    + configs["data_processing"]["S2S_stagger"]["initial_num"]
+                )
+                idx_col_high_start = (len_tot - idx_col_low_start) - configs[
+                    "data_processing"
+                ]["S2S_stagger"]["initial_num"]
+                idx_col_high_end = len_tot - idx_col_low_start
+
+                prediction_low = predictions.iloc[
+                    :, idx_col_low_start:idx_col_low_end
+                ].to_numpy()
+                prediction_high = predictions.iloc[
+                    :, idx_col_high_start:idx_col_high_end
+                ].to_numpy()
+
+            elif configs["learning_algorithm"]["arch_version"] == "charlie":
+
+                window_target_size_count = int(
+                    pd.Timedelta(window_target_size) / pd.Timedelta(resample_interval)
                 )
 
-                fig.add_trace(
-                    go.Scatter(
-                        y=df_high[ahd],
-                        mode="lines",
-                        name="Quantile{}".format(qntl),
-                        legendgroup="Quantile{}".format(qntl),
-                        showlegend=False,
-                        xaxis="x",
-                        fill="tonexty",
-                        opacity=0.1,
-                        line=dict(color=c_list[qntl], width=0),
-                    ),
-                    row=1,
-                    col=1,
+                idx_col_low_start = qntl * window_target_size_count
+                idx_col_low_end = (
+                    qntl * window_target_size_count + window_target_size_count
                 )
+                idx_col_high_start = (
+                    len_tot - idx_col_low_start
+                ) - window_target_size_count
+                idx_col_high_end = len_tot - idx_col_low_start
 
-                fig.add_trace(
-                    go.Scatter(
-                        y=df_viol_l,
-                        mode="lines",
-                        name="Quantile{}".format(qntl),
-                        legendgroup="Quantile{}".format(qntl),
-                        line_color=list_c_low_penalty[count_qntl],
-                        showlegend=False,
-                        xaxis="x",
-                        yaxis="y1",
-                    ),
-                    row=2,
-                    col=1,
-                )
+                prediction_low = predictions.iloc[
+                    :, idx_col_low_start:idx_col_low_end
+                ].to_numpy()
+                prediction_high = predictions.iloc[
+                    :, idx_col_high_start:idx_col_high_end
+                ].to_numpy()
 
-                fig.add_trace(
-                    go.Scatter(
-                        y=df_viol_u,
-                        mode="lines",
-                        name="Quantile{}".format(qntl),
-                        legendgroup="Quantile{}".format(qntl),
-                        line_color=list_c_high_penalty[count_qntl],
-                        showlegend=False,
-                        xaxis="x",
-                        yaxis="y1",
-                    ),
-                    row=3,
-                    col=1,
-                )
+            # -------------------------------------------------------------
+            # calculating Interval Score details
+            # -------------------------------------------------------------
+            alph = 1 - (
+                configs["learning_algorithm"]["quantiles"][-(qntl + 1)]
+                - configs["learning_algorithm"]["quantiles"][qntl]
+            )
+            IS = (
+                (prediction_high - prediction_low)
+                + (2 / alph) * (prediction_low - target) * (target < prediction_low)
+                + (2 / alph) * (target - prediction_high) * (target > prediction_high)
+            )  # (batches * time) for a single quantile
 
-                fig.add_trace(
-                    go.Scatter(
-                        y=df_is[ahd],
-                        mode="lines",
-                        name="Quantile{}".format(qntl),
-                        legendgroup="Quantile{}".format(qntl),
-                        line_color=list_c_is[count_qntl],
-                        showlegend=False,
-                        xaxis="x",
-                    ),
-                    row=4,
-                    col=1,
-                )
+            df_prediction_low = pd.DataFrame(prediction_low)
+            df_prediction_high = pd.DataFrame(prediction_high)
+            df_is = pd.DataFrame(IS)
 
-                count_qntl += 1
+            df_viol_l = (df_prediction_low[time_ahead] - measured[time_ahead]) * (
+                df_prediction_low[time_ahead] > measured[time_ahead]
+            )
+            df_viol_u = (measured[time_ahead] - df_prediction_high[time_ahead]) * (
+                measured[time_ahead] > df_prediction_high[time_ahead]
+            )
 
+            if df_prediction_low[time_ahead].min() < y_min:
+                y_min = df_prediction_low[time_ahead].min()
+
+            if df_prediction_high[time_ahead].max() > y_max:
+                y_max = df_prediction_high[time_ahead].max()
+
+            # -------------------------------------------------------------
+            # plotting prediction lower bound
+            # -------------------------------------------------------------
             fig.add_trace(
                 go.Scatter(
-                    y=df_x[ahd],
+                    y=df_prediction_low[time_ahead],
                     mode="lines",
-                    name="Target",
-                    legendgroup="Target",
-                    line=dict(color=c_target, width=1),
+                    name="Quantile{}".format(qntl),
+                    legendgroup="Quantile{}".format(qntl),
+                    showlegend=True,
                     xaxis="x",
+                    opacity=0.1,
+                    line=dict(color=c_list[qntl], width=0),
                 ),
                 row=1,
                 col=1,
             )
 
+            # -------------------------------------------------------------
+            # plotting prediction higher bound
+            # -------------------------------------------------------------
+            fig.add_trace(
+                go.Scatter(
+                    y=df_prediction_high[time_ahead],
+                    mode="lines",
+                    name="Quantile{}".format(qntl),
+                    legendgroup="Quantile{}".format(qntl),
+                    showlegend=False,
+                    xaxis="x",
+                    fill="tonexty",
+                    opacity=0.1,
+                    line=dict(color=c_list[qntl], width=0),
+                ),
+                row=1,
+                col=1,
+            )
+
+            # -------------------------------------------------------------
+            # plotting prediction lower violation
+            # -------------------------------------------------------------
+            fig.add_trace(
+                go.Scatter(
+                    y=df_viol_l,
+                    mode="lines",
+                    name="Quantile{}".format(qntl),
+                    legendgroup="Quantile{}".format(qntl),
+                    line_color=list_c_low_penalty[count_qntl],
+                    showlegend=False,
+                    xaxis="x",
+                    yaxis="y1",
+                ),
+                row=2,
+                col=1,
+            )
+
+            # -------------------------------------------------------------
+            # plotting prediction higher violation
+            # -------------------------------------------------------------
+            fig.add_trace(
+                go.Scatter(
+                    y=df_viol_u,
+                    mode="lines",
+                    name="Quantile{}".format(qntl),
+                    legendgroup="Quantile{}".format(qntl),
+                    line_color=list_c_high_penalty[count_qntl],
+                    showlegend=False,
+                    xaxis="x",
+                    yaxis="y1",
+                ),
+                row=3,
+                col=1,
+            )
+
+            # -------------------------------------------------------------
+            # plotting Interval Score
+            # -------------------------------------------------------------
+            fig.add_trace(
+                go.Scatter(
+                    y=df_is[time_ahead],
+                    mode="lines",
+                    name="Quantile{}".format(qntl),
+                    legendgroup="Quantile{}".format(qntl),
+                    line_color=list_c_is[count_qntl],
+                    showlegend=False,
+                    xaxis="x",
+                ),
+                row=4,
+                col=1,
+            )
+
+            count_qntl += 1
+
+    ######################################################################
+    # plotting median prediction
+    ######################################################################
+    fig.add_trace(
+        go.Scatter(
+            y=prediction_median,
+            mode="lines",
+            name="Median",
+            legendgroup="Median",
+            line=dict(color="black", width=1, dash="dot"),
+            xaxis="x",
+        ),
+        row=1,
+        col=1,
+    )
+
+    ######################################################################
+    # plotting measured target
+    ######################################################################
+    fig.add_trace(
+        go.Scatter(
+            y=measured[time_ahead],
+            mode="lines",
+            name="Target",
+            legendgroup="Target",
+            line=dict(color=c_target, width=1),
+            xaxis="x",
+        ),
+        row=1,
+        col=1,
+    )
+
+    ######################################################################
+    # plot setting
+    ######################################################################
     fig.update_layout(
         width=width_graphic,
         height=500,
@@ -224,7 +373,7 @@ def timeseries_comparison(configs):
     fig.update_xaxes(
         title=dict(
             text="<b>Appended Multiple Time Windows</b><br>(single window size = {})".format(
-                configs["sequential_splicer"]["window_width"]
+                configs["data_processing"]["sequential_splicer"]["window_width"]
             ),
             font=dict(
                 size=14,
@@ -297,6 +446,9 @@ def timeseries_comparison(configs):
         showgrid=False,
     )
 
+    ######################################################################
+    # saving plot to file
+    ######################################################################
     timeseries_comparison = configs["exp_dir"] + "/Vis_TimeseriesComparisons.svg"
     print("saving timeseries comparison in {}".format(timeseries_comparison))
     pio.write_image(fig, timeseries_comparison)
