@@ -15,6 +15,12 @@
    ],
    "target_var": "Synthetic Site Electricity Main Total Power"
  },
+ "data_output": {
+  "exp_dir": "exp_dir",
+  "plot_comparison":true,
+  "plot_comparison_portion_start":0.0,
+  "plot_comparison_portion_end":1.0
+ },
  "data_processing": {
     "feat_time": {
     "month_of_year": ["sincos"],
@@ -50,7 +56,6 @@
    "data_split": "80:10:10",
    "train_size_factor": 4
  },
- "exp_dir": "",
  "arch_type": "RNN",
  "arch_type_variant": "lstm",
  "learning_algorithm": {
@@ -84,9 +89,5 @@
    "smoothing_alpha": 0.001,
    "eval_frequency": 2,
    "test_method": "external"
- },
- "plot_results": false,
- "plot_comparison":true,
- "plot_comparison_portion_start":0.0,
- "plot_comparison_portion_end":1.0
+ }
 }
