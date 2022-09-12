@@ -1,7 +1,6 @@
 {
  "data_input": {
    "data_dir": "tests/data/Synthetic Site",
-   "exp_dir": "exp_dir",
    "data_config": "Synthetic Site Config.json",
    "start_time": "2018-01-01T00:00:00-07:00",
    "end_time": "2022-01-01T00:00:00-07:00",
@@ -51,6 +50,7 @@
    "data_split": "80:20:0",
    "train_size_factor": 1
  },
+ "exp_dir": "exp_dir",
  "arch_version": "alfa",
  "exp_id": "7-9-21",
  "arch_type": "RNN",
