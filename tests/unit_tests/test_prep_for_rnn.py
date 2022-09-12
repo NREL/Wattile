@@ -29,7 +29,7 @@ def config_for_tests():
 def test_prep_for_rnn(config_for_tests, tmpdir):
     # patch configs and create temporary, unquie output file
     exp_dir = pathlib.Path(tmpdir) / "train_results"
-    config_for_tests["exp_dir"] = str(exp_dir)
+    config_for_tests["data_output"]["exp_dir"] = str(exp_dir)
     exp_dir.mkdir(parents=True, exist_ok=True)
 
     # get data

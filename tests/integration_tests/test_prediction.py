@@ -52,7 +52,7 @@ def test_prediction_alfa(config_for_tests, tmpdir):
 
     # use a temp result dir
     exp_dir = tmpdir / "train_results"
-    config_for_tests["exp_dir"] = str(exp_dir)
+    config_for_tests["data_output"]["exp_dir"] = str(exp_dir)
     shutil.copytree(TESTS_FIXTURES_PATH / "alfa_exp_dir", exp_dir)
 
     # create a temp data dir
@@ -77,7 +77,7 @@ def test_prediction_bravo(config_for_tests, tmpdir):
 
     # use a temp result dir
     exp_dir = pathlib.Path(tmpdir) / "train_results"
-    config_for_tests["exp_dir"] = str(exp_dir)
+    config_for_tests["data_output"]["exp_dir"] = str(exp_dir)
     shutil.copytree(TESTS_FIXTURES_PATH / "bravo_exp_dir", exp_dir)
 
     # create a temp data dir
