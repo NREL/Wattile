@@ -404,8 +404,8 @@ class CharlieModel:
         la_method = "none"
         attention_model = "BA"
         cuda = False
-        epochs = self.configs["learning_algorithm"]["num_epochs"]
-        batch_size = self.configs["learning_algorithm"]["train_batch_size"]
+        num_epochs = self.configs["learning_algorithm"]["num_epochs"]
+        train_batch_size = self.configs["learning_algorithm"]["train_batch_size"]
         loss_function_qs = self.configs["learning_algorithm"]["quantiles"]
         save_model = True
         seed = self.configs["data_processing"]["random_seed"]
@@ -486,27 +486,24 @@ class CharlieModel:
         #     loss_fn = nn.MSELoss(reduction='sum')
         loss_fn = quantile_loss
 
-        EPOCHES = epochs
-        BATCH_SIZE = batch_size
-
         print("\nStarting training...")
 
         train_loss = []
         test_loss = []
 
-        for epoch in range(EPOCHES):
+        for epoch in range(num_epochs):
             t_one_epoch = time.time()
             print("Epoch {}".format(epoch + 1))
 
             # training
             total_usage_loss = 0
-            for b_idx in range(0, train_df_predictor.shape[0], BATCH_SIZE):
+            for b_idx in range(0, train_df_predictor.shape[0], train_batch_size):
 
                 x = torch.from_numpy(
-                    train_df_predictor[b_idx : b_idx + BATCH_SIZE]
+                    train_df_predictor[b_idx : b_idx + train_batch_size]
                 ).float()
                 y = torch.from_numpy(
-                    train_df_target[b_idx : b_idx + BATCH_SIZE]
+                    train_df_target[b_idx : b_idx + train_batch_size]
                 ).float()
 
                 if cuda:
@@ -563,12 +560,14 @@ class CharlieModel:
             pred = None
             total_usage_loss = 0
             all_preds = []
-            for b_idx in range(0, val_df_predictor.shape[0], BATCH_SIZE):
+            for b_idx in range(0, val_df_predictor.shape[0], train_batch_size):
                 with torch.no_grad():
                     x = torch.from_numpy(
-                        val_df_predictor[b_idx : b_idx + BATCH_SIZE]
+                        val_df_predictor[b_idx : b_idx + train_batch_size]
                     ).float()
-                    y = torch.from_numpy(val_df_target[b_idx : b_idx + BATCH_SIZE])
+                    y = torch.from_numpy(
+                        val_df_target[b_idx : b_idx + train_batch_size]
+                    )
 
                     if cuda:
                         x = x.cuda()
@@ -606,7 +605,7 @@ class CharlieModel:
                         window_target_size=window_target_size_count,
                     )
 
-                    if epoch == epochs - 1:
+                    if epoch == num_epochs - 1:
                         all_preds.append(pred)
 
                     total_usage_loss += loss_usage.item()
