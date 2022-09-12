@@ -406,6 +406,7 @@ class CharlieModel:
         cuda = False
         num_epochs = self.configs["learning_algorithm"]["num_epochs"]
         train_batch_size = self.configs["learning_algorithm"]["train_batch_size"]
+        val_batch_size = self.configs["learning_algorithm"]["val_batch_size"]
         loss_function_qs = self.configs["learning_algorithm"]["quantiles"]
         save_model = True
         seed = self.configs["data_processing"]["random_seed"]
@@ -560,14 +561,12 @@ class CharlieModel:
             pred = None
             total_usage_loss = 0
             all_preds = []
-            for b_idx in range(0, val_df_predictor.shape[0], train_batch_size):
+            for b_idx in range(0, val_df_predictor.shape[0], val_batch_size):
                 with torch.no_grad():
                     x = torch.from_numpy(
-                        val_df_predictor[b_idx : b_idx + train_batch_size]
+                        val_df_predictor[b_idx : b_idx + val_batch_size]
                     ).float()
-                    y = torch.from_numpy(
-                        val_df_target[b_idx : b_idx + train_batch_size]
-                    )
+                    y = torch.from_numpy(val_df_target[b_idx : b_idx + val_batch_size])
 
                     if cuda:
                         x = x.cuda()
