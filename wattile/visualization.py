@@ -94,13 +94,13 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
         # -----------------------------------------------------------------
         # extracting median prediction
         # -----------------------------------------------------------------
-        if configs["arch_version"] == "alfa":
+        if configs["learning_algorithm"]["arch_version"] == "alfa":
 
             idx_col_med = len_c_list
             prediction_median = predictions.iloc[:, idx_col_med].values
             time_ahead = 0
 
-        elif configs["arch_version"] == "bravo":
+        elif configs["learning_algorithm"]["arch_version"] == "bravo":
 
             idx_col_med_start = len_c_list * configs["S2S_stagger"]["initial_num"]
             idx_col_med_end = idx_col_med_start + configs["S2S_stagger"]["initial_num"]
@@ -110,7 +110,7 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
                 .values
             )
 
-        elif configs["arch_version"] == "charlie":
+        elif configs["learning_algorithm"]["arch_version"] == "charlie":
 
             window_target_size_count = window_target_size_count = int(
                 pd.Timedelta(window_target_size) / pd.Timedelta(resample_interval)
@@ -134,7 +134,7 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
             # -------------------------------------------------------------
             # filtering data for correct quantile
             # -------------------------------------------------------------
-            if configs["arch_version"] == "alfa":
+            if configs["learning_algorithm"]["arch_version"] == "alfa":
 
                 idx_col_low_start = qntl
                 idx_col_high_start = len_tot - idx_col_low_start - 1
@@ -142,7 +142,7 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
                 prediction_low = predictions.iloc[:, idx_col_low_start].to_numpy()
                 prediction_high = predictions.iloc[:, idx_col_high_start].to_numpy()
 
-            elif configs["arch_version"] == "bravo":
+            elif configs["learning_algorithm"]["arch_version"] == "bravo":
 
                 idx_col_low_start = qntl * configs["S2S_stagger"]["initial_num"]
                 idx_col_low_end = (
@@ -161,7 +161,7 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
                     :, idx_col_high_start:idx_col_high_end
                 ].to_numpy()
 
-            elif configs["arch_version"] == "charlie":
+            elif configs["learning_algorithm"]["arch_version"] == "charlie":
 
                 window_target_size_count = int(
                     pd.Timedelta(window_target_size) / pd.Timedelta(resample_interval)
