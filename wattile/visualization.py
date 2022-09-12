@@ -57,7 +57,7 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
     y_min = 10000000
     y_max = 0
     window_target_size = configs["data_processing"]["S2S_window"]["window_width_target"]
-    resample_interval = configs["resample_interval"]
+    resample_interval = configs["data_processing"]["resample_interval"]
 
     ######################################################################
     # initialize plotting area
@@ -102,8 +102,13 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
 
         elif configs["arch_version"] == "bravo":
 
-            idx_col_med_start = len_c_list * configs["S2S_stagger"]["initial_num"]
-            idx_col_med_end = idx_col_med_start + configs["S2S_stagger"]["initial_num"]
+            idx_col_med_start = (
+                len_c_list * configs["data_processing"]["S2S_stagger"]["initial_num"]
+            )
+            idx_col_med_end = (
+                idx_col_med_start
+                + configs["data_processing"]["S2S_stagger"]["initial_num"]
+            )
             prediction_median = (
                 predictions.iloc[:, idx_col_med_start:idx_col_med_end]
                 .iloc[:, time_ahead]
@@ -142,10 +147,12 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
 
             elif configs["arch_version"] == "bravo":
 
-                idx_col_low_start = qntl * configs["S2S_stagger"]["initial_num"]
+                idx_col_low_start = (
+                    qntl * configs["data_processing"]["S2S_stagger"]["initial_num"]
+                )
                 idx_col_low_end = (
-                    qntl * configs["S2S_stagger"]["initial_num"]
-                    + configs["S2S_stagger"]["initial_num"]
+                    qntl * configs["data_processing"]["S2S_stagger"]["initial_num"]
+                    + configs["data_processing"]["S2S_stagger"]["initial_num"]
                 )
                 idx_col_high_start = (len_tot - idx_col_low_start) - configs[
                     "S2S_stagger"
