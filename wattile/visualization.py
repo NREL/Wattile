@@ -155,8 +155,8 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
                     + configs["data_processing"]["S2S_stagger"]["initial_num"]
                 )
                 idx_col_high_start = (len_tot - idx_col_low_start) - configs[
-                    "S2S_stagger"
-                ]["initial_num"]
+                    "data_processing"
+                ]["S2S_stagger"]["initial_num"]
                 idx_col_high_end = len_tot - idx_col_low_start
 
                 prediction_low = predictions.iloc[
