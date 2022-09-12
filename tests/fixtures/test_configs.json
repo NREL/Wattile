@@ -58,7 +58,7 @@
    "arch_version": "alfa",
    "num_epochs": 1,
    "hidden_size": 5,
-   "layer_dim": 1,
+   "num_layers": 1,
    "quantiles": [
     0.025,
     0.25,
