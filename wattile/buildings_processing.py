@@ -35,13 +35,13 @@ def check_complete(torch_file, des_epochs):
 def _create_split_mask(timestamp, data_size, configs):
 
     # set configuration parameters
-    np.random.seed(seed=configs["random_seed"])
-    active_sequential = configs["sequential_splicer"]["active"]
-    train_ratio = int(configs["data_split"].split(":")[0]) / 100
-    val_ratio = int(configs["data_split"].split(":")[1]) / 100
-    test_ratio = int(configs["data_split"].split(":")[2]) / 100
-    window_witdh = configs["sequential_splicer"]["window_width"]
-    train_size_factor = configs["train_size_factor"]
+    np.random.seed(seed=configs["data_processing"]["random_seed"])
+    active_sequential = configs["data_processing"]["sequential_splicer"]["active"]
+    train_ratio = int(configs["data_processing"]["data_split"].split(":")[0]) / 100
+    val_ratio = int(configs["data_processing"]["data_split"].split(":")[1]) / 100
+    test_ratio = int(configs["data_processing"]["data_split"].split(":")[2]) / 100
+    window_witdh = configs["data_processing"]["sequential_splicer"]["window_width"]
+    train_size_factor = configs["data_processing"]["train_size_factor"]
 
     # split data based on random sequential chunks
     if active_sequential:
@@ -183,9 +183,11 @@ def timelag_predictors(data, configs):
     """
 
     # reading configuration parameters
-    lag_interval = configs["feat_timelag"]["lag_interval"]
-    lag_count = configs["feat_timelag"]["lag_count"]
-    lag_interval_forecast = configs["feat_timelag"]["lag_interval_forecast"]
+    lag_interval = configs["data_processing"]["feat_timelag"]["lag_interval"]
+    lag_count = configs["data_processing"]["feat_timelag"]["lag_count"]
+    lag_interval_forecast = configs["data_processing"]["feat_timelag"][
+        "lag_interval_forecast"
+    ]
     target_var = configs["data_input"]["target_var"]
 
     # splitting predictors and target
@@ -231,11 +233,11 @@ def timelag_predictors_target(data, configs):
     """
 
     # reading configuration parameters
-    lag_interval = configs["feat_timelag"]["lag_interval"]
-    lag_count = configs["feat_timelag"]["lag_count"]
-    initial_num = configs["S2S_stagger"]["initial_num"]
-    secondary_num = configs["S2S_stagger"]["secondary_num"]
-    decay = configs["S2S_stagger"]["decay"]
+    lag_interval = configs["data_processing"]["feat_timelag"]["lag_interval"]
+    lag_count = configs["data_processing"]["feat_timelag"]["lag_count"]
+    initial_num = configs["data_processing"]["S2S_stagger"]["initial_num"]
+    secondary_num = configs["data_processing"]["S2S_stagger"]["secondary_num"]
+    decay = configs["data_processing"]["S2S_stagger"]["decay"]
     target_var = configs["data_input"]["target_var"]
 
     target = data[target_var]
@@ -291,9 +293,13 @@ def roll_predictors_target(data, configs):
     """
 
     # setting configuration parameters
-    window_width_source = configs["S2S_window"]["window_width_source"]
-    window_width_target = configs["S2S_window"]["window_width_target"]
-    resample_interval = configs["resample_interval"]
+    window_width_source = configs["data_processing"]["S2S_window"][
+        "window_width_source"
+    ]
+    window_width_target = configs["data_processing"]["S2S_window"][
+        "window_width_target"
+    ]
+    resample_interval = configs["data_processing"]["resample_interval"]
     target_var = configs["data_input"]["target_var"]
 
     # initialize lists
@@ -489,12 +495,12 @@ def resample_or_rolling_stats(data, configs):
     # window closing is currently tied to resample_label_on
     # window_position is hard coded for now.
     # default is right-closed and backward-looking window.
-    resample_interval = configs["resample_interval"]
+    resample_interval = configs["data_processing"]["resample_interval"]
     resample_label_on = "right"  # left, right
-    window_width = configs["feat_stats"]["window_width"]
+    window_width = configs["data_processing"]["feat_stats"]["window_width"]
     window_position = "backward"  # forward, center, backward
 
-    if configs["feat_stats"]["active"]:
+    if configs["data_processing"]["feat_stats"]["active"]:
 
         # seperate predictors and target
         target = data[configs["data_input"]["target_var"]]
@@ -586,7 +592,7 @@ def _resample_data(data, configs):
 
     # reading configuration parameters.
     # resample_label_on are hard coded for now. default is right labeled and right-closed window.
-    resample_interval = configs["resample_interval"]
+    resample_interval = configs["data_processing"]["resample_interval"]
     resample_label_on = "right"  # left, right
 
     # resample data

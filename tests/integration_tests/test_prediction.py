@@ -86,8 +86,8 @@ def test_prediction_bravo(config_for_tests, tmpdir):
     results = epb.main(config_for_tests)
 
     num_timestamps = (
-        config_for_tests["S2S_stagger"]["initial_num"]
-        + config_for_tests["S2S_stagger"]["secondary_num"]
+        config_for_tests["data_processing"]["S2S_stagger"]["initial_num"]
+        + config_for_tests["data_processing"]["S2S_stagger"]["secondary_num"]
     )
     assert results.shape[1:] == (len(config_for_tests["qs"]), num_timestamps)
 

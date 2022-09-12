@@ -45,7 +45,9 @@ def test_prep_for_rnn(config_for_tests, tmpdir):
         excepted_data_columns += [
             f"{pred}_{m}_lag{lag + 1}"
             for m in ["max", "min", "mean"]
-            for lag in range(config_for_tests["feat_timelag"]["lag_count"])
+            for lag in range(
+                config_for_tests["data_processing"]["feat_timelag"]["lag_count"]
+            )
         ]
 
     # add year and hour columns
@@ -60,7 +62,9 @@ def test_prep_for_rnn(config_for_tests, tmpdir):
         for t in ["MOY", "HOD"]
         for f in ["cos", "sin"]
         for m in ["max", "min", "mean"]
-        for lag in range(config_for_tests["feat_timelag"]["lag_count"])
+        for lag in range(
+            config_for_tests["data_processing"]["feat_timelag"]["lag_count"]
+        )
     ]
 
     # add week columns
@@ -71,7 +75,9 @@ def test_prep_for_rnn(config_for_tests, tmpdir):
         f"DOW_binary_reg_{i}_{m}_lag{lag + 1}"
         for i in range(0, 7)
         for m in ["max", "min", "mean"]
-        for lag in range(config_for_tests["feat_timelag"]["lag_count"])
+        for lag in range(
+            config_for_tests["data_processing"]["feat_timelag"]["lag_count"]
+        )
     ]
 
     # add target var
