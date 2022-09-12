@@ -20,8 +20,8 @@ def config_for_tests():
     with open(TESTS_FIXTURES_PATH / "test_configs.json", "r") as read_file:
         configs = json.load(read_file)
 
-    configs["data_dir"] = str(TESTS_DATA_PATH)
-    configs["data_config"] = "Synthetic Site Config.json"
+    configs["data_input"]["data_dir"] = str(TESTS_DATA_PATH)
+    configs["data_input"]["data_config"] = "Synthetic Site Config.json"
 
     return configs
 
@@ -40,7 +40,7 @@ def test_prep_for_rnn(config_for_tests, tmpdir):
 
     excepted_data_columns = []
     # add weather columns
-    for pred in config_for_tests["predictor_columns"]:
+    for pred in config_for_tests["data_input"]["predictor_columns"]:
         excepted_data_columns += [f"{pred}_{m}" for m in ["max", "min", "mean"]]
         excepted_data_columns += [
             f"{pred}_{m}_lag{lag + 1}"
@@ -81,7 +81,7 @@ def test_prep_for_rnn(config_for_tests, tmpdir):
     ]
 
     # add target var
-    excepted_data_columns.append(config_for_tests["target_var"])
+    excepted_data_columns.append(config_for_tests["data_input"]["target_var"])
 
     assert set(train_df.columns) == set(excepted_data_columns)
     assert train_df.shape == (528, len(excepted_data_columns))

@@ -45,12 +45,12 @@ class AlfaModel(AlgoMainRNNBase):
 
         if run_train:
             # Define input feature matrix
-            X_train = train_data.drop(self.configs["target_var"], axis=1).values.astype(
-                dtype="float32"
-            )
+            X_train = train_data.drop(
+                self.configs["data_input"]["target_var"], axis=1
+            ).values.astype(dtype="float32")
 
             # Output variable
-            y_train = train_data[self.configs["target_var"]]
+            y_train = train_data[self.configs["data_input"]["target_var"]]
             y_train = y_train.values.astype(dtype="float32")
             y_train = np.tile(y_train, (len(self.configs["qs"]), 1))
             y_train = np.transpose(y_train)
@@ -67,11 +67,11 @@ class AlfaModel(AlgoMainRNNBase):
             train_loader = []
 
         # Do the same as above, but for the val set
-        X_val = val_data.drop(self.configs["target_var"], axis=1).values.astype(
-            dtype="float32"
-        )
+        X_val = val_data.drop(
+            self.configs["data_input"]["target_var"], axis=1
+        ).values.astype(dtype="float32")
 
-        y_val = val_data[self.configs["target_var"]]
+        y_val = val_data[self.configs["data_input"]["target_var"]]
         y_val = y_val.values.astype(dtype="float32")
         y_val = np.tile(y_val, (len(self.configs["qs"]), 1))
         y_val = np.transpose(y_val)
@@ -192,25 +192,27 @@ class AlfaModel(AlgoMainRNNBase):
             if transformation_method == "minmaxscale":
                 final_preds = (
                     (
-                        train_max[self.configs["target_var"]]
-                        - train_min[self.configs["target_var"]]
+                        train_max[self.configs["data_input"]["target_var"]]
+                        - train_min[self.configs["data_input"]["target_var"]]
                     )
                     * semifinal_preds
-                ) + train_min[self.configs["target_var"]]
+                ) + train_min[self.configs["data_input"]["target_var"]]
                 final_targs = (
                     (
-                        train_max[self.configs["target_var"]]
-                        - train_min[self.configs["target_var"]]
+                        train_max[self.configs["data_input"]["target_var"]]
+                        - train_min[self.configs["data_input"]["target_var"]]
                     )
                     * semifinal_targs
-                ) + train_min[self.configs["target_var"]]
+                ) + train_min[self.configs["data_input"]["target_var"]]
             elif transformation_method == "standard":
                 final_preds = (
-                    semifinal_preds * train_std[self.configs["target_var"]]
-                ) + train_mean[self.configs["target_var"]]
+                    semifinal_preds
+                    * train_std[self.configs["data_input"]["target_var"]]
+                ) + train_mean[self.configs["data_input"]["target_var"]]
                 final_targs = (
-                    semifinal_targs * train_std[self.configs["target_var"]]
-                ) + train_mean[self.configs["target_var"]]
+                    semifinal_targs
+                    * train_std[self.configs["data_input"]["target_var"]]
+                ) + train_mean[self.configs["data_input"]["target_var"]]
             else:
                 raise self.configsError(
                     "{} is not a supported form of data normalization".format(
@@ -599,10 +601,14 @@ class AlfaModel(AlgoMainRNNBase):
 
                     # Add parody plot to TensorBoard
                     # fig2, ax2 = plt.subplots()
-                    # ax2.scatter(predictions, val_df[self.configs["target_var"]], s=5, alpha=0.3)
+                    # ax2.scatter(predictions,
+                    # val_df[self.configs["data_input"]["target_var"]],
+                    # s=5, alpha=0.3)
                     # strait_line = np.linspace(
-                    #     min(min(predictions), min(val_df[self.configs["target_var"]])),
-                    #     max(max(predictions), max(val_df[self.configs["target_var"]])),
+                    #     min(min(predictions), min(
+                    # val_df[self.configs["data_input"]["target_var"]])),
+                    #     max(max(predictions),
+                    # max(val_df[self.configs["data_input"]["target_var"]])),
                     #     5,
                     # )
                     # ax2.plot(strait_line, strait_line, c="k")
@@ -857,16 +863,16 @@ class AlfaModel(AlgoMainRNNBase):
         if transformation_method == "minmaxscale":
             final_preds = (
                 (
-                    train_max[self.configs["target_var"]]
-                    - train_min[self.configs["target_var"]]
+                    train_max[self.configs["data_input"]["target_var"]]
+                    - train_min[self.configs["data_input"]["target_var"]]
                 )
                 * semifinal_preds
-            ) + train_min[self.configs["target_var"]]
+            ) + train_min[self.configs["data_input"]["target_var"]]
 
         elif transformation_method == "standard":
             final_preds = (
-                semifinal_preds * train_std[self.configs["target_var"]]
-            ) + train_mean[self.configs["target_var"]]
+                semifinal_preds * train_std[self.configs["data_input"]["target_var"]]
+            ) + train_mean[self.configs["data_input"]["target_var"]]
 
         else:
             raise ConfigsError(
@@ -883,7 +889,7 @@ class AlfaModel(AlgoMainRNNBase):
             file = os.path.join(
                 self.configs["data_dir"],
                 self.configs["building"],
-                "{}_external_test.h5".format(self.configs["target_var"]),
+                "{}_external_test.h5".format(self.configs["data_input"]["target_var"]),
             )
             test_data = pd.read_hdf(file, key="df")
         else:
@@ -916,12 +922,13 @@ class AlfaModel(AlgoMainRNNBase):
                 lw=0,
             )
         plt.xticks(rotation=0)
-        ax1.set_ylabel(self.configs["target_var"])
+        ax1.set_ylabel(self.configs["data_input"]["target_var"])
         ax1.legend()
         plt.show()
         # fig.savefig(
         #     os.path.join(
-        #       self.configs["results_dir"], "{}_test.png".format(self.configs["target_var"])
+        #       self.configs["results_dir"], "{}_test.png".format(
+        # self.configs["data_input"]["target_var"])
         #     )
         # )
 

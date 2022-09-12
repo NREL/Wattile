@@ -58,8 +58,8 @@ def _get_dataset_config(configs):
     :return: dataset config
     :rtype: pd.DataFrame
     """
-    dataset_dir = Path(configs["data_dir"])
-    configs_file_inputdata = dataset_dir / configs["data_config"]
+    dataset_dir = Path(configs["data_input"]["data_dir"])
+    configs_file_inputdata = dataset_dir / configs["data_input"]["data_config"]
 
     logger.info(
         "Pre-process: reading input data summary json file from {}".format(
@@ -96,8 +96,8 @@ def read_dataset_from_file(configs):
 
     # only read from files that's timespan intersects with the configs
     # the extra will be removed in `prep_for_rnn`
-    timestamp_start = dt.datetime.fromisoformat(configs["start_time"])
-    timestamp_end = dt.datetime.fromisoformat(configs["end_time"])
+    timestamp_start = dt.datetime.fromisoformat(configs["data_input"]["start_time"])
+    timestamp_end = dt.datetime.fromisoformat(configs["data_input"]["end_time"])
     df_inputdata = df_inputdata.loc[
         (df_inputdata.start <= timestamp_end) & (df_inputdata.end >= timestamp_start), :
     ]
@@ -114,13 +114,13 @@ def read_dataset_from_file(configs):
     predictor_data_info = df_inputdata[df_inputdata.contentType == "predictors"]
     data_full_p = _concat_data_from_files(
         predictor_data_info.path,
-        needed_columns=configs["predictor_columns"],
+        needed_columns=configs["data_input"]["predictor_columns"],
     )
 
     # read in target data
     target_data_info = df_inputdata[df_inputdata.contentType == "targets"]
     data_full_t = _concat_data_from_files(
-        target_data_info.path, needed_columns=[configs["target_var"]]
+        target_data_info.path, needed_columns=[configs["data_input"]["target_var"]]
     )
 
     if data_full_p.empty:
@@ -139,7 +139,7 @@ def read_dataset_from_file(configs):
     # TODO: remove if
     if configs["use_case"] == "prediction":
         data_full = data_full_p
-        data_full[configs["target_var"]] = -999
+        data_full[configs["data_input"]["target_var"]] = -999
     else:
         data_full = pd.merge(data_full_p, data_full_t, how="outer", on="Timestamp")
 

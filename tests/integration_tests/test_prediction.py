@@ -56,8 +56,8 @@ def test_prediction_alfa(config_for_tests, tmpdir):
     shutil.copytree(TESTS_FIXTURES_PATH / "alfa_exp_dir", exp_dir)
 
     # create a temp data dir
-    config_for_tests["data_dir"] = str(tmpdir / "data")
-    config_for_tests["data_config"] = "Synthetic Site Config.json"
+    config_for_tests["data_input"]["data_dir"] = str(tmpdir / "data")
+    config_for_tests["data_input"]["data_config"] = "Synthetic Site Config.json"
     data_dir = tmpdir / "data"
     popluate_test_data_dir_with_prediction_data(data_dir)
 
@@ -78,8 +78,8 @@ def test_prediction_bravo(config_for_tests, tmpdir):
     shutil.copytree(TESTS_FIXTURES_PATH / "bravo_exp_dir", exp_dir)
 
     # create a temp data dir
-    config_for_tests["data_dir"] = str(tmpdir / "data")
-    config_for_tests["data_config"] = "Synthetic Site Config.json"
+    config_for_tests["data_input"]["data_dir"] = str(tmpdir / "data")
+    config_for_tests["data_input"]["data_config"] = "Synthetic Site Config.json"
     data_dir = tmpdir / "data"
     popluate_test_data_dir_with_prediction_data(data_dir)
 

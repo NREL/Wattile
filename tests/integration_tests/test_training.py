@@ -18,8 +18,8 @@ def config_for_tests():
     with open(TESTS_FIXTURES_PATH / "test_configs.json", "r") as read_file:
         configs = json.load(read_file)
 
-    configs["data_dir"] = str(TESTS_DATA_PATH)
-    configs["data_config"] = "Synthetic Site Config.json"
+    configs["data_input"]["data_dir"] = str(TESTS_DATA_PATH)
+    configs["data_input"]["data_config"] = "Synthetic Site Config.json"
 
     return configs
 

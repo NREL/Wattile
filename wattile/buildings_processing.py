@@ -188,7 +188,7 @@ def timelag_predictors(data, configs):
     lag_interval_forecast = configs["data_processing"]["feat_timelag"][
         "lag_interval_forecast"
     ]
-    target_var = configs["target_var"]
+    target_var = configs["data_input"]["target_var"]
 
     # splitting predictors and target
     target = data[target_var]
@@ -238,7 +238,7 @@ def timelag_predictors_target(data, configs):
     initial_num = configs["data_processing"]["S2S_stagger"]["initial_num"]
     secondary_num = configs["data_processing"]["S2S_stagger"]["secondary_num"]
     decay = configs["data_processing"]["S2S_stagger"]["decay"]
-    target_var = configs["target_var"]
+    target_var = configs["data_input"]["target_var"]
 
     target = data[target_var]
     data = data.drop(target_var, axis=1)
@@ -300,7 +300,7 @@ def roll_predictors_target(data, configs):
         "window_width_target"
     ]
     resample_interval = configs["data_processing"]["resample_interval"]
-    target_var = configs["target_var"]
+    target_var = configs["data_input"]["target_var"]
 
     # initialize lists
     data_predictor = []
@@ -375,7 +375,9 @@ def correct_predictor_columns(configs, data):
     :return: data with correct columns
     :rtype: pandas.DataFrame
     """
-    keep_cols = configs["predictor_columns"] + [configs["target_var"]]
+    keep_cols = configs["data_input"]["predictor_columns"] + [
+        configs["data_input"]["target_var"]
+    ]
 
     # raise error if missing columns
     missing_colums = set(keep_cols).difference(set(data.columns))
@@ -409,8 +411,8 @@ def correct_timestamps(configs, data):
     data = data.sort_index()
 
     # TODO: think about timezones.
-    start_time = dt.datetime.fromisoformat((configs["start_time"]))
-    end_time = dt.datetime.fromisoformat(configs["end_time"])
+    start_time = dt.datetime.fromisoformat(configs["data_input"]["start_time"])
+    end_time = dt.datetime.fromisoformat(configs["data_input"]["end_time"])
     data = data[start_time:end_time]
 
     if data.shape[0] == 0:
@@ -471,10 +473,9 @@ def prep_for_rnn(configs, data):
 
     # if validatate with external data, write data to h5 for future testing.
     if configs["use_case"] == "validation" and configs["test_method"] == "external":
-        filepath = (
-            pathlib.Path(configs["data_dir"])
-            / f"{configs['target_var']}_external_test.h5"
-        )
+        filepath = pathlib.Path(
+            configs["data_input"]["data_dir"]
+        ) / "{}_external_test.h5".format(configs["data_input"]["target_var"])
         data.to_hdf(filepath, key="df", mode="w")
 
     if configs["use_case"] == "train":
@@ -502,8 +503,8 @@ def resample_or_rolling_stats(data, configs):
     if configs["data_processing"]["feat_stats"]["active"]:
 
         # seperate predictors and target
-        target = data[configs["target_var"]]
-        X_data = data.drop(configs["target_var"], axis=1)
+        target = data[configs["data_input"]["target_var"]]
+        X_data = data.drop(configs["data_input"]["target_var"], axis=1)
 
         # resampling for each statistics separately
         data_resampler = X_data.resample(
@@ -577,7 +578,7 @@ def resample_or_rolling_stats(data, configs):
 
         # adding resampled target back to the dataframe
         target = _resample_data(target, configs)
-        data[configs["target_var"]] = target
+        data[configs["data_input"]["target_var"]] = target
 
     else:
 
