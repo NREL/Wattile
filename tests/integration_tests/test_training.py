@@ -18,8 +18,8 @@ def config_for_tests():
     with open(TESTS_FIXTURES_PATH / "test_configs.json", "r") as read_file:
         configs = json.load(read_file)
 
-    configs["data_dir"] = str(TESTS_DATA_PATH)
-    configs["data_config"] = "Synthetic Site Config.json"
+    configs["data_input"]["data_dir"] = str(TESTS_DATA_PATH)
+    configs["data_input"]["data_config"] = "Synthetic Site Config.json"
 
     return configs
 
@@ -80,5 +80,5 @@ def test_model_trains(config_for_tests, tmpdir, config_patch):
     # check result file were created
     assert (exp_dir / "output.out").exists()
     assert (exp_dir / "torch_model").exists()
-    if config_for_tests["arch_version"] != "charlie":
+    if config_for_tests["learning_algorithm"]["arch_version"] != "charlie":
         assert (exp_dir / "train_stats.json").exists()

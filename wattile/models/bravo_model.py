@@ -5,7 +5,6 @@ import os
 import pathlib
 import timeit
 
-import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -56,15 +55,21 @@ class BravoModel(AlgoMainRNNBase):
         if run_train:
             # Define input feature matrix
             X_train = train_data.drop(
-                train_data.filter(like=self.configs["target_var"], axis=1).columns,
+                train_data.filter(
+                    like=self.configs["data_input"]["target_var"], axis=1
+                ).columns,
                 axis=1,
             ).values.astype(dtype="float32")
 
             # Output variable (batch*72), then (batch*(72*num of qs))
             y_train = train_data[
-                train_data.filter(like=self.configs["target_var"], axis=1).columns
+                train_data.filter(
+                    like=self.configs["data_input"]["target_var"], axis=1
+                ).columns
             ].values.astype(dtype="float32")
-            y_train = np.tile(y_train, len(self.configs["qs"]))
+            y_train = np.tile(
+                y_train, len(self.configs["learning_algorithm"]["quantiles"])
+            )
 
             # Convert to iterable tensors
             train_feat_tensor = torch.from_numpy(X_train).to(device)
@@ -80,13 +85,18 @@ class BravoModel(AlgoMainRNNBase):
         # Do the same as above, but for the val set
         # X_val = val_data.drop(self.configs['target_var'], axis=1).values.astype(dtype='float32')
         X_val = val_data.drop(
-            val_data.filter(like=self.configs["target_var"], axis=1).columns, axis=1
+            val_data.filter(
+                like=self.configs["data_input"]["target_var"], axis=1
+            ).columns,
+            axis=1,
         ).values.astype(dtype="float32")
 
         y_val = val_data[
-            val_data.filter(like=self.configs["target_var"], axis=1).columns
+            val_data.filter(
+                like=self.configs["data_input"]["target_var"], axis=1
+            ).columns
         ].values.astype(dtype="float32")
-        y_val = np.tile(y_val, len(self.configs["qs"]))
+        y_val = np.tile(y_val, len(self.configs["learning_algorithm"]["quantiles"]))
 
         val_feat_tensor = torch.from_numpy(X_val).to(device)
         val_target_tensor = torch.from_numpy(y_val).to(device)
@@ -98,12 +108,14 @@ class BravoModel(AlgoMainRNNBase):
 
     def pinball_np(self, output, target):
         num_future_time_instances = (
-            self.configs["S2S_stagger"]["initial_num"]
-            + self.configs["S2S_stagger"]["secondary_num"]
+            self.configs["data_processing"]["S2S_stagger"]["initial_num"]
+            + self.configs["data_processing"]["S2S_stagger"]["secondary_num"]
         )
         resid = target - output
-        tau = np.repeat(self.configs["qs"], num_future_time_instances)
-        alpha = self.configs["smoothing_alpha"]
+        tau = np.repeat(
+            self.configs["learning_algorithm"]["quantiles"], num_future_time_instances
+        )
+        alpha = self.configs["learning_algorithm"]["smoothing_alpha"]
         log_term = np.zeros_like(resid)
         log_term[resid < 0] = np.log(1 + np.exp(resid[resid < 0] / alpha)) - (
             resid[resid < 0] / alpha
@@ -123,19 +135,20 @@ class BravoModel(AlgoMainRNNBase):
         """
 
         num_future_time_instances = (
-            self.configs["S2S_stagger"]["initial_num"]
-            + self.configs["S2S_stagger"]["secondary_num"]
+            self.configs["data_processing"]["S2S_stagger"]["initial_num"]
+            + self.configs["data_processing"]["S2S_stagger"]["secondary_num"]
         )
         resid = target - output
 
         # logger.info("Resid device: ".format(resid.device))
 
-        # tau = np.repeat(self.configs["qs"], num_future_time_instances)
-        tau = torch.tensor(self.configs["qs"], device=device).repeat_interleave(
-            num_future_time_instances
-        )
+        # tau = np.repeat(self.configs["learning_algorithm"]["quantiles"],
+        #   num_future_time_instances)
+        tau = torch.tensor(
+            self.configs["learning_algorithm"]["quantiles"], device=device
+        ).repeat_interleave(num_future_time_instances)
 
-        alpha = self.configs["smoothing_alpha"]
+        alpha = self.configs["learning_algorithm"]["smoothing_alpha"]
         log_term = torch.zeros_like(resid, device=device)
         log_term[resid < 0] = torch.log(1 + torch.exp(resid[resid < 0] / alpha)) - (
             resid[resid < 0] / alpha
@@ -181,8 +194,8 @@ class BravoModel(AlgoMainRNNBase):
         with torch.no_grad():
             # Plug the val set into the model
             num_timestamps = (
-                self.configs["S2S_stagger"]["initial_num"]
-                + self.configs["S2S_stagger"]["secondary_num"]
+                self.configs["data_processing"]["S2S_stagger"]["initial_num"]
+                + self.configs["data_processing"]["S2S_stagger"]["secondary_num"]
             )
             model.eval()
             preds = []
@@ -218,15 +231,19 @@ class BravoModel(AlgoMainRNNBase):
             if transformation_method == "minmaxscale":
                 maxs = np.tile(
                     train_max[
-                        train_max.filter(like=self.configs["target_var"], axis=0).index
+                        train_max.filter(
+                            like=self.configs["data_input"]["target_var"], axis=0
+                        ).index
                     ].values,
-                    len(self.configs["qs"]),
+                    len(self.configs["learning_algorithm"]["quantiles"]),
                 )
                 mins = np.tile(
                     train_min[
-                        train_min.filter(like=self.configs["target_var"], axis=0).index
+                        train_min.filter(
+                            like=self.configs["data_input"]["target_var"], axis=0
+                        ).index
                     ].values,
-                    len(self.configs["qs"]),
+                    len(self.configs["learning_algorithm"]["quantiles"]),
                 )
                 final_preds = (
                     (maxs - mins) * semifinal_preds
@@ -237,15 +254,19 @@ class BravoModel(AlgoMainRNNBase):
             elif transformation_method == "standard":
                 stds = np.tile(
                     train_std[
-                        train_std.filter(like=self.configs["target_var"], axis=0).index
+                        train_std.filter(
+                            like=self.configs["data_input"]["target_var"], axis=0
+                        ).index
                     ].values,
-                    len(self.configs["qs"]),
+                    len(self.configs["learning_algorithm"]["quantiles"]),
                 )
                 means = np.tile(
                     train_mean[
-                        train_mean.filter(like=self.configs["target_var"], axis=0).index
+                        train_mean.filter(
+                            like=self.configs["data_input"]["target_var"], axis=0
+                        ).index
                     ].values,
-                    len(self.configs["qs"]),
+                    len(self.configs["learning_algorithm"]["quantiles"]),
                 )
                 final_preds = (semifinal_preds * stds) + means
                 final_targs = (semifinal_targs * stds) + means
@@ -266,10 +287,17 @@ class BravoModel(AlgoMainRNNBase):
             QS = loss.mean()
             # PICP (single point for each bound)
             target_1D = target[:, range(num_timestamps)]
-            bounds = np.zeros((target.shape[0], int(len(self.configs["qs"]) / 2)))
+            bounds = np.zeros(
+                (
+                    target.shape[0],
+                    int(len(self.configs["learning_algorithm"]["quantiles"]) / 2),
+                )
+            )
             PINC = []
-            split_arrays = np.split(output, len(self.configs["qs"]), axis=1)
-            for i, q in enumerate(self.configs["qs"]):
+            split_arrays = np.split(
+                output, len(self.configs["learning_algorithm"]["quantiles"]), axis=1
+            )
+            for i, q in enumerate(self.configs["learning_algorithm"]["quantiles"]):
                 if q == 0.5:
                     break
                 filtered_low = split_arrays[i]
@@ -280,7 +308,10 @@ class BravoModel(AlgoMainRNNBase):
                 time_averaged = check_across_time.mean(axis=1)
                 bounds[:, i] = time_averaged
                 # Calculate theoretical PI
-                PINC.append(self.configs["qs"][-(i + 1)] - self.configs["qs"][i])
+                PINC.append(
+                    self.configs["learning_algorithm"]["quantiles"][-(i + 1)]
+                    - self.configs["learning_algorithm"]["quantiles"][i]
+                )
             PINC = np.array(PINC)
             PICP = bounds.mean(axis=0)
             # ACE (single point)
@@ -288,14 +319,15 @@ class BravoModel(AlgoMainRNNBase):
             # IS (single point)
             ISs = []
             # Iterate through Prediction Intervals (pair of quantiles)
-            for i, q in enumerate(self.configs["qs"]):
+            for i, q in enumerate(self.configs["learning_algorithm"]["quantiles"]):
                 if q == 0.5:
                     break
                 low = split_arrays[i]  # (batches * time) for a single quantile
                 high = split_arrays[-(i + 1)]  # (batches * time) for a single quantile
                 x = target_1D  # (batches * time) for nominal results
                 alph = 1 - (
-                    self.configs["qs"][-(i + 1)] - self.configs["qs"][i]
+                    self.configs["learning_algorithm"]["quantiles"][-(i + 1)]
+                    - self.configs["learning_algorithm"]["quantiles"][i]
                 )  # Single float
                 IS = (
                     (high - low)
@@ -308,22 +340,26 @@ class BravoModel(AlgoMainRNNBase):
 
             # Compare theoretical and actual Q's
             temp_actual = []
-            for i, q in enumerate(self.configs["qs"]):
+            for i, q in enumerate(self.configs["learning_algorithm"]["quantiles"]):
                 act_prob = (split_arrays[i] > target_1D).mean()
                 temp_actual.append(act_prob)
             Q_vals = pd.DataFrame()
-            Q_vals["q_requested"] = self.configs["qs"]
+            Q_vals["q_requested"] = self.configs["learning_algorithm"]["quantiles"]
             Q_vals["q_actual"] = temp_actual
 
             # Do quantile-related (q == 0.5) error statistics
             # Get the predictions for the q=0.5 case
-            final_preds_median = np.split(final_preds, len(self.configs["qs"]), axis=1)[
-                int(len(self.configs["qs"]) / 2)
-            ]
+            final_preds_median = np.split(
+                final_preds,
+                len(self.configs["learning_algorithm"]["quantiles"]),
+                axis=1,
+            )[int(len(self.configs["learning_algorithm"]["quantiles"]) / 2)]
             output = pd.DataFrame(final_preds_median).values.squeeze()
-            target = np.split(final_targs, len(self.configs["qs"]), axis=1)[
-                int(len(self.configs["qs"]) / 2)
-            ]
+            target = np.split(
+                final_targs,
+                len(self.configs["learning_algorithm"]["quantiles"]),
+                axis=1,
+            )[int(len(self.configs["learning_algorithm"]["quantiles"]) / 2)]
             # Set "Number of adjustable model parameters" for each type of error statistic
             p_nmbe = 0
             p_cvrmse = 1
@@ -343,9 +379,11 @@ class BravoModel(AlgoMainRNNBase):
             # get histogram data of residuals for each quantile (use normalized data)
             if last_run:
                 resid = semifinal_targs - semifinal_preds
-                split_arrays = np.split(resid, len(self.configs["qs"]), axis=1)
+                split_arrays = np.split(
+                    resid, len(self.configs["learning_algorithm"]["quantiles"]), axis=1
+                )
                 hist_data = pd.DataFrame()
-                for i, q in enumerate(self.configs["qs"]):
+                for i, q in enumerate(self.configs["learning_algorithm"]["quantiles"]):
                     tester = np.histogram(split_arrays[i], bins=200)
                     y_vals = tester[0]
                     x_vals = 0.5 * (tester[1][1:] + tester[1][:-1])
@@ -399,7 +437,7 @@ class BravoModel(AlgoMainRNNBase):
         :return: None
         """
 
-        weight_decay = float(self.configs["weight_decay"])
+        weight_decay = float(self.configs["learning_algorithm"]["weight_decay"])
         input_dim = self.configs["input_dim"]
 
         # Write the configurations used for this training process to a json file
@@ -438,46 +476,47 @@ class BravoModel(AlgoMainRNNBase):
         # Instantiate Optimizer Class
         optimizer = torch.optim.Adam(
             model.parameters(),
-            lr=self.configs["lr_config"]["base"],
+            lr=self.configs["learning_algorithm"]["lr_config"]["base"],
             weight_decay=weight_decay,
         )
 
         # Set up learning rate scheduler
-        if not self.configs["lr_config"]["schedule"]:
+        if not self.configs["learning_algorithm"]["lr_config"]["schedule"]:
             pass
         elif (
-            self.configs["lr_config"]["schedule"]
-            and self.configs["lr_config"]["type"] == "performance"
+            self.configs["learning_algorithm"]["lr_config"]["schedule"]
+            and self.configs["learning_algorithm"]["lr_config"]["type"] == "performance"
         ):
             # Patience (for our case) is # of iterations, not epochs,
             # but self.configs specification is num epochs
             scheduler = ReduceLROnPlateau(
                 optimizer,
                 mode="min",
-                factor=self.configs["lr_config"]["factor"],
-                min_lr=self.configs["lr_config"]["min"],
+                factor=self.configs["learning_algorithm"]["lr_config"]["factor"],
+                min_lr=self.configs["learning_algorithm"]["lr_config"]["min"],
                 patience=int(
-                    self.configs["lr_config"]["patience"]
+                    self.configs["learning_algorithm"]["lr_config"]["patience"]
                     * (num_train_data / train_batch_size)
                 ),
                 verbose=True,
             )
         elif (
-            self.configs["lr_config"]["schedule"]
-            and self.configs["lr_config"]["type"] == "absolute"
+            self.configs["learning_algorithm"]["lr_config"]["schedule"]
+            and self.configs["learning_algorithm"]["lr_config"]["type"] == "absolute"
         ):
             # scheduler = StepLR(
             #     optimizer,
             #     step_size=int(
-            #         self.configs["lr_config"]["step_size"] * (num_train_data / train_batch_size)
+            #         self.configs["learning_algorithm"]["lr_config"]["step_size"]
+            #           * (num_train_data / train_batch_size)
             #     ),
-            #     gamma=self.configs["lr_config"]["factor"],
+            #     gamma=self.configs["learning_algorithm"]["lr_config"]["factor"],
             # )
             pass
         else:
             raise ConfigsError(
                 "{} is not a supported method of LR scheduling".format(
-                    self.configs["lr_config"]["type"]
+                    self.configs["learning_algorithm"]["lr_config"]["type"]
                 )
             )
 
@@ -527,14 +566,18 @@ class BravoModel(AlgoMainRNNBase):
 
             # Do manual learning rate scheduling, if requested
             if (
-                self.configs["lr_config"]["schedule"]
-                and self.configs["lr_config"]["type"] == "absolute"
-                and epoch_num % self.configs["lr_config"]["step_size"] == 0
+                self.configs["learning_algorithm"]["lr_config"]["schedule"]
+                and self.configs["learning_algorithm"]["lr_config"]["type"]
+                == "absolute"
+                and epoch_num
+                % self.configs["learning_algorithm"]["lr_config"]["step_size"]
+                == 0
             ):
                 for param_group in optimizer.param_groups:
                     old_lr = param_group["lr"]
                     param_group["lr"] = (
-                        param_group["lr"] * self.configs["lr_config"]["factor"]
+                        param_group["lr"]
+                        * self.configs["learning_algorithm"]["lr_config"]["factor"]
                     )
                     new_lr = param_group["lr"]
                 logger.info(
@@ -559,7 +602,7 @@ class BravoModel(AlgoMainRNNBase):
                 optimizer.zero_grad()
 
                 # # Get memory statistics
-                # if n_iter % self.configs["eval_frequency"] == 0:
+                # if n_iter % self.configs["learning_algorithm"]["eval_frequency"] == 0:
                 #     mem = virtual_memory()
                 #     mem = {"total": mem.total / 10 ** 9, "available": mem.available / 10 ** 9,
                 #            "used": mem.used / 10 ** 9, "free": mem.free / 10 ** 9}
@@ -590,8 +633,9 @@ class BravoModel(AlgoMainRNNBase):
                 time5 = timeit.default_timer()
 
                 if (
-                    self.configs["lr_config"]["schedule"]
-                    and self.configs["lr_config"]["type"] == "performance"
+                    self.configs["learning_algorithm"]["lr_config"]["schedule"]
+                    and self.configs["learning_algorithm"]["lr_config"]["type"]
+                    == "performance"
                 ):
                     scheduler.step(loss)
 
@@ -616,12 +660,12 @@ class BravoModel(AlgoMainRNNBase):
                 )
 
                 # Save the model every ___ iterations
-                if n_iter % self.configs["eval_frequency"] == 0:
+                if n_iter % self.configs["learning_algorithm"]["eval_frequency"] == 0:
                     filepath = os.path.join(self.file_prefix, "torch_model")
                     save_model(model, epoch, n_iter, filepath)
 
                 # Do a val batch every ___ iterations
-                if n_iter % self.configs["eval_frequency"] == 0:
+                if n_iter % self.configs["learning_algorithm"]["eval_frequency"] == 0:
                     # Evaluate val set
                     (predictions, errors, measured, Q_vals,) = self.test_processing(
                         val_df,
@@ -646,34 +690,51 @@ class BravoModel(AlgoMainRNNBase):
                     # val_rmse.append(errors['rmse'])
                     writer.add_scalars("Loss", {"val": errors["pinball_loss"]}, n_iter)
 
-                    # Save the final predictions to a file
-                    # pd.DataFrame(predictions).to_hdf(
-                    #     os.path.join(self.file_prefix, "predictions.h5"), key="df", mode="w"
-                    # )
-                    # pd.DataFrame(measured).to_hdf(
-                    #     os.path.join(self.file_prefix, "measured.h5"), key="df", mode="w"
-                    # )
-
-                    # Save the QQ information to a file
-                    # Q_vals.to_hdf(
-                    #     os.path.join(self.file_prefix, "QQ_data.h5"), key="df", mode="w"
-                    # )
-
                     # Add parody plot to TensorBoard
-                    # fig2, ax2 = plt.subplots()
-                    # ax2.scatter(predictions, val_df[self.configs["target_var"]], s=5, alpha=0.3)
-                    # strait_line = np.linspace(
-                    #     min(min(predictions), min(val_df[self.configs["target_var"]])),
-                    #     max(max(predictions), max(val_df[self.configs["target_var"]])),
-                    #     5,
-                    # )
-                    # ax2.plot(strait_line, strait_line, c="k")
-                    # ax2.set_xlabel("Predicted")
-                    # ax2.set_ylabel("Observed")
-                    # ax2.axhline(y=0, color="k")
-                    # ax2.axvline(x=0, color="k")
-                    # ax2.axis("equal")
-                    # writer.add_figure("Parody", fig2, n_iter)
+                    fig1, ax1 = plt.subplots()
+                    for lag in range(self.configs["S2S_stagger"]["initial_num"]):
+                        ax1.scatter(
+                            predictions[:, lag * len(self.configs["qs"])],
+                            val_df[
+                                self.configs["data_input"]["target_var"]
+                                + "_lag_"
+                                + str(lag)
+                            ],
+                            s=5,
+                            alpha=0.3,
+                        )
+                    strait_line = np.linspace(
+                        min(
+                            np.amin(predictions),
+                            min(
+                                val_df.loc[
+                                    :,
+                                    val_df.columns.str.contains(
+                                        self.configs["data_input"]["target_var"]
+                                    ),
+                                ].min()
+                            ),
+                        ),
+                        max(
+                            np.amax(predictions),
+                            max(
+                                val_df.loc[
+                                    :,
+                                    val_df.columns.str.contains(
+                                        self.configs["data_input"]["target_var"]
+                                    ),
+                                ].max()
+                            ),
+                        ),
+                        5,
+                    )
+                    ax1.plot(strait_line, strait_line, c="k")
+                    ax1.set_xlabel("Predicted")
+                    ax1.set_ylabel("Observed")
+                    ax1.axhline(y=0, color="k")
+                    ax1.axvline(x=0, color="k")
+                    ax1.axis("equal")
+                    writer.add_figure("Parody", fig1, n_iter)
 
                     # Add QQ plot to TensorBoard
                     fig2, ax2 = plt.subplots()
@@ -684,13 +745,6 @@ class BravoModel(AlgoMainRNNBase):
                     ax2.set_xlim(left=0, right=1)
                     ax2.set_ylim(bottom=0, top=1)
                     writer.add_figure("QQ", fig2, n_iter)
-
-                    # # Write information about CPU usage to tensorboard
-                    # percentages = dict(zip(
-                    #     list(np.arange(1, num_logical_processors + 1).astype(str)),
-                    #     psutil.cpu_percent(interval=None, percpu=True)
-                    # ))
-                    # writer.add_scalars("CPU_utilization", percentages, n_iter)
 
                     logger.info(
                         "Epoch: {} Iteration: {}. Train_loss: {}. val_loss: {}, LR: {}".format(
@@ -863,9 +917,6 @@ class BravoModel(AlgoMainRNNBase):
                 ]
             )
 
-        if self.configs.get("plot_results", True):
-            self._plot_results(measured, predictions)
-
     def run_prediction(
         self,
         val_loader,
@@ -903,15 +954,19 @@ class BravoModel(AlgoMainRNNBase):
             if transformation_method == "minmaxscale":
                 maxs = np.tile(
                     train_max[
-                        train_max.filter(like=self.configs["target_var"], axis=0).index
+                        train_max.filter(
+                            like=self.configs["data_input"]["target_var"], axis=0
+                        ).index
                     ].values,
-                    len(self.configs["qs"]),
+                    len(self.configs["learning_algorithm"]["quantiles"]),
                 )
                 mins = np.tile(
                     train_min[
-                        train_min.filter(like=self.configs["target_var"], axis=0).index
+                        train_min.filter(
+                            like=self.configs["data_input"]["target_var"], axis=0
+                        ).index
                     ].values,
-                    len(self.configs["qs"]),
+                    len(self.configs["learning_algorithm"]["quantiles"]),
                 )
                 final_preds = (
                     (maxs - mins) * semifinal_preds
@@ -919,15 +974,19 @@ class BravoModel(AlgoMainRNNBase):
             elif transformation_method == "standard":
                 stds = np.tile(
                     train_std[
-                        train_std.filter(like=self.configs["target_var"], axis=0).index
+                        train_std.filter(
+                            like=self.configs["data_input"]["target_var"], axis=0
+                        ).index
                     ].values,
-                    len(self.configs["qs"]),
+                    len(self.configs["learning_algorithm"]["quantiles"]),
                 )
                 means = np.tile(
                     train_mean[
-                        train_mean.filter(like=self.configs["target_var"], axis=0).index
+                        train_mean.filter(
+                            like=self.configs["data_input"]["target_var"], axis=0
+                        ).index
                     ].values,
-                    len(self.configs["qs"]),
+                    len(self.configs["learning_algorithm"]["quantiles"]),
                 )
                 final_preds = (semifinal_preds * stds) + means
             else:
@@ -938,133 +997,16 @@ class BravoModel(AlgoMainRNNBase):
                 )
 
         num_timestamps = (
-            self.configs["S2S_stagger"]["initial_num"]
-            + self.configs["S2S_stagger"]["secondary_num"]
+            self.configs["data_processing"]["S2S_stagger"]["initial_num"]
+            + self.configs["data_processing"]["S2S_stagger"]["secondary_num"]
         )
         final_preds = np.array(final_preds)
         final_preds = final_preds.reshape(
-            (final_preds.shape[0], len(self.configs["qs"]), num_timestamps)
+            (
+                final_preds.shape[0],
+                len(self.configs["learning_algorithm"]["quantiles"]),
+                num_timestamps,
+            )
         )
 
         return final_preds
-
-    def _plot_results(self, measured, predictions):
-        """
-        Plot some stats about the predictions
-        """  # # Plotting
-        if self.configs["test_method"] == "external":
-            file = os.path.join(
-                self.configs["data_dir"],
-                self.configs["building"],
-                "{}_external_test.h5".format(self.configs["target_var"]),
-            )
-            test_data = pd.read_hdf(file, key="df")
-        else:
-            test_data = pd.read_hdf(
-                os.path.join(self.file_prefix, "internal_test.h5"), key="df"
-            )
-
-        num_timestamps = (
-            self.configs["S2S_stagger"]["initial_num"]
-            + self.configs["S2S_stagger"]["secondary_num"]
-        )
-        data = np.array(predictions)
-        data = data.reshape((data.shape[0], len(self.configs["qs"]), num_timestamps))
-
-        # Plotting the test set with ALL of the sequence forecasts
-        fig, ax1 = plt.subplots()
-        plt.rc("font", family="serif")
-        # for j in range(0, test_data.shape[0]-1):
-        # for j in range(1515, 1528):
-        for j in range(1, 100):
-            time_index = pd.date_range(
-                start=test_data.index[j],
-                periods=self.configs["S2S_stagger"]["initial_num"],
-                freq="{}min".format(self.configs["resample_freq"]),
-            )
-            ax1.plot(time_index, measured[j, :], color="black", lw=1, zorder=5)
-            if j == 70:
-                ax1.plot(
-                    time_index,
-                    measured[j, :],
-                    label="Load",
-                    color="black",
-                    lw=1,
-                    zorder=5,
-                )
-                ax1.plot(
-                    time_index,
-                    data[j, int(len(self.configs["qs"]) / 2), :],
-                    label="Median Predicted Load",
-                    color="Blue",
-                    zorder=5,
-                )
-        #         for i in range(int(len(self.configs["qs"]) / 2) - 1, -1, -1):
-        #             q = self.configs["qs"][i]
-        #             ax1.plot(
-        #                 time_index, data[j, i, :], color="black", lw=0.3, alpha=1, zorder=i
-        #             )
-        #             ax1.plot(
-        #                 time_index,
-        #                 data[j, -(i + 1), :],
-        #                 color="black",
-        #                 lw=0.3,
-        #                 alpha=1,
-        #                 zorder=i,
-        #             )
-        #             ax1.fill_between(
-        #                 time_index,
-        #                 data[j, i, :],
-        #                 data[j, -(i + 1), :],
-        #                 color=cmap(q),
-        #                 alpha=1,
-        #                 label="{}% PI".format(round((self.configs["qs"][-(i + 1)] - q) * 100)),
-        #                 zorder=i,
-        #             )
-
-        # plt.axvline(test_data.index[1522], c="black", ls="--", lw=1, zorder=6)
-        # plt.text(
-        #     test_data.index[1522],
-        #     50,
-        #     r" Forecast generation time $t_{gen}$",
-        #     rotation=0,
-        #     fontsize=8,
-        # )
-
-        # plt.xticks(rotation=45, ha="right", va="top", fontsize=8)
-        myFmt = mdates.DateFormatter("%H:%M:%S\n%m/%d/%y")
-        ax1.xaxis.set_major_formatter(myFmt)
-        plt.xticks(fontsize=8)
-        plt.yticks(fontsize=8)
-        plt.ylabel("Cafe Main Power (kW)", fontsize=8)
-        plt.xlabel("Date & Time", fontsize=8)
-        ax1.legend(loc="upper center", fontsize=8)
-
-        plt.show()
-
-        # Plotting residuals vs time-step-ahead forecast
-        # residuals = data[:, 3, :] - measured
-        # fig, ax2 = plt.subplots()
-        # for i in range(0, residuals.shape[1]):
-        #     ax2.scatter(
-        #         np.ones_like(residuals[:, i]) * i, residuals[:, i], s=0.5, color="black"
-        #     )
-        # ax2.set_xlabel("Forecast steps ahead")
-        # ax2.set_ylabel("Residual")
-        # plt.show()
-
-        # # Plot residuals for all times in test set
-        # fig, ax3 = plt.subplots()
-        # ax3.scatter(test_data.index, residuals[:, -1], s=0.5, alpha=0.5, color="blue")
-        # ax3.set_ylabel("Residual of 18hr ahead forecast")
-        # ax3.scatter(
-        #     processed.index[
-        #         np.logical_and(processed.index.weekday == 5, processed.index.hour == 12)
-        #     ],
-        #     residuals[:, -1][
-        #         np.logical_and(processed.index.weekday == 5, processed.index.hour == 12)
-        #     ],
-        #     s=20,
-        #     alpha=0.5,
-        #     color="black",
-        # )
