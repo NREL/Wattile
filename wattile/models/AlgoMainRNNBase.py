@@ -231,7 +231,7 @@ class AlgoMainRNNBase(ABC):
 
             # Create visualization
             if self.configs["plot_comparison"]:
-                timeseries_comparison(self.configs)
+                timeseries_comparison(self.configs, 0)
 
         elif self.configs["use_case"] == "validation":
             self.run_validation(
@@ -245,7 +245,7 @@ class AlgoMainRNNBase(ABC):
 
             # Create visualization
             if self.configs["plot_comparison"]:
-                timeseries_comparison(self.configs)
+                timeseries_comparison(self.configs, 0)
 
         elif self.configs["use_case"] == "prediction":
             return self.run_prediction(

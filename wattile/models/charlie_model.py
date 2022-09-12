@@ -1,8 +1,8 @@
 import math
+import os
 import time
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
@@ -227,7 +227,7 @@ class S2S_BA_Model(nn.Module):
         return preds
 
 
-#############################################################################################
+#########################################################################################
 # Luong Attention module
 class Attn(torch.nn.Module):
     def __init__(self, method, hidden_size):
@@ -385,10 +385,12 @@ class S2S_LA_Model(nn.Module):
         return preds
 
 
-####################################################################################################
+#########################################################################################
 class CharlieModel:
     def __init__(self, configs):
         self.configs = configs
+        self.file_prefix = Path(configs["exp_dir"])
+        self.file_prefix.mkdir(parents=True, exist_ok=True)
 
     def main(self, train_df, val_df):  # noqa: C901 TODO: remove noqa
         """
@@ -495,6 +497,8 @@ class CharlieModel:
         for epoch in range(EPOCHES):
             t_one_epoch = time.time()
             print("Epoch {}".format(epoch + 1))
+
+            # training
             total_usage_loss = 0
             for b_idx in range(0, train_df_predictor.shape[0], BATCH_SIZE):
 
@@ -553,16 +557,12 @@ class CharlieModel:
             train_loss.append(total_usage_loss)
             print("\tTRAINING: {} total train USAGE loss.\n".format(total_usage_loss))
 
-            ########################################################################################
-            # TESTING
+            # testing
             y = None
             y_pred = None
             pred = None
-            total_usage_loss = (
-                0  # <---------------------------------------------------------------
-            )
+            total_usage_loss = 0
             all_preds = []
-
             for b_idx in range(0, val_df_predictor.shape[0], BATCH_SIZE):
                 with torch.no_grad():
                     x = torch.from_numpy(
@@ -621,8 +621,6 @@ class CharlieModel:
                 "\t\t   PRED: {}\n\n".format(pred[-1].cpu().detach().numpy().flatten())
             )
 
-            y_last = y[-1].cpu().detach().numpy().flatten()
-            pred_last = pred[-1].cpu().detach().numpy().flatten()
             t2_one_epoch = time.time()
             time_one_epoch = t2_one_epoch - t_one_epoch
             print(
@@ -631,36 +629,19 @@ class CharlieModel:
                 )
             )
 
-        ############################################################################################
-        # SAVING MODEL
+        # saving model
         if save_model:
             torch.save(model.state_dict(), f"{self.configs['exp_dir']}/torch_model")
 
-        ############################################################################################
-        # RESULTS
-        # for plotting and accuracy
-        predictions = torch.cat(all_preds, 0)
-        predictions = predictions.cpu().detach().numpy().flatten()
-        measured = val_df_target.flatten()
-
-        # using the measured usage from top of script here
-        mae3 = (sum(abs(measured - predictions))) / (len(measured))
-        mape3 = (sum(abs((measured - predictions) / measured))) / (len(measured))
-
-        # for std
-        mape_s = abs((measured - predictions) / measured)
-        s = mape_s.std()
-        mae_s = abs(measured - predictions)
-        s2 = mae_s.std()
-        print(
-            "\n\tACTUAL ACC. RESULTS: MAE, MAPE: {} and {}%".format(mae3, mape3 * 100.0)
+        # saving results
+        predictions = pd.DataFrame(all_preds[0].numpy().squeeze())
+        predictions = predictions.add_prefix("{}_".format(str(loss_function_qs)))
+        targets = pd.DataFrame(val_df_target.squeeze())
+        predictions.to_hdf(
+            os.path.join(self.file_prefix, "predictions.h5"), key="df", mode="w"
         )
-
-        pd.DataFrame(predictions, columns=[f"q{loss_function_qs}"]).to_csv(
-            f"{self.configs['exp_dir']}/q{loss_function_qs}.csv", index=None
-        )
-        pd.DataFrame(measured, columns=["measured"]).to_csv(
-            f"{self.configs['exp_dir']}/measured.csv", index=None
+        targets.to_hdf(
+            os.path.join(self.file_prefix, "measured.h5"), key="df", mode="w"
         )
 
         # total time of run
@@ -668,17 +649,3 @@ class CharlieModel:
         total = t1 - t0
         print("\nTIME ELAPSED: {} seconds OR {} minutes".format(total, total / 60.0))
         print("\nEnd of run")
-        plt.show()
-        for_plotting = [measured, predictions, y_last, pred_last]
-        return (
-            s,
-            s2,
-            mape_s,
-            mae_s,
-            mae3,
-            mape3,
-            total / 60.0,
-            train_loss,
-            test_loss,
-            for_plotting,
-        )
