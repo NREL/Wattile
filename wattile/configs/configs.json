@@ -55,9 +55,6 @@
  "exp_id": "7-9-21",
  "arch_type": "RNN",
  "arch_type_variant": "lstm",
- "transformation_method": "minmaxscale",
- "train_batch_size": 26,
- "val_batch_size": 1,
  "convert_csvs": false,
  "resample_freq": 15,
  "S2S_learning": {
@@ -69,36 +66,42 @@
   "cuda": false,
   "save_model": false
  },
- "train_val_split": "Random",
- "qs": [
-  0.025,
-  0.05,
-  0.1,
-  0.25,
-  0.5,
-  0.75,
-  0.9,
-  0.95,
-  0.975
- ],
- "use_case": "train",
- "run_resume": false,
- "num_epochs": 100,
- "weight_decay": 0.001,
- "hidden_nodes": 25,
- "layer_dim": 1,
- "eval_frequency": 500,
- "lr_config": {
-  "base": 0.001,
-  "schedule": false,
-  "type": "performance",
-  "factor": 0.1,
-  "min": 1e-05,
-  "patience": 30,
-  "step_size": 75
+ "learning_algorithm": {
+   "use_case": "train",
+   "arch_version": "alfa",
+   "num_epochs": 100,
+   "hidden_nodes": 25,
+   "layer_dim": 1,
+   "quantiles": [
+    0.025,
+    0.05,
+    0.1,
+    0.25,
+    0.5,
+    0.75,
+    0.9,
+    0.95,
+    0.975
+   ],
+   "transformation_method": "minmaxscale",
+   "train_batch_size": 26,
+   "val_batch_size": 1,
+   "train_val_split": "Random",
+   "run_resume": false,
+   "weight_decay": 0.001,
+   "lr_config": {
+    "base": 0.001,
+    "schedule": false,
+    "type": "performance",
+    "factor": 0.1,
+    "min": 1e-05,
+    "patience": 30,
+    "step_size": 75
+   },
+   "smoothing_alpha": 0.001,
+   "eval_frequency": 500,
+   "test_method": "external"
  },
- "smoothing_alpha": 0.001,
- "test_method": "external",
  "external_test": {
   "year": "2020",
   "month": [1, 2, 3, 4, 5, 6]

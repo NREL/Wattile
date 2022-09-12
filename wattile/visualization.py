@@ -45,7 +45,7 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
     len_tot = len(predictions.columns)
     target = measured.to_numpy()
     c_target = "rgb(228,26,28)"
-    len_c_list = int((len(configs["qs"]) - 1) / 2)
+    len_c_list = int((len(configs["learning_algorithm"]["quantiles"]) - 1) / 2)
     if len_c_list == 1:
         c_list = [color_base]
     else:
@@ -73,7 +73,7 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
     ######################################################################
     # if quantiles were only defined with median
     ######################################################################
-    if len(configs["qs"]) == 1:
+    if len(configs["learning_algorithm"]["quantiles"]) == 1:
 
         # -----------------------------------------------------------------
         # extracting median prediction
@@ -94,13 +94,13 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
         # -----------------------------------------------------------------
         # extracting median prediction
         # -----------------------------------------------------------------
-        if configs["arch_version"] == "alfa":
+        if configs["learning_algorithm"]["arch_version"] == "alfa":
 
             idx_col_med = len_c_list
             prediction_median = predictions.iloc[:, idx_col_med].values
             time_ahead = 0
 
-        elif configs["arch_version"] == "bravo":
+        elif configs["learning_algorithm"]["arch_version"] == "bravo":
 
             idx_col_med_start = (
                 len_c_list * configs["data_processing"]["S2S_stagger"]["initial_num"]
@@ -115,7 +115,7 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
                 .values
             )
 
-        elif configs["arch_version"] == "charlie":
+        elif configs["learning_algorithm"]["arch_version"] == "charlie":
 
             window_target_size_count = window_target_size_count = int(
                 pd.Timedelta(window_target_size) / pd.Timedelta(resample_interval)
@@ -132,12 +132,14 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
         # extracting quantile predictions
         # -----------------------------------------------------------------
         count_qntl = 0
-        for qntl in range(0, int((len(configs["qs"]) - 1) / 2)):
+        for qntl in range(
+            0, int((len(configs["learning_algorithm"]["quantiles"]) - 1) / 2)
+        ):
 
             # -------------------------------------------------------------
             # filtering data for correct quantile
             # -------------------------------------------------------------
-            if configs["arch_version"] == "alfa":
+            if configs["learning_algorithm"]["arch_version"] == "alfa":
 
                 idx_col_low_start = qntl
                 idx_col_high_start = len_tot - idx_col_low_start - 1
@@ -145,7 +147,7 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
                 prediction_low = predictions.iloc[:, idx_col_low_start].to_numpy()
                 prediction_high = predictions.iloc[:, idx_col_high_start].to_numpy()
 
-            elif configs["arch_version"] == "bravo":
+            elif configs["learning_algorithm"]["arch_version"] == "bravo":
 
                 idx_col_low_start = (
                     qntl * configs["data_processing"]["S2S_stagger"]["initial_num"]
@@ -166,7 +168,7 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
                     :, idx_col_high_start:idx_col_high_end
                 ].to_numpy()
 
-            elif configs["arch_version"] == "charlie":
+            elif configs["learning_algorithm"]["arch_version"] == "charlie":
 
                 window_target_size_count = int(
                     pd.Timedelta(window_target_size) / pd.Timedelta(resample_interval)
@@ -191,7 +193,10 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
             # -------------------------------------------------------------
             # calculating Interval Score details
             # -------------------------------------------------------------
-            alph = 1 - (configs["qs"][-(qntl + 1)] - configs["qs"][qntl])
+            alph = 1 - (
+                configs["learning_algorithm"]["quantiles"][-(qntl + 1)]
+                - configs["learning_algorithm"]["quantiles"][qntl]
+            )
             IS = (
                 (prediction_high - prediction_low)
                 + (2 / alph) * (prediction_low - target) * (target < prediction_low)

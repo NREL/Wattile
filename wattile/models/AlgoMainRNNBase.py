@@ -39,7 +39,7 @@ class AlgoMainRNNBase(ABC):
         :return:
         """
 
-        if self.configs["use_case"] == "train":
+        if self.configs["learning_algorithm"]["use_case"] == "train":
             # Find factors of the length of train and val df's
             # and pick the closest one to the requested batch sizes
             train_bth = factors(train_data.shape[0])
@@ -155,12 +155,14 @@ class AlgoMainRNNBase(ABC):
         :return: None
         """
 
-        transformation_method = self.configs["transformation_method"]
-        run_train = self.configs["use_case"] == "train"
-        num_epochs = self.configs["num_epochs"]
-        run_resume = self.configs["run_resume"]
-        tr_desired_batch_size = self.configs["train_batch_size"]
-        te_desired_batch_size = self.configs["val_batch_size"]
+        transformation_method = self.configs["learning_algorithm"][
+            "transformation_method"
+        ]
+        run_train = self.configs["learning_algorithm"]["use_case"] == "train"
+        num_epochs = self.configs["learning_algorithm"]["num_epochs"]
+        run_resume = self.configs["learning_algorithm"]["run_resume"]
+        tr_desired_batch_size = self.configs["learning_algorithm"]["train_batch_size"]
+        te_desired_batch_size = self.configs["learning_algorithm"]["val_batch_size"]
 
         # Setting random seed with constant
         torch.manual_seed(self.configs["data_processing"]["random_seed"])
@@ -200,7 +202,7 @@ class AlgoMainRNNBase(ABC):
         )
 
         # Already did sequential padding: Convert to iterable dataset (DataLoaders)
-        if self.configs["train_val_split"] == "Random":
+        if self.configs["learning_algorithm"]["train_val_split"] == "Random":
             train_loader, val_loader = self.data_iterable_random(
                 train_data,
                 val_data,
@@ -210,7 +212,7 @@ class AlgoMainRNNBase(ABC):
             )
         logger.info("Data converted to iterable dataset")
 
-        if self.configs["use_case"] == "train":
+        if self.configs["learning_algorithm"]["use_case"] == "train":
             self.run_training(
                 train_loader,
                 val_loader,
@@ -233,7 +235,7 @@ class AlgoMainRNNBase(ABC):
             if self.configs["plot_comparison"]:
                 timeseries_comparison(self.configs, 0)
 
-        elif self.configs["use_case"] == "validation":
+        elif self.configs["learning_algorithm"]["use_case"] == "validation":
             self.run_validation(
                 val_loader,
                 val_df,
@@ -247,7 +249,7 @@ class AlgoMainRNNBase(ABC):
             if self.configs["plot_comparison"]:
                 timeseries_comparison(self.configs, 0)
 
-        elif self.configs["use_case"] == "prediction":
+        elif self.configs["learning_algorithm"]["use_case"] == "prediction":
             return self.run_prediction(
                 val_loader,
                 val_df,

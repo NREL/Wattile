@@ -399,14 +399,14 @@ class CharlieModel:
         window_target_size = self.configs["data_processing"]["S2S_window"][
             "window_width_target"
         ]
-        hidden_size = self.configs["hidden_nodes"]
+        hidden_size = self.configs["learning_algorithm"]["hidden_nodes"]
         cell_type = "lstm"
         la_method = "none"
         attention_model = "BA"
         cuda = False
-        epochs = self.configs["num_epochs"]
-        batch_size = self.configs["train_batch_size"]
-        loss_function_qs = self.configs["qs"]
+        epochs = self.configs["learning_algorithm"]["num_epochs"]
+        batch_size = self.configs["learning_algorithm"]["train_batch_size"]
+        loss_function_qs = self.configs["learning_algorithm"]["quantiles"]
         save_model = True
         seed = self.configs["data_processing"]["random_seed"]
         resample_interval = self.configs["data_processing"]["resample_interval"]

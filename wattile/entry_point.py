@@ -51,7 +51,10 @@ def create_input_dataframe(configs):
     configs["target_feat_name"] = [configs["data_input"]["target_var"]]
 
     # Get the dataset
-    if configs["use_case"] == "validation" and configs["test_method"] == "internal":
+    if (
+        configs["learning_algorithm"]["use_case"] == "validation"
+        and configs["learning_algorithm"]["test_method"] == "internal"
+    ):
         data = pd.read_hdf(os.path.join(local_results_dir, "internal_test.h5"))
     else:
         data = read_dataset_from_file(configs)
@@ -73,11 +76,13 @@ def run_model(configs, train_df, val_df):
     """
     local_results_dir = pathlib.Path(configs["exp_dir"])
 
-    if configs["use_case"] == "train":
+    if configs["learning_algorithm"]["use_case"] == "train":
         # Check the model training process
         torch_file = os.path.join(local_results_dir, "torch_model")
         if os.path.exists(torch_file):
-            check = bp.check_complete(torch_file, configs["num_epochs"])
+            check = bp.check_complete(
+                torch_file, configs["learning_algorithm"]["num_epochs"]
+            )
             # If we already have the desired number of epochs, don't do anything else
             if check:
                 print(
@@ -89,8 +94,8 @@ def run_model(configs, train_df, val_df):
         # If the torch file doesnt exist yet, and run_resume=True, then reset it to false so it can
         # start from scratch
         else:
-            if configs["run_resume"]:
-                configs["run_resume"] = False
+            if configs["learning_algorithm"]["run_resume"]:
+                configs["learning_algorithm"]["run_resume"] = False
                 print(
                     "Model for {} doesnt exist yet. Resetting run_resume to False".format(
                         configs["data_input"]["target_var"]
@@ -99,13 +104,17 @@ def run_model(configs, train_df, val_df):
 
     # Choose what ML architecture to use and execute the corresponding script
     if configs["arch_type"] == "RNN":
-        model_class = MODELS_DICT.get(configs["arch_version"])
+        model_class = MODELS_DICT.get(configs["learning_algorithm"]["arch_version"])
         if model_class is None:
             raise ValueError(f"Invalid arch version {configs['arch_version']}")
         else:
             model = model_class(configs)
 
-        logger.info("training with arch version {}".format(configs["arch_version"]))
+        logger.info(
+            "training with arch version {}".format(
+                configs["learning_algorithm"]["arch_version"]
+            )
+        )
 
         # Prepare data for the RNN model type
         results = model.main(train_df, val_df)

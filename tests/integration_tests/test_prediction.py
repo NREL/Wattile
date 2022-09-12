@@ -47,8 +47,8 @@ BRAVO_CONFIG_PATCH = {"arch_version": "bravo"}
 
 def test_prediction_alfa(config_for_tests, tmpdir):
     # don't run training
-    config_for_tests["arch_version"] = "alfa"
-    config_for_tests["use_case"] = "prediction"
+    config_for_tests["learning_algorithm"]["arch_version"] = "alfa"
+    config_for_tests["learning_algorithm"]["use_case"] = "prediction"
 
     # use a temp result dir
     exp_dir = tmpdir / "train_results"
@@ -63,14 +63,17 @@ def test_prediction_alfa(config_for_tests, tmpdir):
 
     results = epb.main(config_for_tests)
 
-    assert results.shape[1:] == (len(config_for_tests["qs"]), 1)  # one for 1 timestamp
+    assert results.shape[1:] == (
+        len(config_for_tests["learning_algorithm"]["quantiles"]),
+        1,
+    )  # one for 1 timestamp
     assert (exp_dir / "output.out").exists()
 
 
 def test_prediction_bravo(config_for_tests, tmpdir):
     # don't run training
-    config_for_tests["arch_version"] = "bravo"
-    config_for_tests["use_case"] = "prediction"
+    config_for_tests["learning_algorithm"]["arch_version"] = "bravo"
+    config_for_tests["learning_algorithm"]["use_case"] = "prediction"
 
     # use a temp result dir
     exp_dir = pathlib.Path(tmpdir) / "train_results"
@@ -89,6 +92,9 @@ def test_prediction_bravo(config_for_tests, tmpdir):
         config_for_tests["data_processing"]["S2S_stagger"]["initial_num"]
         + config_for_tests["data_processing"]["S2S_stagger"]["secondary_num"]
     )
-    assert results.shape[1:] == (len(config_for_tests["qs"]), num_timestamps)
+    assert results.shape[1:] == (
+        len(config_for_tests["learning_algorithm"]["quantiles"]),
+        num_timestamps,
+    )
 
     assert (exp_dir / "output.out").exists()
