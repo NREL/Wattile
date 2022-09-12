@@ -43,7 +43,7 @@ def init_model(configs):
             f"{configs['arch_type_variant']} is not a supported architecture variant"
         )
 
-    hidden_dim = int(configs["learning_algorithm"]["hidden_nodes"])
+    hidden_dim = int(configs["learning_algorithm"]["hidden_size"])
     output_dim = _get_output_dim(configs)
     input_dim = configs["input_dim"]
     layer_dim = configs["learning_algorithm"]["layer_dim"]
