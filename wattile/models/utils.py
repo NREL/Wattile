@@ -25,8 +25,8 @@ def _get_output_dim(configs):
 
     elif arch_version == "bravo":
         return (
-            configs["S2S_stagger"]["initial_num"]
-            + configs["S2S_stagger"]["secondary_num"]
+            configs["data_processing"]["S2S_stagger"]["initial_num"]
+            + configs["data_processing"]["S2S_stagger"]["secondary_num"]
         ) * len(configs["learning_algorithm"]["quantiles"])
 
     else:

@@ -56,13 +56,17 @@ class BravoModel(AlgoMainRNNBase):
         if run_train:
             # Define input feature matrix
             X_train = train_data.drop(
-                train_data.filter(like=self.configs["target_var"], axis=1).columns,
+                train_data.filter(
+                    like=self.configs["data_input"]["target_var"], axis=1
+                ).columns,
                 axis=1,
             ).values.astype(dtype="float32")
 
             # Output variable (batch*72), then (batch*(72*num of qs))
             y_train = train_data[
-                train_data.filter(like=self.configs["target_var"], axis=1).columns
+                train_data.filter(
+                    like=self.configs["data_input"]["target_var"], axis=1
+                ).columns
             ].values.astype(dtype="float32")
             y_train = np.tile(
                 y_train, len(self.configs["learning_algorithm"]["quantiles"])
@@ -82,11 +86,16 @@ class BravoModel(AlgoMainRNNBase):
         # Do the same as above, but for the val set
         # X_val = val_data.drop(self.configs['target_var'], axis=1).values.astype(dtype='float32')
         X_val = val_data.drop(
-            val_data.filter(like=self.configs["target_var"], axis=1).columns, axis=1
+            val_data.filter(
+                like=self.configs["data_input"]["target_var"], axis=1
+            ).columns,
+            axis=1,
         ).values.astype(dtype="float32")
 
         y_val = val_data[
-            val_data.filter(like=self.configs["target_var"], axis=1).columns
+            val_data.filter(
+                like=self.configs["data_input"]["target_var"], axis=1
+            ).columns
         ].values.astype(dtype="float32")
         y_val = np.tile(y_val, len(self.configs["learning_algorithm"]["quantiles"]))
 
@@ -100,8 +109,8 @@ class BravoModel(AlgoMainRNNBase):
 
     def pinball_np(self, output, target):
         num_future_time_instances = (
-            self.configs["S2S_stagger"]["initial_num"]
-            + self.configs["S2S_stagger"]["secondary_num"]
+            self.configs["data_processing"]["S2S_stagger"]["initial_num"]
+            + self.configs["data_processing"]["S2S_stagger"]["secondary_num"]
         )
         resid = target - output
         tau = np.repeat(
@@ -127,8 +136,8 @@ class BravoModel(AlgoMainRNNBase):
         """
 
         num_future_time_instances = (
-            self.configs["S2S_stagger"]["initial_num"]
-            + self.configs["S2S_stagger"]["secondary_num"]
+            self.configs["data_processing"]["S2S_stagger"]["initial_num"]
+            + self.configs["data_processing"]["S2S_stagger"]["secondary_num"]
         )
         resid = target - output
 
@@ -186,8 +195,8 @@ class BravoModel(AlgoMainRNNBase):
         with torch.no_grad():
             # Plug the val set into the model
             num_timestamps = (
-                self.configs["S2S_stagger"]["initial_num"]
-                + self.configs["S2S_stagger"]["secondary_num"]
+                self.configs["data_processing"]["S2S_stagger"]["initial_num"]
+                + self.configs["data_processing"]["S2S_stagger"]["secondary_num"]
             )
             model.eval()
             preds = []
@@ -223,13 +232,17 @@ class BravoModel(AlgoMainRNNBase):
             if transformation_method == "minmaxscale":
                 maxs = np.tile(
                     train_max[
-                        train_max.filter(like=self.configs["target_var"], axis=0).index
+                        train_max.filter(
+                            like=self.configs["data_input"]["target_var"], axis=0
+                        ).index
                     ].values,
                     len(self.configs["learning_algorithm"]["quantiles"]),
                 )
                 mins = np.tile(
                     train_min[
-                        train_min.filter(like=self.configs["target_var"], axis=0).index
+                        train_min.filter(
+                            like=self.configs["data_input"]["target_var"], axis=0
+                        ).index
                     ].values,
                     len(self.configs["learning_algorithm"]["quantiles"]),
                 )
@@ -242,13 +255,17 @@ class BravoModel(AlgoMainRNNBase):
             elif transformation_method == "standard":
                 stds = np.tile(
                     train_std[
-                        train_std.filter(like=self.configs["target_var"], axis=0).index
+                        train_std.filter(
+                            like=self.configs["data_input"]["target_var"], axis=0
+                        ).index
                     ].values,
                     len(self.configs["learning_algorithm"]["quantiles"]),
                 )
                 means = np.tile(
                     train_mean[
-                        train_mean.filter(like=self.configs["target_var"], axis=0).index
+                        train_mean.filter(
+                            like=self.configs["data_input"]["target_var"], axis=0
+                        ).index
                     ].values,
                     len(self.configs["learning_algorithm"]["quantiles"]),
                 )
@@ -689,10 +706,15 @@ class BravoModel(AlgoMainRNNBase):
 
                     # Add parody plot to TensorBoard
                     # fig2, ax2 = plt.subplots()
-                    # ax2.scatter(predictions, val_df[self.configs["target_var"]], s=5, alpha=0.3)
+                    # ax2.scatter(predictions, val_df[
+                    #   self.configs["data_input"]["target_var"]],
+                    #   s=5,
+                    #   alpha=0.3)
                     # strait_line = np.linspace(
-                    #     min(min(predictions), min(val_df[self.configs["target_var"]])),
-                    #     max(max(predictions), max(val_df[self.configs["target_var"]])),
+                    #     min(min(predictions), min(val_df[
+                    #       self.configs["data_input"]["target_var"]])),
+                    #     max(max(predictions), max(
+                    #   val_df[self.configs["data_input"]["target_var"]])),
                     #     5,
                     # )
                     # ax2.plot(strait_line, strait_line, c="k")
@@ -931,13 +953,17 @@ class BravoModel(AlgoMainRNNBase):
             if transformation_method == "minmaxscale":
                 maxs = np.tile(
                     train_max[
-                        train_max.filter(like=self.configs["target_var"], axis=0).index
+                        train_max.filter(
+                            like=self.configs["data_input"]["target_var"], axis=0
+                        ).index
                     ].values,
                     len(self.configs["learning_algorithm"]["quantiles"]),
                 )
                 mins = np.tile(
                     train_min[
-                        train_min.filter(like=self.configs["target_var"], axis=0).index
+                        train_min.filter(
+                            like=self.configs["data_input"]["target_var"], axis=0
+                        ).index
                     ].values,
                     len(self.configs["learning_algorithm"]["quantiles"]),
                 )
@@ -947,13 +973,17 @@ class BravoModel(AlgoMainRNNBase):
             elif transformation_method == "standard":
                 stds = np.tile(
                     train_std[
-                        train_std.filter(like=self.configs["target_var"], axis=0).index
+                        train_std.filter(
+                            like=self.configs["data_input"]["target_var"], axis=0
+                        ).index
                     ].values,
                     len(self.configs["learning_algorithm"]["quantiles"]),
                 )
                 means = np.tile(
                     train_mean[
-                        train_mean.filter(like=self.configs["target_var"], axis=0).index
+                        train_mean.filter(
+                            like=self.configs["data_input"]["target_var"], axis=0
+                        ).index
                     ].values,
                     len(self.configs["learning_algorithm"]["quantiles"]),
                 )
@@ -966,8 +996,8 @@ class BravoModel(AlgoMainRNNBase):
                 )
 
         num_timestamps = (
-            self.configs["S2S_stagger"]["initial_num"]
-            + self.configs["S2S_stagger"]["secondary_num"]
+            self.configs["data_processing"]["S2S_stagger"]["initial_num"]
+            + self.configs["data_processing"]["S2S_stagger"]["secondary_num"]
         )
         final_preds = np.array(final_preds)
         final_preds = final_preds.reshape(
@@ -988,7 +1018,7 @@ class BravoModel(AlgoMainRNNBase):
             file = os.path.join(
                 self.configs["data_dir"],
                 self.configs["building"],
-                "{}_external_test.h5".format(self.configs["target_var"]),
+                "{}_external_test.h5".format(self.configs["data_input"]["target_var"]),
             )
             test_data = pd.read_hdf(file, key="df")
         else:
@@ -997,8 +1027,8 @@ class BravoModel(AlgoMainRNNBase):
             )
 
         num_timestamps = (
-            self.configs["S2S_stagger"]["initial_num"]
-            + self.configs["S2S_stagger"]["secondary_num"]
+            self.configs["data_processing"]["S2S_stagger"]["initial_num"]
+            + self.configs["data_processing"]["S2S_stagger"]["secondary_num"]
         )
         data = np.array(predictions)
         data = data.reshape(
@@ -1017,7 +1047,7 @@ class BravoModel(AlgoMainRNNBase):
         for j in range(1, 100):
             time_index = pd.date_range(
                 start=test_data.index[j],
-                periods=self.configs["S2S_stagger"]["initial_num"],
+                periods=self.configs["data_processing"]["S2S_stagger"]["initial_num"],
                 freq="{}min".format(self.configs["resample_freq"]),
             )
             ax1.plot(time_index, measured[j, :], color="black", lw=1, zorder=5)

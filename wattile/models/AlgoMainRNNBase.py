@@ -165,7 +165,7 @@ class AlgoMainRNNBase(ABC):
         te_desired_batch_size = self.configs["learning_algorithm"]["val_batch_size"]
 
         # Setting random seed with constant
-        torch.manual_seed(self.configs["random_seed"])
+        torch.manual_seed(self.configs["data_processing"]["random_seed"])
 
         # Create writer object for TensorBoard
         writer_path = str(self.file_prefix)
@@ -223,7 +223,7 @@ class AlgoMainRNNBase(ABC):
                 transformation_method,
                 train_batch_size,
                 val_batch_size,
-                self.configs["feat_timelag"]["lag_count"] + 1,
+                self.configs["data_processing"]["feat_timelag"]["lag_count"] + 1,
                 num_train_data,
             )
 
@@ -242,7 +242,7 @@ class AlgoMainRNNBase(ABC):
                 writer,
                 transformation_method,
                 val_batch_size,
-                self.configs["feat_timelag"]["lag_count"] + 1,
+                self.configs["data_processing"]["feat_timelag"]["lag_count"] + 1,
             )
 
             # Create visualization
@@ -256,7 +256,7 @@ class AlgoMainRNNBase(ABC):
                 writer,
                 transformation_method,
                 val_batch_size,
-                self.configs["feat_timelag"]["lag_count"] + 1,
+                self.configs["data_processing"]["feat_timelag"]["lag_count"] + 1,
             )
 
         else:

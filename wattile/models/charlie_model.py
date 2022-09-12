@@ -396,7 +396,9 @@ class CharlieModel:
         """
         process the data into three-dimensional for S2S model, train the model, and test the restuls
         """
-        window_target_size = self.configs["S2S_window"]["window_width_target"]
+        window_target_size = self.configs["data_processing"]["S2S_window"][
+            "window_width_target"
+        ]
         hidden_size = self.configs["learning_algorithm"]["hidden_nodes"]
         cell_type = "lstm"
         la_method = "none"
@@ -406,8 +408,8 @@ class CharlieModel:
         batch_size = self.configs["learning_algorithm"]["train_batch_size"]
         loss_function_qs = self.configs["learning_algorithm"]["quantiles"]
         save_model = True
-        seed = self.configs["random_seed"]
-        resample_interval = self.configs["resample_interval"]
+        seed = self.configs["data_processing"]["random_seed"]
+        resample_interval = self.configs["data_processing"]["resample_interval"]
         window_target_size_count = int(
             pd.Timedelta(window_target_size) / pd.Timedelta(resample_interval)
         )
@@ -629,7 +631,10 @@ class CharlieModel:
 
         # saving model
         if save_model:
-            torch.save(model.state_dict(), f"{self.configs['exp_dir']}/torch_model")
+            torch.save(
+                model.state_dict(),
+                "{}/torch_model".format(self.configs["exp_dir"]),
+            )
 
         # saving results
         predictions = pd.DataFrame(all_preds[0].numpy().squeeze())

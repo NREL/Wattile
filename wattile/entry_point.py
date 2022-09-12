@@ -48,7 +48,7 @@ def create_input_dataframe(configs):
     """
     local_results_dir = pathlib.Path(configs["exp_dir"])
 
-    configs["target_feat_name"] = [configs["target_var"]]
+    configs["target_feat_name"] = [configs["data_input"]["target_var"]]
 
     # Get the dataset
     if (
@@ -86,7 +86,9 @@ def run_model(configs, train_df, val_df):
             # If we already have the desired number of epochs, don't do anything else
             if check:
                 print(
-                    "{} already completed. Moving on...".format(configs["target_var"])
+                    "{} already completed. Moving on...".format(
+                        configs["data_input"]["target_var"]
+                    )
                 )
                 return
         # If the torch file doesnt exist yet, and run_resume=True, then reset it to false so it can
@@ -96,7 +98,7 @@ def run_model(configs, train_df, val_df):
                 configs["learning_algorithm"]["run_resume"] = False
                 print(
                     "Model for {} doesnt exist yet. Resetting run_resume to False".format(
-                        configs["target_var"]
+                        configs["data_input"]["target_var"]
                     )
                 )
 
@@ -121,7 +123,7 @@ def run_model(configs, train_df, val_df):
         "Run with arch {}({}), on {}, with session ID {}, is done!".format(
             configs["arch_type"],
             configs["arch_type_variant"],
-            configs["target_var"],
+            configs["data_input"]["target_var"],
             configs["exp_id"],
         )
     )

@@ -56,8 +56,8 @@ def test_prediction_alfa(config_for_tests, tmpdir):
     shutil.copytree(TESTS_FIXTURES_PATH / "alfa_exp_dir", exp_dir)
 
     # create a temp data dir
-    config_for_tests["data_dir"] = str(tmpdir / "data")
-    config_for_tests["data_config"] = "Synthetic Site Config.json"
+    config_for_tests["data_input"]["data_dir"] = str(tmpdir / "data")
+    config_for_tests["data_input"]["data_config"] = "Synthetic Site Config.json"
     data_dir = tmpdir / "data"
     popluate_test_data_dir_with_prediction_data(data_dir)
 
@@ -81,16 +81,16 @@ def test_prediction_bravo(config_for_tests, tmpdir):
     shutil.copytree(TESTS_FIXTURES_PATH / "bravo_exp_dir", exp_dir)
 
     # create a temp data dir
-    config_for_tests["data_dir"] = str(tmpdir / "data")
-    config_for_tests["data_config"] = "Synthetic Site Config.json"
+    config_for_tests["data_input"]["data_dir"] = str(tmpdir / "data")
+    config_for_tests["data_input"]["data_config"] = "Synthetic Site Config.json"
     data_dir = tmpdir / "data"
     popluate_test_data_dir_with_prediction_data(data_dir)
 
     results = epb.main(config_for_tests)
 
     num_timestamps = (
-        config_for_tests["S2S_stagger"]["initial_num"]
-        + config_for_tests["S2S_stagger"]["secondary_num"]
+        config_for_tests["data_processing"]["S2S_stagger"]["initial_num"]
+        + config_for_tests["data_processing"]["S2S_stagger"]["secondary_num"]
     )
     assert results.shape[1:] == (
         len(config_for_tests["learning_algorithm"]["quantiles"]),
