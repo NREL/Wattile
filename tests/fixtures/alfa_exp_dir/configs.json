@@ -51,12 +51,8 @@
   "train_size_factor": 4
  },
  "exp_dir": "tests/fixtures/v4_exp_dir",
- "arch_version": "alfa",
- "exp_id": "Debugging_for_rolling_stats",
  "arch_type": "RNN",
  "arch_type_variant": "lstm",
- "convert_csvs": false,
- "resample_freq": 15,
  "learning_algorithm": {
    "use_case": "train",
    "arch_version": "alfa",

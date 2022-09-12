@@ -51,12 +51,8 @@
    "train_size_factor": 1
  },
  "exp_dir": "exp_dir",
- "arch_version": "alfa",
- "exp_id": "7-9-21",
  "arch_type": "RNN",
  "arch_type_variant": "lstm",
- "convert_csvs": false,
- "resample_freq": 15,
  "S2S_learning": {
   "cell_type": "lstm",
   "attention_model": "BA",

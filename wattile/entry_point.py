@@ -120,11 +120,10 @@ def run_model(configs, train_df, val_df):
         results = model.main(train_df, val_df)
 
     logger.info(
-        "Run with arch {}({}), on {}, with session ID {}, is done!".format(
+        "Run with arch {}({}), on {} is done!".format(
             configs["arch_type"],
             configs["arch_type_variant"],
             configs["data_input"]["target_var"],
-            configs["exp_id"],
         )
     )
     return results
