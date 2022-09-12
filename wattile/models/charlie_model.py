@@ -439,7 +439,7 @@ class CharlieModel:
                 window_target_size
             )
 
-            alpha = 0.001
+            alpha = self.configs["learning_algorithm"]["smoothing_alpha"]
             log_term = torch.zeros_like(resid, device=device)
             log_term[resid < 0] = torch.log(1 + torch.exp(resid[resid < 0] / alpha)) - (
                 resid[resid < 0] / alpha
