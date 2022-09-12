@@ -633,13 +633,19 @@ class AlfaModel(AlgoMainRNNBase):
                     fig1, ax1 = plt.subplots()
                     ax1.scatter(
                         predictions,
-                        val_df[self.configs["target_var"]],
+                        val_df[self.configs["data_input"]["target_var"]],
                         s=5,
                         alpha=0.3,
                     )
                     strait_line = np.linspace(
-                        min(min(predictions), min(val_df[self.configs["target_var"]])),
-                        max(max(predictions), max(val_df[self.configs["target_var"]])),
+                        min(
+                            min(predictions),
+                            min(val_df[self.configs["data_input"]["target_var"]]),
+                        ),
+                        max(
+                            max(predictions),
+                            max(val_df[self.configs["data_input"]["target_var"]]),
+                        ),
                         5,
                     )
                     ax1.plot(strait_line, strait_line, c="k")
