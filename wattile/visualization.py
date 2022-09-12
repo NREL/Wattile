@@ -56,7 +56,7 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
     list_c_is.reverse()
     y_min = 10000000
     y_max = 0
-    window_target_size = configs["S2S_window"]["window_width_target"]
+    window_target_size = configs["data_processing"]["S2S_window"]["window_width_target"]
     resample_interval = configs["resample_interval"]
 
     ######################################################################
