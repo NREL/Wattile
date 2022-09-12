@@ -45,7 +45,7 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
     len_tot = len(predictions.columns)
     target = measured.to_numpy()
     c_target = "rgb(228,26,28)"
-    len_c_list = int((len(configs["qs"]) - 1) / 2)
+    len_c_list = int((len(configs["learning_algorithm"]["quantiles"]) - 1) / 2)
     if len_c_list == 1:
         c_list = [color_base]
     else:
@@ -73,7 +73,7 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
     ######################################################################
     # if quantiles were only defined with median
     ######################################################################
-    if len(configs["qs"]) == 1:
+    if len(configs["learning_algorithm"]["quantiles"]) == 1:
 
         # -----------------------------------------------------------------
         # extracting median prediction
@@ -127,7 +127,9 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
         # extracting quantile predictions
         # -----------------------------------------------------------------
         count_qntl = 0
-        for qntl in range(0, int((len(configs["qs"]) - 1) / 2)):
+        for qntl in range(
+            0, int((len(configs["learning_algorithm"]["quantiles"]) - 1) / 2)
+        ):
 
             # -------------------------------------------------------------
             # filtering data for correct quantile
@@ -184,7 +186,10 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
             # -------------------------------------------------------------
             # calculating Interval Score details
             # -------------------------------------------------------------
-            alph = 1 - (configs["qs"][-(qntl + 1)] - configs["qs"][qntl])
+            alph = 1 - (
+                configs["learning_algorithm"]["quantiles"][-(qntl + 1)]
+                - configs["learning_algorithm"]["quantiles"][qntl]
+            )
             IS = (
                 (prediction_high - prediction_low)
                 + (2 / alph) * (prediction_low - target) * (target < prediction_low)
