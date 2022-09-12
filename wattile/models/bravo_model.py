@@ -5,7 +5,6 @@ import os
 import pathlib
 import timeit
 
-import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -691,39 +690,51 @@ class BravoModel(AlgoMainRNNBase):
                     # val_rmse.append(errors['rmse'])
                     writer.add_scalars("Loss", {"val": errors["pinball_loss"]}, n_iter)
 
-                    # Save the final predictions to a file
-                    # pd.DataFrame(predictions).to_hdf(
-                    #     os.path.join(self.file_prefix, "predictions.h5"), key="df", mode="w"
-                    # )
-                    # pd.DataFrame(measured).to_hdf(
-                    #     os.path.join(self.file_prefix, "measured.h5"), key="df", mode="w"
-                    # )
-
-                    # Save the QQ information to a file
-                    # Q_vals.to_hdf(
-                    #     os.path.join(self.file_prefix, "QQ_data.h5"), key="df", mode="w"
-                    # )
-
                     # Add parody plot to TensorBoard
-                    # fig2, ax2 = plt.subplots()
-                    # ax2.scatter(predictions, val_df[
-                    #   self.configs["data_input"]["target_var"]],
-                    #   s=5,
-                    #   alpha=0.3)
-                    # strait_line = np.linspace(
-                    #     min(min(predictions), min(val_df[
-                    #       self.configs["data_input"]["target_var"]])),
-                    #     max(max(predictions), max(
-                    #   val_df[self.configs["data_input"]["target_var"]])),
-                    #     5,
-                    # )
-                    # ax2.plot(strait_line, strait_line, c="k")
-                    # ax2.set_xlabel("Predicted")
-                    # ax2.set_ylabel("Observed")
-                    # ax2.axhline(y=0, color="k")
-                    # ax2.axvline(x=0, color="k")
-                    # ax2.axis("equal")
-                    # writer.add_figure("Parody", fig2, n_iter)
+                    fig1, ax1 = plt.subplots()
+                    for lag in range(self.configs["S2S_stagger"]["initial_num"]):
+                        ax1.scatter(
+                            predictions[:, lag * len(self.configs["qs"])],
+                            val_df[
+                                self.configs["data_input"]["target_var"]
+                                + "_lag_"
+                                + str(lag)
+                            ],
+                            s=5,
+                            alpha=0.3,
+                        )
+                    strait_line = np.linspace(
+                        min(
+                            np.amin(predictions),
+                            min(
+                                val_df.loc[
+                                    :,
+                                    val_df.columns.str.contains(
+                                        self.configs["data_input"]["target_var"]
+                                    ),
+                                ].min()
+                            ),
+                        ),
+                        max(
+                            np.amax(predictions),
+                            max(
+                                val_df.loc[
+                                    :,
+                                    val_df.columns.str.contains(
+                                        self.configs["data_input"]["target_var"]
+                                    ),
+                                ].max()
+                            ),
+                        ),
+                        5,
+                    )
+                    ax1.plot(strait_line, strait_line, c="k")
+                    ax1.set_xlabel("Predicted")
+                    ax1.set_ylabel("Observed")
+                    ax1.axhline(y=0, color="k")
+                    ax1.axvline(x=0, color="k")
+                    ax1.axis("equal")
+                    writer.add_figure("Parody", fig1, n_iter)
 
                     # Add QQ plot to TensorBoard
                     fig2, ax2 = plt.subplots()
@@ -734,13 +745,6 @@ class BravoModel(AlgoMainRNNBase):
                     ax2.set_xlim(left=0, right=1)
                     ax2.set_ylim(bottom=0, top=1)
                     writer.add_figure("QQ", fig2, n_iter)
-
-                    # # Write information about CPU usage to tensorboard
-                    # percentages = dict(zip(
-                    #     list(np.arange(1, num_logical_processors + 1).astype(str)),
-                    #     psutil.cpu_percent(interval=None, percpu=True)
-                    # ))
-                    # writer.add_scalars("CPU_utilization", percentages, n_iter)
 
                     logger.info(
                         "Epoch: {} Iteration: {}. Train_loss: {}. val_loss: {}, LR: {}".format(
@@ -913,9 +917,6 @@ class BravoModel(AlgoMainRNNBase):
                 ]
             )
 
-        if self.configs.get("plot_results", True):
-            self._plot_results(measured, predictions)
-
     def run_prediction(
         self,
         val_loader,
@@ -1009,137 +1010,3 @@ class BravoModel(AlgoMainRNNBase):
         )
 
         return final_preds
-
-    def _plot_results(self, measured, predictions):
-        """
-        Plot some stats about the predictions
-        """  # # Plotting
-        if self.configs["learning_algorithm"]["test_method"] == "external":
-            file = os.path.join(
-                self.configs["data_dir"],
-                self.configs["building"],
-                "{}_external_test.h5".format(self.configs["data_input"]["target_var"]),
-            )
-            test_data = pd.read_hdf(file, key="df")
-        else:
-            test_data = pd.read_hdf(
-                os.path.join(self.file_prefix, "internal_test.h5"), key="df"
-            )
-
-        num_timestamps = (
-            self.configs["data_processing"]["S2S_stagger"]["initial_num"]
-            + self.configs["data_processing"]["S2S_stagger"]["secondary_num"]
-        )
-        data = np.array(predictions)
-        data = data.reshape(
-            (
-                data.shape[0],
-                len(self.configs["learning_algorithm"]["quantiles"]),
-                num_timestamps,
-            )
-        )
-
-        # Plotting the test set with ALL of the sequence forecasts
-        fig, ax1 = plt.subplots()
-        plt.rc("font", family="serif")
-        # for j in range(0, test_data.shape[0]-1):
-        # for j in range(1515, 1528):
-        for j in range(1, 100):
-            time_index = pd.date_range(
-                start=test_data.index[j],
-                periods=self.configs["data_processing"]["S2S_stagger"]["initial_num"],
-                freq="{}min".format(self.configs["resample_freq"]),
-            )
-            ax1.plot(time_index, measured[j, :], color="black", lw=1, zorder=5)
-            if j == 70:
-                ax1.plot(
-                    time_index,
-                    measured[j, :],
-                    label="Load",
-                    color="black",
-                    lw=1,
-                    zorder=5,
-                )
-                ax1.plot(
-                    time_index,
-                    data[
-                        j,
-                        int(len(self.configs["learning_algorithm"]["quantiles"]) / 2),
-                        :,
-                    ],
-                    label="Median Predicted Load",
-                    color="Blue",
-                    zorder=5,
-                )
-        #         for i in range(int(len(self.configs["learning_algorithm"]["quantiles"]) / 2) - 1,
-        #                           -1, -1):
-        #             q = self.configs["learning_algorithm"]["quantiles"][i]
-        #             ax1.plot(
-        #                 time_index, data[j, i, :], color="black", lw=0.3, alpha=1, zorder=i
-        #             )
-        #             ax1.plot(
-        #                 time_index,
-        #                 data[j, -(i + 1), :],
-        #                 color="black",
-        #                 lw=0.3,
-        #                 alpha=1,
-        #                 zorder=i,
-        #             )
-        #             ax1.fill_between(
-        #                 time_index,
-        #                 data[j, i, :],
-        #                 data[j, -(i + 1), :],
-        #                 color=cmap(q),
-        #                 alpha=1,
-        #                 label="{}% PI".format(round((
-        #                     self.configs["learning_algorithm"]["quantiles"][-(i + 1)] - q)
-        #                     * 100)),
-        #                 zorder=i,
-        #             )
-
-        # plt.axvline(test_data.index[1522], c="black", ls="--", lw=1, zorder=6)
-        # plt.text(
-        #     test_data.index[1522],
-        #     50,
-        #     r" Forecast generation time $t_{gen}$",
-        #     rotation=0,
-        #     fontsize=8,
-        # )
-
-        # plt.xticks(rotation=45, ha="right", va="top", fontsize=8)
-        myFmt = mdates.DateFormatter("%H:%M:%S\n%m/%d/%y")
-        ax1.xaxis.set_major_formatter(myFmt)
-        plt.xticks(fontsize=8)
-        plt.yticks(fontsize=8)
-        plt.ylabel("Cafe Main Power (kW)", fontsize=8)
-        plt.xlabel("Date & Time", fontsize=8)
-        ax1.legend(loc="upper center", fontsize=8)
-
-        plt.show()
-
-        # Plotting residuals vs time-step-ahead forecast
-        # residuals = data[:, 3, :] - measured
-        # fig, ax2 = plt.subplots()
-        # for i in range(0, residuals.shape[1]):
-        #     ax2.scatter(
-        #         np.ones_like(residuals[:, i]) * i, residuals[:, i], s=0.5, color="black"
-        #     )
-        # ax2.set_xlabel("Forecast steps ahead")
-        # ax2.set_ylabel("Residual")
-        # plt.show()
-
-        # # Plot residuals for all times in test set
-        # fig, ax3 = plt.subplots()
-        # ax3.scatter(test_data.index, residuals[:, -1], s=0.5, alpha=0.5, color="blue")
-        # ax3.set_ylabel("Residual of 18hr ahead forecast")
-        # ax3.scatter(
-        #     processed.index[
-        #         np.logical_and(processed.index.weekday == 5, processed.index.hour == 12)
-        #     ],
-        #     residuals[:, -1][
-        #         np.logical_and(processed.index.weekday == 5, processed.index.hour == 12)
-        #     ],
-        #     s=20,
-        #     alpha=0.5,
-        #     color="black",
-        # )

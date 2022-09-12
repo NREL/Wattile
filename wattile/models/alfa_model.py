@@ -630,24 +630,31 @@ class AlfaModel(AlgoMainRNNBase):
                     writer.add_scalars("Loss", {"val": errors["pinball_loss"]}, n_iter)
 
                     # Add parody plot to TensorBoard
-                    # fig2, ax2 = plt.subplots()
-                    # ax2.scatter(predictions,
-                    # val_df[self.configs["data_input"]["target_var"]],
-                    # s=5, alpha=0.3)
-                    # strait_line = np.linspace(
-                    #     min(min(predictions), min(
-                    # val_df[self.configs["data_input"]["target_var"]])),
-                    #     max(max(predictions),
-                    # max(val_df[self.configs["data_input"]["target_var"]])),
-                    #     5,
-                    # )
-                    # ax2.plot(strait_line, strait_line, c="k")
-                    # ax2.set_xlabel("Predicted")
-                    # ax2.set_ylabel("Observed")
-                    # ax2.axhline(y=0, color="k")
-                    # ax2.axvline(x=0, color="k")
-                    # ax2.axis("equal")
-                    # writer.add_figure("Parody", fig2, n_iter)
+                    fig1, ax1 = plt.subplots()
+                    ax1.scatter(
+                        predictions,
+                        val_df[self.configs["data_input"]["target_var"]],
+                        s=5,
+                        alpha=0.3,
+                    )
+                    strait_line = np.linspace(
+                        min(
+                            min(predictions),
+                            min(val_df[self.configs["data_input"]["target_var"]]),
+                        ),
+                        max(
+                            max(predictions),
+                            max(val_df[self.configs["data_input"]["target_var"]]),
+                        ),
+                        5,
+                    )
+                    ax1.plot(strait_line, strait_line, c="k")
+                    ax1.set_xlabel("Predicted")
+                    ax1.set_ylabel("Observed")
+                    ax1.axhline(y=0, color="k")
+                    ax1.axvline(x=0, color="k")
+                    ax1.axis("equal")
+                    writer.add_figure("Parody", fig1, n_iter)
 
                     # Add QQ plot to TensorBoard
                     fig2, ax2 = plt.subplots()
@@ -716,12 +723,6 @@ class AlfaModel(AlgoMainRNNBase):
         # End training timer
         train_end_time = timeit.default_timer()
         train_time = train_end_time - train_start_time
-
-        # Plot residual stats
-        # fig3, ax3 = plt.subplots()
-        # ax3.plot(np.array(resid_stats)[:, 0], label="Min")
-        # ax3.plot(np.array(resid_stats)[:, 1], label="Max")
-        # plt.show()
 
         # If a training history csv file does not exist, make one
         if not pathlib.Path("Training_history.csv").exists():
@@ -849,9 +850,6 @@ class AlfaModel(AlgoMainRNNBase):
                 ]
             )
 
-        if self.configs.get("plot_results", True):
-            self._plot_results(self.configs, targets, predictions)
-
     def run_prediction(
         self,
         val_loader,
@@ -912,90 +910,3 @@ class AlfaModel(AlgoMainRNNBase):
             )
 
         return final_preds
-
-    def _plot_results(self, targets, predictions):
-        """Plot some stats about the predictions"""
-        if self.configs["learning_algorithm"]["test_method"] == "external":
-            file = os.path.join(
-                self.configs["data_dir"],
-                self.configs["building"],
-                "{}_external_test.h5".format(self.configs["data_input"]["target_var"]),
-            )
-            test_data = pd.read_hdf(file, key="df")
-        else:
-            test_data = pd.read_hdf(
-                os.path.join(self.file_prefix, "internal_test.h5"), key="df"
-            )
-
-        # Plot the results of the test set
-        cmap = plt.get_cmap("Reds")
-        fig, ax1 = plt.subplots(figsize=(20, 4))
-        ax1.plot(
-            test_data.index, targets.iloc[:, 0], label="Actual Demand", color="black"
-        )
-        ax1.plot(
-            test_data.index,
-            predictions.iloc[
-                :, int(len(self.configs["learning_algorithm"]["quantiles"]) / 2)
-            ],
-            label="q = 0.5 forecast",
-            color="red",
-        )
-        for i, q in enumerate(self.configs["learning_algorithm"]["quantiles"]):
-            if q == 0.5:
-                break
-            ax1.fill_between(
-                test_data.index,
-                predictions.iloc[:, i],
-                predictions.iloc[:, -(i + 1)],
-                color=cmap(q),
-                alpha=1,
-                label="{}% PI".format(
-                    round(
-                        (self.configs["learning_algorithm"]["quantiles"][-(i + 1)] - q)
-                        * 100
-                    )
-                ),
-                lw=0,
-            )
-        plt.xticks(rotation=0)
-        ax1.set_ylabel(self.configs["data_input"]["target_var"])
-        ax1.legend()
-        plt.show()
-        # fig.savefig(
-        #     os.path.join(
-        #       self.configs["results_dir"], "{}_test.png".format(
-        # self.configs["data_input"]["target_var"])
-        #     )
-        # )
-
-        # Plotting residuals for the test set
-        residuals = (
-            predictions.iloc[
-                :, int(len(self.configs["learning_algorithm"]["quantiles"]) / 2)
-            ]
-            - targets.iloc[
-                :, int(len(self.configs["learning_algorithm"]["quantiles"]) / 2)
-            ]
-        )
-        fig, ax2 = plt.subplots()
-        ax2.scatter(test_data.index, residuals.values, s=0.5, alpha=0.3, color="blue")
-        ax2.set_ylabel("Median Forecast Residual (kW)")
-        plt.show()
-        print("Done")
-
-        # Plotting out of bounds
-        fig, ax3 = plt.subplots()
-        mask = ~np.logical_and(
-            predictions.iloc[:, 0]
-            < targets.iloc[
-                :, int(len(self.configs["learning_algorithm"]["quantiles"]) / 2)
-            ],
-            predictions.iloc[:, -1]
-            > targets.iloc[
-                :, int(len(self.configs["learning_algorithm"]["quantiles"]) / 2)
-            ],
-        )
-        dates = test_data.index[mask]
-        plt.vlines(dates, 0, 1, alpha=0.05)
-        plt.show()
