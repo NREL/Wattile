@@ -1,16 +1,21 @@
 {
- "target_var": "Synthetic Site Electricity Main Total Power",
- "start_time": "2018-01-01T00:00:00-07:00",
- "end_time": "2022-01-01T00:00:00-07:00",
- "predictor_columns": [
-  "Synthetic Weather Station Dew Point Temperature",
-  "Synthetic Weather Station Diffuse Horizontal Irradiance",
-  "Synthetic Weather Station Direct Normal Irradiance",
-  "Synthetic Weather Station Dry Bulb Temperature",
-  "Synthetic Weather Station Global Horizontal Irradiance",
-  "Synthetic Weather Station Relative Humidity",
-  "Synthetic Weather Station Wind Speed"
- ],
+ "data_input": {
+   "data_dir": "tests/data/Synthetic Site",
+   "data_config": "Synthetic Site Config.json",
+   "start_time": "2018-01-01T00:00:00-07:00",
+   "end_time": "2022-01-01T00:00:00-07:00",
+   "predictor_columns": [
+     "Synthetic Weather Station Dew Point Temperature",
+     "Synthetic Weather Station Diffuse Horizontal Irradiance",
+     "Synthetic Weather Station Direct Normal Irradiance",
+     "Synthetic Weather Station Dry Bulb Temperature",
+     "Synthetic Weather Station Global Horizontal Irradiance",
+     "Synthetic Weather Station Relative Humidity",
+     "Synthetic Weather Station Wind Speed"
+   ],
+   "target_var": "Synthetic Site Electricity Main Total Power"
+ },
+ "exp_dir": "tests/fixtures/v4_exp_dir",
  "arch_version": "alfa",
  "exp_id": "Debugging_for_rolling_stats",
  "arch_type": "RNN",
@@ -19,9 +24,6 @@
  "train_batch_size": 5,
  "val_batch_size": 1,
  "convert_csvs": false,
- "exp_dir": "tests/fixtures/v4_exp_dir",
- "data_dir": "tests/data/Synthetic Site",
- "data_config": "Synthetic Site Config.json",
  "resample_freq": 15,
  "resample_interval": "15min",
  "sequential_splicer": {

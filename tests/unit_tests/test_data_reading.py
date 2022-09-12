@@ -18,8 +18,8 @@ def config_for_tests():
     with open(TESTS_FIXTURES_PATH / "test_configs.json", "r") as read_file:
         configs = json.load(read_file)
 
-    configs["data_dir"] = str(TESTS_DATA_PATH)
-    configs["data_config"] = "Synthetic Site Config.json"
+    configs["data_input"]["data_dir"] = str(TESTS_DATA_PATH)
+    configs["data_input"]["data_config"] = "Synthetic Site Config.json"
 
     return configs
 
@@ -35,6 +35,7 @@ def test_create_input_dataframe(config_for_tests, tmpdir):
 
     assert data.index.inferred_type == "datetime64"
     assert set(data.columns) == set(
-        config_for_tests["predictor_columns"] + [config_for_tests["target_var"]]
+        config_for_tests["data_input"]["predictor_columns"]
+        + [config_for_tests["data_input"]["target_var"]]
     )
     assert data.shape == (10080, 8)

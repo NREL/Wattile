@@ -629,7 +629,10 @@ class CharlieModel:
 
         # saving model
         if save_model:
-            torch.save(model.state_dict(), f"{self.configs['exp_dir']}/torch_model")
+            torch.save(
+                model.state_dict(),
+                "{}/torch_model".format(self.configs["exp_dir"]),
+            )
 
         # saving results
         predictions = pd.DataFrame(all_preds[0].numpy().squeeze())
