@@ -55,7 +55,7 @@ def init_model(configs):
 def load_model(configs):
     model = init_model(configs)
 
-    filepath = pathlib.Path(configs["exp_dir"]) / "torch_model"
+    filepath = pathlib.Path(configs["data_output"]["exp_dir"]) / "torch_model"
     checkpoint = torch.load(filepath)
 
     model.load_state_dict(checkpoint["model_state_dict"])

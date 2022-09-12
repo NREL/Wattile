@@ -20,7 +20,7 @@ def config_for_tests():
         configs = json.load(read_file)
 
     configs["data_input"]["data_dir"] = str(TESTS_DATA_PATH)
-    configs["plot_comparison"] = False
+    configs["data_output"]["plot_comparison"] = False
     configs["data_input"]["data_config"] = "Synthetic Site Config.json"
 
     return configs
