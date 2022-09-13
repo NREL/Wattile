@@ -1,3 +1,4 @@
+import json
 import math
 import os
 import time
@@ -635,6 +636,11 @@ class CharlieModel:
                 model.state_dict(),
                 "{}/torch_model".format(self.configs["exp_dir"]),
             )
+
+        # Write the configurations used for this training process to a json file
+        path = self.file_prefix / "configs.json"
+        with open(path, "w") as fp:
+            json.dump(self.configs, fp, indent=1)
 
         # saving results
         predictions = pd.DataFrame(all_preds[0].numpy().squeeze())
