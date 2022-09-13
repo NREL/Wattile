@@ -67,8 +67,8 @@
    "use_case": "train",
    "arch_version": "bravo",
    "num_epochs": 1,
-   "hidden_nodes": 5,
-   "layer_dim": 1,
+   "hidden_size": 5,
+   "num_layers": 1,
    "qs": [
     0.025,
     0.25,

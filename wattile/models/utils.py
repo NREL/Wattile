@@ -43,13 +43,13 @@ def init_model(configs):
             f"{configs['arch_type_variant']} is not a supported architecture variant"
         )
 
-    hidden_dim = int(configs["learning_algorithm"]["hidden_nodes"])
+    hidden_dim = int(configs["learning_algorithm"]["hidden_size"])
     output_dim = _get_output_dim(configs)
     input_dim = configs["input_dim"]
-    layer_dim = configs["learning_algorithm"]["layer_dim"]
+    num_layers = configs["learning_algorithm"]["num_layers"]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    return model(input_dim, hidden_dim, layer_dim, output_dim, device=device)
+    return model(input_dim, hidden_dim, num_layers, output_dim, device=device)
 
 
 def load_model(configs):

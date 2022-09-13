@@ -400,7 +400,7 @@ class CharlieModel:
         window_target_size = self.configs["data_processing"]["S2S_window"][
             "window_width_target"
         ]
-        hidden_size = self.configs["learning_algorithm"]["hidden_nodes"]
+        hidden_size = self.configs["learning_algorithm"]["hidden_size"]
         cell_type = "lstm"
         la_method = "none"
         attention_model = "BA"
