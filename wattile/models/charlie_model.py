@@ -415,6 +415,8 @@ class CharlieModel:
         window_target_size_count = int(
             pd.Timedelta(window_target_size) / pd.Timedelta(resample_interval)
         )
+        lr = self.configs["learning_algorithm"]["lr_config"]["base"]
+        weight_decay = self.configs["learning_algorithm"]["weight_decay"]
 
         t0 = time.time()
         np.random.seed(seed)
@@ -484,7 +486,7 @@ class CharlieModel:
             )
         )
 
-        opt = optim.Adam(model.parameters(), lr=1e-3)
+        opt = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
         #     loss_fn = nn.MSELoss(reduction='sum')
         loss_fn = quantile_loss
 
