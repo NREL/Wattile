@@ -18,14 +18,16 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
     ######################################################################
     # reading measured and prediction files
     ######################################################################
-    predictions = pd.read_hdf(configs["exp_dir"] + "/predictions.h5")
-    measured = pd.read_hdf(configs["exp_dir"] + "/measured.h5")
+    predictions = pd.read_hdf(configs["data_output"]["exp_dir"] + "/predictions.h5")
+    measured = pd.read_hdf(configs["data_output"]["exp_dir"] + "/measured.h5")
 
     ######################################################################
     # filter data based on portion defined in configs.json
     ######################################################################
-    plot_comparison_portion_start = configs["plot_comparison_portion_start"]
-    plot_comparison_portion_end = configs["plot_comparison_portion_end"]
+    plot_comparison_portion_start = configs["data_output"][
+        "plot_comparison_portion_start"
+    ]
+    plot_comparison_portion_end = configs["data_output"]["plot_comparison_portion_end"]
     predictions = predictions.iloc[
         int(predictions.shape[0] * plot_comparison_portion_start) : int(
             predictions.shape[0] * plot_comparison_portion_end
@@ -449,7 +451,11 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
     ######################################################################
     # saving plot to file
     ######################################################################
-    timeseries_comparison = configs["exp_dir"] + "/Vis_TimeseriesComparisons.svg"
+    timeseries_comparison = (
+        configs["data_output"]["exp_dir"] + "/Vis_TimeseriesComparisons.svg"
+    )
     print("saving timeseries comparison in {}".format(timeseries_comparison))
     pio.write_image(fig, timeseries_comparison)
-    fig.write_html(configs["exp_dir"] + "/Vis_TimeseriesComparisons.html")
+    fig.write_html(
+        configs["data_output"]["exp_dir"] + "/Vis_TimeseriesComparisons.html"
+    )

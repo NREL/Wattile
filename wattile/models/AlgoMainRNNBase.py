@@ -19,7 +19,7 @@ logger = logging.getLogger(str(os.getpid()))
 class AlgoMainRNNBase(ABC):
     def __init__(self, configs):
         self.configs = configs
-        self.file_prefix = Path(configs["exp_dir"])
+        self.file_prefix = Path(configs["data_output"]["exp_dir"])
         self.file_prefix.mkdir(parents=True, exist_ok=True)
 
     def size_the_batches(
@@ -232,7 +232,7 @@ class AlgoMainRNNBase(ABC):
             writer.close()
 
             # Create visualization
-            if self.configs["plot_comparison"]:
+            if self.configs["data_output"]["plot_comparison"]:
                 timeseries_comparison(self.configs, 0)
 
         elif self.configs["learning_algorithm"]["use_case"] == "validation":
@@ -246,7 +246,7 @@ class AlgoMainRNNBase(ABC):
             )
 
             # Create visualization
-            if self.configs["plot_comparison"]:
+            if self.configs["data_output"]["plot_comparison"]:
                 timeseries_comparison(self.configs, 0)
 
         elif self.configs["learning_algorithm"]["use_case"] == "prediction":

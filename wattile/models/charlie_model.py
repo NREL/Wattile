@@ -390,7 +390,7 @@ class S2S_LA_Model(nn.Module):
 class CharlieModel:
     def __init__(self, configs):
         self.configs = configs
-        self.file_prefix = Path(configs["exp_dir"])
+        self.file_prefix = Path(configs["data_output"]["exp_dir"])
         self.file_prefix.mkdir(parents=True, exist_ok=True)
 
     def main(self, train_df, val_df):  # noqa: C901 TODO: remove noqa
@@ -634,7 +634,7 @@ class CharlieModel:
         if save_model:
             torch.save(
                 model.state_dict(),
-                "{}/torch_model".format(self.configs["exp_dir"]),
+                "{}/torch_model".format(self.configs["data_output"]["exp_dir"]),
             )
 
         # Write the configurations used for this training process to a json file

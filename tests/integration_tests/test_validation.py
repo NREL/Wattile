@@ -20,7 +20,7 @@ def config_for_tests():
         configs = json.load(read_file)
 
     configs["data_input"]["data_dir"] = str(TESTS_DATA_PATH)
-    configs["plot_comparison"] = False
+    configs["data_output"]["plot_comparison"] = False
     configs["data_input"]["data_config"] = "Synthetic Site Config.json"
 
     return configs
@@ -45,7 +45,7 @@ def test_validation(config_for_tests, tmpdir, config_patch, test_exp_dir):
     config_for_tests["learning_algorithm"]["use_case"] = "validation"
 
     exp_dir = pathlib.Path(tmpdir) / "train_results"
-    config_for_tests["exp_dir"] = str(exp_dir)
+    config_for_tests["data_output"]["exp_dir"] = str(exp_dir)
     shutil.copytree(test_exp_dir, exp_dir)
 
     epb.main(config_for_tests)
