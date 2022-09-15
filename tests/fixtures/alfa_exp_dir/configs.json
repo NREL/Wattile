@@ -56,9 +56,9 @@
   "data_split": "80:10:10",
   "train_size_factor": 4
  },
- "arch_type": "RNN",
- "arch_type_variant": "lstm",
  "learning_algorithm": {
+   "arch_type": "RNN",
+   "arch_type_variant": "lstm",
    "use_case": "train",
    "arch_version": "alfa",
    "num_epochs": 1,
