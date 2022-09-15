@@ -23,12 +23,12 @@ class S2S_Model(nn.Module):
         self.hidden_size = hidden_size
         self.cell_type = cell_type
 
-        if self.cell_type not in ["rnn", "gru", "lstm"]:
+        if self.cell_type not in ["vanilla", "gru", "lstm"]:
             raise ValueError(
                 self.cell_type,
                 " is not an appropriate cell type. Please select one of rnn, gru, or lstm.",
             )
-        if self.cell_type == "rnn":
+        if self.cell_type == "vanilla":
             self.Ecell = nn.RNNCell(self.input_size, self.hidden_size)
             self.Dcell = nn.RNNCell(1, self.hidden_size)
         if self.cell_type == "gru":
@@ -45,7 +45,7 @@ class S2S_Model(nn.Module):
     # function to intialize weight parameters.
     # Refer to Saxe at al. paper that explains why to use orthogonal init weights
     def init(self):
-        if self.cell_type == "rnn" or self.cell_type == "gru":
+        if self.cell_type == "vanilla" or self.cell_type == "gru":
             for p in self.parameters():
                 if p.dim() > 1:
                     init.orthogonal_(p.data, gain=1.0)
@@ -62,7 +62,7 @@ class S2S_Model(nn.Module):
     def consume(self, x):
         # encoder forward function
         # for rnn and gru
-        if self.cell_type == "rnn" or self.cell_type == "gru":
+        if self.cell_type == "vanilla" or self.cell_type == "gru":
             h = torch.zeros(x.shape[0], self.hidden_size)
             if self.use_cuda:
                 h = h.cuda()
@@ -86,7 +86,7 @@ class S2S_Model(nn.Module):
         # decoder forward function
         preds = []
         # for rnn and gru
-        if self.cell_type == "rnn" or self.cell_type == "gru":
+        if self.cell_type == "vanilla" or self.cell_type == "gru":
             for step in range(target_length):
                 h = self.Dcell(pred_usage, h)
                 pred_usage = self.lin_usage(h)
@@ -119,12 +119,12 @@ class S2S_BA_Model(nn.Module):
         self.use_cuda = use_cuda
         self.cell_type = cell_type
 
-        if self.cell_type not in ["rnn", "gru", "lstm"]:
+        if self.cell_type not in ["vanilla", "gru", "lstm"]:
             raise ValueError(
                 self.cell_type,
                 " is not an appropriate cell type. Please select one of rnn, gru, or lstm.",
             )
-        if self.cell_type == "rnn":
+        if self.cell_type == "vanilla":
             self.Ecell = nn.RNNCell(self.input_size, self.hidden_size)
             self.Dcell = nn.RNNCell(1 + self.hidden_size, self.hidden_size)
         if self.cell_type == "gru":
@@ -144,7 +144,7 @@ class S2S_BA_Model(nn.Module):
 
     # function to intialize weight parameters
     def init(self):
-        if self.cell_type == "rnn" or self.cell_type == "gru":
+        if self.cell_type == "vanilla" or self.cell_type == "gru":
             for p in self.parameters():
                 if p.dim() > 1:
                     init.orthogonal_(p.data, gain=1.0)
@@ -160,7 +160,7 @@ class S2S_BA_Model(nn.Module):
 
     def consume(self, x):
         # for rnn and gru
-        if self.cell_type == "rnn" or self.cell_type == "gru":
+        if self.cell_type == "vanilla" or self.cell_type == "gru":
             # encoder forward function
             h = torch.zeros(x.shape[0], self.hidden_size)
             encoder_outputs = torch.zeros(x.shape[1], x.shape[0], self.hidden_size)
@@ -192,7 +192,7 @@ class S2S_BA_Model(nn.Module):
         # decoder with attention function
         preds = []
         # for rnn and gru
-        if self.cell_type == "rnn" or self.cell_type == "gru":
+        if self.cell_type == "vanilla" or self.cell_type == "gru":
             for step in range(target_length):
                 h_copies = h.expand(encoder_outputs.shape[0], -1, -1)
                 energies = torch.tanh(
@@ -298,7 +298,7 @@ class S2S_LA_Model(nn.Module):
         self.input_size = input_size
         self.hidden_size = hidden_size
 
-        if self.cell_type == "rnn":
+        if self.cell_type == "vanilla":
             self.Ecell = nn.RNNCell(self.input_size, self.hidden_size)
             self.Dcell = nn.RNNCell(1, self.hidden_size)
         if self.cell_type == "gru":
@@ -316,7 +316,7 @@ class S2S_LA_Model(nn.Module):
 
     # function to intialize weight parameters
     def init(self):
-        if self.cell_type == "rnn" or self.cell_type == "gru":
+        if self.cell_type == "vanilla" or self.cell_type == "gru":
             for p in self.parameters():
                 if p.dim() > 1:
                     init.orthogonal_(p.data, gain=1.0)
@@ -331,7 +331,7 @@ class S2S_LA_Model(nn.Module):
                     init.constant_(p.data[self.hidden_size : 2 * self.hidden_size], 1.0)
 
     def consume(self, x):
-        if self.cell_type == "rnn" or self.cell_type == "gru":
+        if self.cell_type == "vanilla" or self.cell_type == "gru":
             # encoder forward function
             h = torch.zeros(x.shape[0], self.hidden_size)
             encoder_outputs = torch.zeros(x.shape[1], x.shape[0], self.hidden_size)
@@ -361,7 +361,7 @@ class S2S_LA_Model(nn.Module):
     def predict(self, pred_usage, h, encoder_outputs, target_length):
         # decoder with attention function
         preds = []
-        if self.cell_type == "rnn" or self.cell_type == "gru":
+        if self.cell_type == "vanilla" or self.cell_type == "gru":
             for step in range(target_length):
                 h = self.Dcell(pred_usage, h)
                 attn_weights = self.attn(h, encoder_outputs)
