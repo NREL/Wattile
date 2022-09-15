@@ -694,7 +694,9 @@ class BravoModel(AlgoMainRNNBase):
 
                     # Add parody plot to TensorBoard
                     fig1, ax1 = plt.subplots()
-                    for lag in range(self.configs["S2S_stagger"]["initial_num"]):
+                    for lag in range(
+                        self.configs["learning_algorithm"]["S2S_stagger"]["initial_num"]
+                    ):
                         ax1.scatter(
                             predictions[:, lag * len(self.configs["qs"])],
                             val_df[
