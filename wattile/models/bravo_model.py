@@ -698,7 +698,11 @@ class BravoModel(AlgoMainRNNBase):
                         self.configs["data_processing"]["S2S_stagger"]["initial_num"]
                     ):
                         ax1.scatter(
-                            predictions[:, lag * len(self.configs["qs"])],
+                            predictions[
+                                :,
+                                lag
+                                * len(self.configs["learning_algorithm"]["quantiles"]),
+                            ],
                             val_df[
                                 self.configs["data_input"]["target_var"]
                                 + "_lag_"
