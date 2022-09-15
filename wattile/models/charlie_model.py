@@ -401,7 +401,7 @@ class CharlieModel:
             "window_width_target"
         ]
         hidden_size = self.configs["learning_algorithm"]["hidden_size"]
-        cell_type = "lstm"
+        cell_type = self.configs["learning_algorithm"]["arch_type_variant"]
         la_method = "none"
         attention_model = "BA"
         cuda = False

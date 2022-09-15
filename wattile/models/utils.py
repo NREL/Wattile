@@ -34,9 +34,9 @@ def _get_output_dim(configs):
 
 
 def init_model(configs):
-    if configs["arch_type_variant"] == "vanilla":
+    if configs["learning_algorithm"]["arch_type_variant"] == "vanilla":
         model = rnn.RNNModel
-    elif configs["arch_type_variant"] == "lstm":
+    elif configs["learning_algorithm"]["arch_type_variant"] == "lstm":
         model = lstm.LSTM_Model
     else:
         raise ConfigsError(

@@ -122,7 +122,7 @@ def run_model(configs, train_df, val_df):
     logger.info(
         "Run with arch {}({}), on {} is done!".format(
             configs["learning_algorithm"]["arch_type"],
-            configs["arch_type_variant"],
+            configs["learning_algorithm"]["arch_type_variant"],
             configs["data_input"]["target_var"],
         )
     )
