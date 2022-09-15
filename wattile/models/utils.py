@@ -40,7 +40,9 @@ def init_model(configs):
         model = lstm.LSTM_Model
     else:
         raise ConfigsError(
-            f"{configs['arch_type_variant']} is not a supported architecture variant"
+            "{} is not a supported architecture variant".format(
+                configs["learning_algorithm"]["arch_type_variant"]
+            )
         )
 
     hidden_dim = int(configs["learning_algorithm"]["hidden_size"])
