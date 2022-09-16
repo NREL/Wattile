@@ -466,8 +466,10 @@ class BravoModel(AlgoMainRNNBase):
             epoch_range = np.arange(num_epochs)
 
             logger.info(
-                f"A new {self.configs['arch_type_variant']} {self.configs['arch_type']} "
-                "model instantiated"
+                "A new {} {} model instantiated".format(
+                    self.configs["learning_algorithm"]["arch_type_variant"],
+                    self.configs["learning_algorithm"]["arch_type"],
+                )
             )
 
         # Move model and data to GPU, if availiable
@@ -692,9 +694,15 @@ class BravoModel(AlgoMainRNNBase):
 
                     # Add parody plot to TensorBoard
                     fig1, ax1 = plt.subplots()
-                    for lag in range(self.configs["S2S_stagger"]["initial_num"]):
+                    for lag in range(
+                        self.configs["data_processing"]["S2S_stagger"]["initial_num"]
+                    ):
                         ax1.scatter(
-                            predictions[:, lag * len(self.configs["qs"])],
+                            predictions[
+                                :,
+                                lag
+                                * len(self.configs["learning_algorithm"]["quantiles"]),
+                            ],
                             val_df[
                                 self.configs["data_input"]["target_var"]
                                 + "_lag_"

@@ -401,8 +401,10 @@ class AlfaModel(AlgoMainRNNBase):
             epoch_range = np.arange(num_epochs)
 
             logger.info(
-                f"A new {self.configs['arch_type_variant']} {self.configs['arch_type']} "
-                "model instantiated"
+                "A new {} {} model instantiated".format(
+                    self.configs["learning_algorithm"]["arch_type_variant"],
+                    self.configs["learning_algorithm"]["arch_type"],
+                )
             )
 
         # Move model and data to GPU, if availiable

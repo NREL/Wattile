@@ -209,7 +209,7 @@ def timelag_predictors(data, configs):
     data = pd.concat(temp_holder, axis=1)
 
     # If this is an RNN model
-    if configs["arch_type"] == "RNN":
+    if configs["learning_algorithm"]["arch_type"] == "RNN":
         # re-append the shifted target column to the dataframe
         data[target_var] = target.shift(freq="-" + lag_interval_forecast)
 

@@ -56,14 +56,14 @@
   "data_split": "80:10:10",
   "train_size_factor": 4
  },
- "arch_type": "RNN",
- "arch_type_variant": "lstm",
  "resample_interval": "15min",
  "sequential_splicer": {
   "active": true,
   "window_width": "3h"
  },
  "learning_algorithm": {
+   "arch_type": "RNN",
+   "arch_type_variant": "lstm",
    "use_case": "train",
    "arch_version": "bravo",
    "num_epochs": 1,
