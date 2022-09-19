@@ -120,8 +120,8 @@ def read_dataset_from_file(configs):
         needed_columns=configs["data_input"]["predictor_columns"],
     )
 
-    if configs["predictor_columns"] == []:
-        configs["predictor_columns"] = list(data_full_p.columns)
+    if configs["data_input"]["predictor_columns"] == []:
+        configs["data_input"]["predictor_columns"] = list(data_full_p.columns)
 
     # read in target data
     target_data_info = df_inputdata[df_inputdata.contentType == "targets"]
