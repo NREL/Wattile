@@ -19,7 +19,7 @@ logger = logging.getLogger(str(os.getpid()))
 class AlgoMainRNNBase(ABC):
     def __init__(self, configs):
         self.configs = configs
-        self.file_prefix = Path(configs["exp_dir"])
+        self.file_prefix = Path(configs["data_output"]["exp_dir"])
         self.file_prefix.mkdir(parents=True, exist_ok=True)
 
     def size_the_batches(
@@ -39,7 +39,7 @@ class AlgoMainRNNBase(ABC):
         :return:
         """
 
-        if self.configs["use_case"] == "train":
+        if self.configs["learning_algorithm"]["use_case"] == "train":
             # Find factors of the length of train and val df's
             # and pick the closest one to the requested batch sizes
             train_bth = factors(train_data.shape[0])
@@ -155,15 +155,17 @@ class AlgoMainRNNBase(ABC):
         :return: None
         """
 
-        transformation_method = self.configs["transformation_method"]
-        run_train = self.configs["use_case"] == "train"
-        num_epochs = self.configs["num_epochs"]
-        run_resume = self.configs["run_resume"]
-        tr_desired_batch_size = self.configs["train_batch_size"]
-        te_desired_batch_size = self.configs["val_batch_size"]
+        transformation_method = self.configs["learning_algorithm"][
+            "transformation_method"
+        ]
+        run_train = self.configs["learning_algorithm"]["use_case"] == "train"
+        num_epochs = self.configs["learning_algorithm"]["num_epochs"]
+        run_resume = self.configs["learning_algorithm"]["run_resume"]
+        tr_desired_batch_size = self.configs["learning_algorithm"]["train_batch_size"]
+        te_desired_batch_size = self.configs["learning_algorithm"]["val_batch_size"]
 
         # Setting random seed with constant
-        torch.manual_seed(self.configs["random_seed"])
+        torch.manual_seed(self.configs["data_processing"]["random_seed"])
 
         # Create writer object for TensorBoard
         writer_path = str(self.file_prefix)
@@ -200,7 +202,7 @@ class AlgoMainRNNBase(ABC):
         )
 
         # Already did sequential padding: Convert to iterable dataset (DataLoaders)
-        if self.configs["train_val_split"] == "Random":
+        if self.configs["learning_algorithm"]["train_val_split"] == "Random":
             train_loader, val_loader = self.data_iterable_random(
                 train_data,
                 val_data,
@@ -210,7 +212,7 @@ class AlgoMainRNNBase(ABC):
             )
         logger.info("Data converted to iterable dataset")
 
-        if self.configs["use_case"] == "train":
+        if self.configs["learning_algorithm"]["use_case"] == "train":
             self.run_training(
                 train_loader,
                 val_loader,
@@ -221,7 +223,7 @@ class AlgoMainRNNBase(ABC):
                 transformation_method,
                 train_batch_size,
                 val_batch_size,
-                self.configs["feat_timelag"]["lag_count"] + 1,
+                self.configs["data_processing"]["feat_timelag"]["lag_count"] + 1,
                 num_train_data,
             )
 
@@ -230,31 +232,31 @@ class AlgoMainRNNBase(ABC):
             writer.close()
 
             # Create visualization
-            if self.configs["plot_comparison"]:
-                timeseries_comparison(self.configs)
+            if self.configs["data_output"]["plot_comparison"]:
+                timeseries_comparison(self.configs, 0)
 
-        elif self.configs["use_case"] == "validation":
+        elif self.configs["learning_algorithm"]["use_case"] == "validation":
             self.run_validation(
                 val_loader,
                 val_df,
                 writer,
                 transformation_method,
                 val_batch_size,
-                self.configs["feat_timelag"]["lag_count"] + 1,
+                self.configs["data_processing"]["feat_timelag"]["lag_count"] + 1,
             )
 
             # Create visualization
-            if self.configs["plot_comparison"]:
-                timeseries_comparison(self.configs)
+            if self.configs["data_output"]["plot_comparison"]:
+                timeseries_comparison(self.configs, 0)
 
-        elif self.configs["use_case"] == "prediction":
+        elif self.configs["learning_algorithm"]["use_case"] == "prediction":
             return self.run_prediction(
                 val_loader,
                 val_df,
                 writer,
                 transformation_method,
                 val_batch_size,
-                self.configs["feat_timelag"]["lag_count"] + 1,
+                self.configs["data_processing"]["feat_timelag"]["lag_count"] + 1,
             )
 
         else:

@@ -47,48 +47,54 @@ BRAVO_CONFIG_PATCH = {"arch_version": "bravo"}
 
 def test_prediction_alfa(config_for_tests, tmpdir):
     # don't run training
-    config_for_tests["arch_version"] = "alfa"
-    config_for_tests["use_case"] = "prediction"
+    config_for_tests["learning_algorithm"]["arch_version"] = "alfa"
+    config_for_tests["learning_algorithm"]["use_case"] = "prediction"
 
     # use a temp result dir
     exp_dir = tmpdir / "train_results"
-    config_for_tests["exp_dir"] = str(exp_dir)
+    config_for_tests["data_output"]["exp_dir"] = str(exp_dir)
     shutil.copytree(TESTS_FIXTURES_PATH / "alfa_exp_dir", exp_dir)
 
     # create a temp data dir
-    config_for_tests["data_dir"] = str(tmpdir / "data")
-    config_for_tests["data_config"] = "Synthetic Site Config.json"
+    config_for_tests["data_input"]["data_dir"] = str(tmpdir / "data")
+    config_for_tests["data_input"]["data_config"] = "Synthetic Site Config.json"
     data_dir = tmpdir / "data"
     popluate_test_data_dir_with_prediction_data(data_dir)
 
     results = epb.main(config_for_tests)
 
-    assert results.shape[1:] == (len(config_for_tests["qs"]), 1)  # one for 1 timestamp
+    assert results.shape[1:] == (
+        len(config_for_tests["learning_algorithm"]["quantiles"]),
+        1,
+    )  # one for 1 timestamp
     assert (exp_dir / "output.out").exists()
 
 
 def test_prediction_bravo(config_for_tests, tmpdir):
     # don't run training
-    config_for_tests["arch_version"] = "bravo"
-    config_for_tests["use_case"] = "prediction"
+    config_for_tests["learning_algorithm"]["arch_version"] = "bravo"
+    config_for_tests["learning_algorithm"]["use_case"] = "prediction"
 
     # use a temp result dir
     exp_dir = pathlib.Path(tmpdir) / "train_results"
-    config_for_tests["exp_dir"] = str(exp_dir)
+    config_for_tests["data_output"]["exp_dir"] = str(exp_dir)
     shutil.copytree(TESTS_FIXTURES_PATH / "bravo_exp_dir", exp_dir)
 
     # create a temp data dir
-    config_for_tests["data_dir"] = str(tmpdir / "data")
-    config_for_tests["data_config"] = "Synthetic Site Config.json"
+    config_for_tests["data_input"]["data_dir"] = str(tmpdir / "data")
+    config_for_tests["data_input"]["data_config"] = "Synthetic Site Config.json"
     data_dir = tmpdir / "data"
     popluate_test_data_dir_with_prediction_data(data_dir)
 
     results = epb.main(config_for_tests)
 
     num_timestamps = (
-        config_for_tests["S2S_stagger"]["initial_num"]
-        + config_for_tests["S2S_stagger"]["secondary_num"]
+        config_for_tests["data_processing"]["S2S_stagger"]["initial_num"]
+        + config_for_tests["data_processing"]["S2S_stagger"]["secondary_num"]
     )
-    assert results.shape[1:] == (len(config_for_tests["qs"]), num_timestamps)
+    assert results.shape[1:] == (
+        len(config_for_tests["learning_algorithm"]["quantiles"]),
+        num_timestamps,
+    )
 
     assert (exp_dir / "output.out").exists()

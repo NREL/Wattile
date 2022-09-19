@@ -20,8 +20,8 @@ def config_for_tests():
     with open(TESTS_FIXTURES_PATH / "test_configs.json", "r") as read_file:
         configs = json.load(read_file)
 
-    configs["data_dir"] = str(TESTS_DATA_PATH)
-    configs["data_config"] = "Synthetic Site Config.json"
+    configs["data_input"]["data_dir"] = str(TESTS_DATA_PATH)
+    configs["data_input"]["data_config"] = "Synthetic Site Config.json"
 
     return configs
 
@@ -29,7 +29,7 @@ def config_for_tests():
 def test_prep_for_rnn(config_for_tests, tmpdir):
     # patch configs and create temporary, unquie output file
     exp_dir = pathlib.Path(tmpdir) / "train_results"
-    config_for_tests["exp_dir"] = str(exp_dir)
+    config_for_tests["data_output"]["exp_dir"] = str(exp_dir)
     exp_dir.mkdir(parents=True, exist_ok=True)
 
     # get data
@@ -40,12 +40,14 @@ def test_prep_for_rnn(config_for_tests, tmpdir):
 
     excepted_data_columns = []
     # add weather columns
-    for pred in config_for_tests["predictor_columns"]:
+    for pred in config_for_tests["data_input"]["predictor_columns"]:
         excepted_data_columns += [f"{pred}_{m}" for m in ["max", "min", "mean"]]
         excepted_data_columns += [
             f"{pred}_{m}_lag{lag + 1}"
             for m in ["max", "min", "mean"]
-            for lag in range(config_for_tests["feat_timelag"]["lag_count"])
+            for lag in range(
+                config_for_tests["data_processing"]["feat_timelag"]["lag_count"]
+            )
         ]
 
     # add year and hour columns
@@ -60,7 +62,9 @@ def test_prep_for_rnn(config_for_tests, tmpdir):
         for t in ["MOY", "HOD"]
         for f in ["cos", "sin"]
         for m in ["max", "min", "mean"]
-        for lag in range(config_for_tests["feat_timelag"]["lag_count"])
+        for lag in range(
+            config_for_tests["data_processing"]["feat_timelag"]["lag_count"]
+        )
     ]
 
     # add week columns
@@ -71,11 +75,13 @@ def test_prep_for_rnn(config_for_tests, tmpdir):
         f"DOW_binary_reg_{i}_{m}_lag{lag + 1}"
         for i in range(0, 7)
         for m in ["max", "min", "mean"]
-        for lag in range(config_for_tests["feat_timelag"]["lag_count"])
+        for lag in range(
+            config_for_tests["data_processing"]["feat_timelag"]["lag_count"]
+        )
     ]
 
     # add target var
-    excepted_data_columns.append(config_for_tests["target_var"])
+    excepted_data_columns.append(config_for_tests["data_input"]["target_var"])
 
     assert set(train_df.columns) == set(excepted_data_columns)
     assert train_df.shape == (528, len(excepted_data_columns))

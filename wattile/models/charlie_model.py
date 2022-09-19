@@ -1,8 +1,9 @@
+import json
 import math
+import os
 import time
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
@@ -22,12 +23,12 @@ class S2S_Model(nn.Module):
         self.hidden_size = hidden_size
         self.cell_type = cell_type
 
-        if self.cell_type not in ["rnn", "gru", "lstm"]:
+        if self.cell_type not in ["vanilla", "gru", "lstm"]:
             raise ValueError(
                 self.cell_type,
                 " is not an appropriate cell type. Please select one of rnn, gru, or lstm.",
             )
-        if self.cell_type == "rnn":
+        if self.cell_type == "vanilla":
             self.Ecell = nn.RNNCell(self.input_size, self.hidden_size)
             self.Dcell = nn.RNNCell(1, self.hidden_size)
         if self.cell_type == "gru":
@@ -44,7 +45,7 @@ class S2S_Model(nn.Module):
     # function to intialize weight parameters.
     # Refer to Saxe at al. paper that explains why to use orthogonal init weights
     def init(self):
-        if self.cell_type == "rnn" or self.cell_type == "gru":
+        if self.cell_type == "vanilla" or self.cell_type == "gru":
             for p in self.parameters():
                 if p.dim() > 1:
                     init.orthogonal_(p.data, gain=1.0)
@@ -61,7 +62,7 @@ class S2S_Model(nn.Module):
     def consume(self, x):
         # encoder forward function
         # for rnn and gru
-        if self.cell_type == "rnn" or self.cell_type == "gru":
+        if self.cell_type == "vanilla" or self.cell_type == "gru":
             h = torch.zeros(x.shape[0], self.hidden_size)
             if self.use_cuda:
                 h = h.cuda()
@@ -85,7 +86,7 @@ class S2S_Model(nn.Module):
         # decoder forward function
         preds = []
         # for rnn and gru
-        if self.cell_type == "rnn" or self.cell_type == "gru":
+        if self.cell_type == "vanilla" or self.cell_type == "gru":
             for step in range(target_length):
                 h = self.Dcell(pred_usage, h)
                 pred_usage = self.lin_usage(h)
@@ -118,12 +119,12 @@ class S2S_BA_Model(nn.Module):
         self.use_cuda = use_cuda
         self.cell_type = cell_type
 
-        if self.cell_type not in ["rnn", "gru", "lstm"]:
+        if self.cell_type not in ["vanilla", "gru", "lstm"]:
             raise ValueError(
                 self.cell_type,
                 " is not an appropriate cell type. Please select one of rnn, gru, or lstm.",
             )
-        if self.cell_type == "rnn":
+        if self.cell_type == "vanilla":
             self.Ecell = nn.RNNCell(self.input_size, self.hidden_size)
             self.Dcell = nn.RNNCell(1 + self.hidden_size, self.hidden_size)
         if self.cell_type == "gru":
@@ -143,7 +144,7 @@ class S2S_BA_Model(nn.Module):
 
     # function to intialize weight parameters
     def init(self):
-        if self.cell_type == "rnn" or self.cell_type == "gru":
+        if self.cell_type == "vanilla" or self.cell_type == "gru":
             for p in self.parameters():
                 if p.dim() > 1:
                     init.orthogonal_(p.data, gain=1.0)
@@ -159,7 +160,7 @@ class S2S_BA_Model(nn.Module):
 
     def consume(self, x):
         # for rnn and gru
-        if self.cell_type == "rnn" or self.cell_type == "gru":
+        if self.cell_type == "vanilla" or self.cell_type == "gru":
             # encoder forward function
             h = torch.zeros(x.shape[0], self.hidden_size)
             encoder_outputs = torch.zeros(x.shape[1], x.shape[0], self.hidden_size)
@@ -191,7 +192,7 @@ class S2S_BA_Model(nn.Module):
         # decoder with attention function
         preds = []
         # for rnn and gru
-        if self.cell_type == "rnn" or self.cell_type == "gru":
+        if self.cell_type == "vanilla" or self.cell_type == "gru":
             for step in range(target_length):
                 h_copies = h.expand(encoder_outputs.shape[0], -1, -1)
                 energies = torch.tanh(
@@ -227,7 +228,7 @@ class S2S_BA_Model(nn.Module):
         return preds
 
 
-#############################################################################################
+#########################################################################################
 # Luong Attention module
 class Attn(torch.nn.Module):
     def __init__(self, method, hidden_size):
@@ -297,7 +298,7 @@ class S2S_LA_Model(nn.Module):
         self.input_size = input_size
         self.hidden_size = hidden_size
 
-        if self.cell_type == "rnn":
+        if self.cell_type == "vanilla":
             self.Ecell = nn.RNNCell(self.input_size, self.hidden_size)
             self.Dcell = nn.RNNCell(1, self.hidden_size)
         if self.cell_type == "gru":
@@ -315,7 +316,7 @@ class S2S_LA_Model(nn.Module):
 
     # function to intialize weight parameters
     def init(self):
-        if self.cell_type == "rnn" or self.cell_type == "gru":
+        if self.cell_type == "vanilla" or self.cell_type == "gru":
             for p in self.parameters():
                 if p.dim() > 1:
                     init.orthogonal_(p.data, gain=1.0)
@@ -330,7 +331,7 @@ class S2S_LA_Model(nn.Module):
                     init.constant_(p.data[self.hidden_size : 2 * self.hidden_size], 1.0)
 
     def consume(self, x):
-        if self.cell_type == "rnn" or self.cell_type == "gru":
+        if self.cell_type == "vanilla" or self.cell_type == "gru":
             # encoder forward function
             h = torch.zeros(x.shape[0], self.hidden_size)
             encoder_outputs = torch.zeros(x.shape[1], x.shape[0], self.hidden_size)
@@ -360,7 +361,7 @@ class S2S_LA_Model(nn.Module):
     def predict(self, pred_usage, h, encoder_outputs, target_length):
         # decoder with attention function
         preds = []
-        if self.cell_type == "rnn" or self.cell_type == "gru":
+        if self.cell_type == "vanilla" or self.cell_type == "gru":
             for step in range(target_length):
                 h = self.Dcell(pred_usage, h)
                 attn_weights = self.attn(h, encoder_outputs)
@@ -385,30 +386,37 @@ class S2S_LA_Model(nn.Module):
         return preds
 
 
-####################################################################################################
+#########################################################################################
 class CharlieModel:
     def __init__(self, configs):
         self.configs = configs
+        self.file_prefix = Path(configs["data_output"]["exp_dir"])
+        self.file_prefix.mkdir(parents=True, exist_ok=True)
 
     def main(self, train_df, val_df):  # noqa: C901 TODO: remove noqa
         """
         process the data into three-dimensional for S2S model, train the model, and test the restuls
         """
-        window_target_size = self.configs["S2S_window"]["window_width_target"]
-        hidden_size = self.configs["hidden_nodes"]
-        cell_type = "lstm"
+        window_target_size = self.configs["data_processing"]["S2S_window"][
+            "window_width_target"
+        ]
+        hidden_size = self.configs["learning_algorithm"]["hidden_size"]
+        cell_type = self.configs["learning_algorithm"]["arch_type_variant"]
         la_method = "none"
         attention_model = "BA"
         cuda = False
-        epochs = self.configs["num_epochs"]
-        batch_size = self.configs["train_batch_size"]
-        loss_function_qs = self.configs["qs"]
+        num_epochs = self.configs["learning_algorithm"]["num_epochs"]
+        train_batch_size = self.configs["learning_algorithm"]["train_batch_size"]
+        val_batch_size = self.configs["learning_algorithm"]["val_batch_size"]
+        loss_function_qs = self.configs["learning_algorithm"]["quantiles"]
         save_model = True
-        seed = self.configs["random_seed"]
-        resample_interval = self.configs["resample_interval"]
+        seed = self.configs["data_processing"]["random_seed"]
+        resample_interval = self.configs["data_processing"]["resample_interval"]
         window_target_size_count = int(
             pd.Timedelta(window_target_size) / pd.Timedelta(resample_interval)
         )
+        lr = self.configs["learning_algorithm"]["lr_config"]["base"]
+        weight_decay = self.configs["learning_algorithm"]["weight_decay"]
 
         t0 = time.time()
         np.random.seed(seed)
@@ -434,7 +442,7 @@ class CharlieModel:
                 window_target_size
             )
 
-            alpha = 0.001
+            alpha = self.configs["learning_algorithm"]["smoothing_alpha"]
             log_term = torch.zeros_like(resid, device=device)
             log_term[resid < 0] = torch.log(1 + torch.exp(resid[resid < 0] / alpha)) - (
                 resid[resid < 0] / alpha
@@ -478,29 +486,28 @@ class CharlieModel:
             )
         )
 
-        opt = optim.Adam(model.parameters(), lr=1e-3)
+        opt = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
         #     loss_fn = nn.MSELoss(reduction='sum')
         loss_fn = quantile_loss
-
-        EPOCHES = epochs
-        BATCH_SIZE = batch_size
 
         print("\nStarting training...")
 
         train_loss = []
         test_loss = []
 
-        for epoch in range(EPOCHES):
+        for epoch in range(num_epochs):
             t_one_epoch = time.time()
             print("Epoch {}".format(epoch + 1))
+
+            # training
             total_usage_loss = 0
-            for b_idx in range(0, train_df_predictor.shape[0], BATCH_SIZE):
+            for b_idx in range(0, train_df_predictor.shape[0], train_batch_size):
 
                 x = torch.from_numpy(
-                    train_df_predictor[b_idx : b_idx + BATCH_SIZE]
+                    train_df_predictor[b_idx : b_idx + train_batch_size]
                 ).float()
                 y = torch.from_numpy(
-                    train_df_target[b_idx : b_idx + BATCH_SIZE]
+                    train_df_target[b_idx : b_idx + train_batch_size]
                 ).float()
 
                 if cuda:
@@ -551,22 +558,18 @@ class CharlieModel:
             train_loss.append(total_usage_loss)
             print("\tTRAINING: {} total train USAGE loss.\n".format(total_usage_loss))
 
-            ########################################################################################
-            # TESTING
+            # testing
             y = None
             y_pred = None
             pred = None
-            total_usage_loss = (
-                0  # <---------------------------------------------------------------
-            )
+            total_usage_loss = 0
             all_preds = []
-
-            for b_idx in range(0, val_df_predictor.shape[0], BATCH_SIZE):
+            for b_idx in range(0, val_df_predictor.shape[0], val_batch_size):
                 with torch.no_grad():
                     x = torch.from_numpy(
-                        val_df_predictor[b_idx : b_idx + BATCH_SIZE]
+                        val_df_predictor[b_idx : b_idx + val_batch_size]
                     ).float()
-                    y = torch.from_numpy(val_df_target[b_idx : b_idx + BATCH_SIZE])
+                    y = torch.from_numpy(val_df_target[b_idx : b_idx + val_batch_size])
 
                     if cuda:
                         x = x.cuda()
@@ -604,7 +607,7 @@ class CharlieModel:
                         window_target_size=window_target_size_count,
                     )
 
-                    if epoch == epochs - 1:
+                    if epoch == num_epochs - 1:
                         all_preds.append(pred)
 
                     total_usage_loss += loss_usage.item()
@@ -619,8 +622,6 @@ class CharlieModel:
                 "\t\t   PRED: {}\n\n".format(pred[-1].cpu().detach().numpy().flatten())
             )
 
-            y_last = y[-1].cpu().detach().numpy().flatten()
-            pred_last = pred[-1].cpu().detach().numpy().flatten()
             t2_one_epoch = time.time()
             time_one_epoch = t2_one_epoch - t_one_epoch
             print(
@@ -629,36 +630,27 @@ class CharlieModel:
                 )
             )
 
-        ############################################################################################
-        # SAVING MODEL
+        # saving model
         if save_model:
-            torch.save(model.state_dict(), f"{self.configs['exp_dir']}/torch_model")
+            torch.save(
+                model.state_dict(),
+                "{}/torch_model".format(self.configs["data_output"]["exp_dir"]),
+            )
 
-        ############################################################################################
-        # RESULTS
-        # for plotting and accuracy
-        predictions = torch.cat(all_preds, 0)
-        predictions = predictions.cpu().detach().numpy().flatten()
-        measured = val_df_target.flatten()
+        # Write the configurations used for this training process to a json file
+        path = self.file_prefix / "configs.json"
+        with open(path, "w") as fp:
+            json.dump(self.configs, fp, indent=1)
 
-        # using the measured usage from top of script here
-        mae3 = (sum(abs(measured - predictions))) / (len(measured))
-        mape3 = (sum(abs((measured - predictions) / measured))) / (len(measured))
-
-        # for std
-        mape_s = abs((measured - predictions) / measured)
-        s = mape_s.std()
-        mae_s = abs(measured - predictions)
-        s2 = mae_s.std()
-        print(
-            "\n\tACTUAL ACC. RESULTS: MAE, MAPE: {} and {}%".format(mae3, mape3 * 100.0)
+        # saving results
+        predictions = pd.DataFrame(all_preds[0].numpy().squeeze())
+        predictions = predictions.add_prefix("{}_".format(str(loss_function_qs)))
+        targets = pd.DataFrame(val_df_target.squeeze())
+        predictions.to_hdf(
+            os.path.join(self.file_prefix, "predictions.h5"), key="df", mode="w"
         )
-
-        pd.DataFrame(predictions, columns=[f"q{loss_function_qs}"]).to_csv(
-            f"{self.configs['exp_dir']}/q{loss_function_qs}.csv", index=None
-        )
-        pd.DataFrame(measured, columns=["measured"]).to_csv(
-            f"{self.configs['exp_dir']}/measured.csv", index=None
+        targets.to_hdf(
+            os.path.join(self.file_prefix, "measured.h5"), key="df", mode="w"
         )
 
         # total time of run
@@ -666,17 +658,3 @@ class CharlieModel:
         total = t1 - t0
         print("\nTIME ELAPSED: {} seconds OR {} minutes".format(total, total / 60.0))
         print("\nEnd of run")
-        plt.show()
-        for_plotting = [measured, predictions, y_last, pred_last]
-        return (
-            s,
-            s2,
-            mape_s,
-            mae_s,
-            mae3,
-            mape3,
-            total / 60.0,
-            train_loss,
-            test_loss,
-            for_plotting,
-        )

@@ -18,44 +18,46 @@ def save_model(model, epoch_num, n_iter, filepath):
 
 
 def _get_output_dim(configs):
-    arch_version = configs["arch_version"]
+    arch_version = configs["learning_algorithm"]["arch_version"]
 
     if arch_version == "alfa":
-        return len(configs["qs"])
+        return len(configs["learning_algorithm"]["quantiles"])
 
     elif arch_version == "bravo":
         return (
-            configs["S2S_stagger"]["initial_num"]
-            + configs["S2S_stagger"]["secondary_num"]
-        ) * len(configs["qs"])
+            configs["data_processing"]["S2S_stagger"]["initial_num"]
+            + configs["data_processing"]["S2S_stagger"]["secondary_num"]
+        ) * len(configs["learning_algorithm"]["quantiles"])
 
     else:
         ConfigsError(f"{arch_version} not a valid arch_version")
 
 
 def init_model(configs):
-    if configs["arch_type_variant"] == "vanilla":
+    if configs["learning_algorithm"]["arch_type_variant"] == "vanilla":
         model = rnn.RNNModel
-    elif configs["arch_type_variant"] == "lstm":
+    elif configs["learning_algorithm"]["arch_type_variant"] == "lstm":
         model = lstm.LSTM_Model
     else:
         raise ConfigsError(
-            f"{configs['arch_type_variant']} is not a supported architecture variant"
+            "{} is not a supported architecture variant".format(
+                configs["learning_algorithm"]["arch_type_variant"]
+            )
         )
 
-    hidden_dim = int(configs["hidden_nodes"])
+    hidden_dim = int(configs["learning_algorithm"]["hidden_size"])
     output_dim = _get_output_dim(configs)
     input_dim = configs["input_dim"]
-    layer_dim = configs["layer_dim"]
+    num_layers = configs["learning_algorithm"]["num_layers"]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    return model(input_dim, hidden_dim, layer_dim, output_dim, device=device)
+    return model(input_dim, hidden_dim, num_layers, output_dim, device=device)
 
 
 def load_model(configs):
     model = init_model(configs)
 
-    filepath = pathlib.Path(configs["exp_dir"]) / "torch_model"
+    filepath = pathlib.Path(configs["data_output"]["exp_dir"]) / "torch_model"
     checkpoint = torch.load(filepath)
 
     model.load_state_dict(checkpoint["model_state_dict"])

@@ -35,13 +35,13 @@ def check_complete(torch_file, des_epochs):
 def _create_split_mask(timestamp, data_size, configs):
 
     # set configuration parameters
-    np.random.seed(seed=configs["random_seed"])
-    active_sequential = configs["sequential_splicer"]["active"]
-    train_ratio = int(configs["data_split"].split(":")[0]) / 100
-    val_ratio = int(configs["data_split"].split(":")[1]) / 100
-    test_ratio = int(configs["data_split"].split(":")[2]) / 100
-    window_witdh = configs["sequential_splicer"]["window_width"]
-    train_size_factor = configs["train_size_factor"]
+    np.random.seed(seed=configs["data_processing"]["random_seed"])
+    active_sequential = configs["data_processing"]["sequential_splicer"]["active"]
+    train_ratio = int(configs["data_processing"]["data_split"].split(":")[0]) / 100
+    val_ratio = int(configs["data_processing"]["data_split"].split(":")[1]) / 100
+    test_ratio = int(configs["data_processing"]["data_split"].split(":")[2]) / 100
+    window_witdh = configs["data_processing"]["sequential_splicer"]["window_width"]
+    train_size_factor = configs["data_processing"]["train_size_factor"]
 
     # split data based on random sequential chunks
     if active_sequential:
@@ -115,8 +115,8 @@ def input_data_split(data, configs):
     :return:
     """
     # setting configuration parameters
-    arch_version = configs["arch_version"]
-    file_prefix = Path(configs["exp_dir"])
+    arch_version = configs["learning_algorithm"]["arch_version"]
+    file_prefix = Path(configs["data_output"]["exp_dir"])
     mask_file = os.path.join(file_prefix, "mask.h5")
 
     # assign timestamp and data size depending on arch_version
@@ -183,10 +183,12 @@ def timelag_predictors(data, configs):
     """
 
     # reading configuration parameters
-    lag_interval = configs["feat_timelag"]["lag_interval"]
-    lag_count = configs["feat_timelag"]["lag_count"]
-    lag_interval_forecast = configs["feat_timelag"]["lag_interval_forecast"]
-    target_var = configs["target_var"]
+    lag_interval = configs["data_processing"]["feat_timelag"]["lag_interval"]
+    lag_count = configs["data_processing"]["feat_timelag"]["lag_count"]
+    lag_interval_forecast = configs["data_processing"]["feat_timelag"][
+        "lag_interval_forecast"
+    ]
+    target_var = configs["data_input"]["target_var"]
 
     # splitting predictors and target
     target = data[target_var]
@@ -207,7 +209,7 @@ def timelag_predictors(data, configs):
     data = pd.concat(temp_holder, axis=1)
 
     # If this is an RNN model
-    if configs["arch_type"] == "RNN":
+    if configs["learning_algorithm"]["arch_type"] == "RNN":
         # re-append the shifted target column to the dataframe
         data[target_var] = target.shift(freq="-" + lag_interval_forecast)
 
@@ -231,12 +233,12 @@ def timelag_predictors_target(data, configs):
     """
 
     # reading configuration parameters
-    lag_interval = configs["feat_timelag"]["lag_interval"]
-    lag_count = configs["feat_timelag"]["lag_count"]
-    initial_num = configs["S2S_stagger"]["initial_num"]
-    secondary_num = configs["S2S_stagger"]["secondary_num"]
-    decay = configs["S2S_stagger"]["decay"]
-    target_var = configs["target_var"]
+    lag_interval = configs["data_processing"]["feat_timelag"]["lag_interval"]
+    lag_count = configs["data_processing"]["feat_timelag"]["lag_count"]
+    initial_num = configs["data_processing"]["S2S_stagger"]["initial_num"]
+    secondary_num = configs["data_processing"]["S2S_stagger"]["secondary_num"]
+    decay = configs["data_processing"]["S2S_stagger"]["decay"]
+    target_var = configs["data_input"]["target_var"]
 
     target = data[target_var]
     data = data.drop(target_var, axis=1)
@@ -291,10 +293,14 @@ def roll_predictors_target(data, configs):
     """
 
     # setting configuration parameters
-    window_width_source = configs["S2S_window"]["window_width_source"]
-    window_width_target = configs["S2S_window"]["window_width_target"]
-    resample_interval = configs["resample_interval"]
-    target_var = configs["target_var"]
+    window_width_source = configs["data_processing"]["S2S_window"][
+        "window_width_source"
+    ]
+    window_width_target = configs["data_processing"]["S2S_window"][
+        "window_width_target"
+    ]
+    resample_interval = configs["data_processing"]["resample_interval"]
+    target_var = configs["data_input"]["target_var"]
 
     # initialize lists
     data_predictor = []
@@ -369,7 +375,9 @@ def correct_predictor_columns(configs, data):
     :return: data with correct columns
     :rtype: pandas.DataFrame
     """
-    keep_cols = configs["predictor_columns"] + [configs["target_var"]]
+    keep_cols = configs["data_input"]["predictor_columns"] + [
+        configs["data_input"]["target_var"]
+    ]
 
     # raise error if missing columns
     missing_colums = set(keep_cols).difference(set(data.columns))
@@ -403,8 +411,8 @@ def correct_timestamps(configs, data):
     data = data.sort_index()
 
     # TODO: think about timezones.
-    start_time = dt.datetime.fromisoformat((configs["start_time"]))
-    end_time = dt.datetime.fromisoformat(configs["end_time"])
+    start_time = dt.datetime.fromisoformat(configs["data_input"]["start_time"])
+    end_time = dt.datetime.fromisoformat(configs["data_input"]["end_time"])
     data = data[start_time:end_time]
 
     if data.shape[0] == 0:
@@ -444,11 +452,11 @@ def _preprocess_data(configs, data):
     logger.info("Number of features: {}".format(configs["input_dim"]))
     logger.debug("Features: {}".format(data.columns.values))
 
-    if configs["arch_version"] == "alfa":
+    if configs["learning_algorithm"]["arch_version"] == "alfa":
         data = timelag_predictors(data, configs)
-    elif configs["arch_version"] == "bravo":
+    elif configs["learning_algorithm"]["arch_version"] == "bravo":
         data = timelag_predictors_target(data, configs)
-    elif configs["arch_version"] == "charlie":
+    elif configs["learning_algorithm"]["arch_version"] == "charlie":
         data = roll_predictors_target(data, configs)
 
     return data
@@ -464,14 +472,16 @@ def prep_for_rnn(configs, data):
     data = _preprocess_data(configs, data)
 
     # if validatate with external data, write data to h5 for future testing.
-    if configs["use_case"] == "validation" and configs["test_method"] == "external":
-        filepath = (
-            pathlib.Path(configs["data_dir"])
-            / f"{configs['target_var']}_external_test.h5"
-        )
+    if (
+        configs["learning_algorithm"]["use_case"] == "validation"
+        and configs["learning_algorithm"]["test_method"] == "external"
+    ):
+        filepath = pathlib.Path(
+            configs["data_input"]["data_dir"]
+        ) / "{}_external_test.h5".format(configs["data_input"]["target_var"])
         data.to_hdf(filepath, key="df", mode="w")
 
-    if configs["use_case"] == "train":
+    if configs["learning_algorithm"]["use_case"] == "train":
         train_df, val_df = input_data_split(data, configs)
 
     else:
@@ -488,16 +498,16 @@ def resample_or_rolling_stats(data, configs):
     # window closing is currently tied to resample_label_on
     # window_position is hard coded for now.
     # default is right-closed and backward-looking window.
-    resample_interval = configs["resample_interval"]
+    resample_interval = configs["data_processing"]["resample_interval"]
     resample_label_on = "right"  # left, right
-    window_width = configs["feat_stats"]["window_width"]
+    window_width = configs["data_processing"]["feat_stats"]["window_width"]
     window_position = "backward"  # forward, center, backward
 
-    if configs["feat_stats"]["active"]:
+    if configs["data_processing"]["feat_stats"]["active"]:
 
         # seperate predictors and target
-        target = data[configs["target_var"]]
-        X_data = data.drop(configs["target_var"], axis=1)
+        target = data[configs["data_input"]["target_var"]]
+        X_data = data.drop(configs["data_input"]["target_var"], axis=1)
 
         # resampling for each statistics separately
         data_resampler = X_data.resample(
@@ -571,7 +581,7 @@ def resample_or_rolling_stats(data, configs):
 
         # adding resampled target back to the dataframe
         target = _resample_data(target, configs)
-        data[configs["target_var"]] = target
+        data[configs["data_input"]["target_var"]] = target
 
     else:
 
@@ -585,7 +595,7 @@ def _resample_data(data, configs):
 
     # reading configuration parameters.
     # resample_label_on are hard coded for now. default is right labeled and right-closed window.
-    resample_interval = configs["resample_interval"]
+    resample_interval = configs["data_processing"]["resample_interval"]
     resample_label_on = "right"  # left, right
 
     # resample data
