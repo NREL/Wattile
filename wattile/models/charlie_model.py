@@ -11,6 +11,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.nn import init
 
+from wattile.models.utils import save_model
+
 PROJECT_DIRECTORY = Path().resolve().parent.parent
 
 
@@ -409,7 +411,7 @@ class CharlieModel:
         train_batch_size = self.configs["learning_algorithm"]["train_batch_size"]
         val_batch_size = self.configs["learning_algorithm"]["val_batch_size"]
         loss_function_qs = self.configs["learning_algorithm"]["quantiles"]
-        save_model = True
+        # save_model = True
         seed = self.configs["data_processing"]["random_seed"]
         resample_interval = self.configs["data_processing"]["resample_interval"]
         window_target_size_count = int(
@@ -494,6 +496,7 @@ class CharlieModel:
 
         train_loss = []
         test_loss = []
+        n_iter = 0
 
         for epoch in range(num_epochs):
             t_one_epoch = time.time()
@@ -554,6 +557,13 @@ class CharlieModel:
                 opt.step()
 
                 total_usage_loss += loss_usage.item()
+
+                n_iter += 1
+
+                # Save the model every ___ iterations
+                if n_iter % self.configs["learning_algorithm"]["eval_frequency"] == 0:
+                    filepath = os.path.join(self.file_prefix, "torch_model")
+                    save_model(model, epoch, n_iter, filepath)
 
             train_loss.append(total_usage_loss)
             print("\tTRAINING: {} total train USAGE loss.\n".format(total_usage_loss))
@@ -630,12 +640,16 @@ class CharlieModel:
                 )
             )
 
-        # saving model
-        if save_model:
-            torch.save(
-                model.state_dict(),
-                "{}/torch_model".format(self.configs["data_output"]["exp_dir"]),
-            )
+        # # saving model
+        # if save_model:
+        #     torch.save(
+        #         model.state_dict(),
+        #         "{}/torch_model".format(self.configs["data_output"]["exp_dir"]),
+        #     )
+
+        # Once model training is done, save the current model state
+        filepath = os.path.join(self.file_prefix, "torch_model")
+        save_model(model, epoch, n_iter, filepath)
 
         # Write the configurations used for this training process to a json file
         path = self.file_prefix / "configs.json"
