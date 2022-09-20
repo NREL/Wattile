@@ -56,15 +56,6 @@
    "data_split": "80:20:0",
    "train_size_factor": 1
  },
- "S2S_learning": {
-  "cell_type": "lstm",
-  "attention_model": "BA",
-  "la_method": "none",
-  "batch_size": 256,
-  "hidden_size": 64,
-  "cuda": false,
-  "save_model": false
- },
  "learning_algorithm": {
    "arch_type": "RNN",
    "arch_type_variant": "lstm",
