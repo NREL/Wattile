@@ -411,7 +411,6 @@ class CharlieModel:
         train_batch_size = self.configs["learning_algorithm"]["train_batch_size"]
         val_batch_size = self.configs["learning_algorithm"]["val_batch_size"]
         loss_function_qs = self.configs["learning_algorithm"]["quantiles"]
-        # save_model = True
         seed = self.configs["data_processing"]["random_seed"]
         resample_interval = self.configs["data_processing"]["resample_interval"]
         window_target_size_count = int(
@@ -639,13 +638,6 @@ class CharlieModel:
                     time_one_epoch, time_one_epoch / 60.0
                 )
             )
-
-        # # saving model
-        # if save_model:
-        #     torch.save(
-        #         model.state_dict(),
-        #         "{}/torch_model".format(self.configs["data_output"]["exp_dir"]),
-        #     )
 
         # Once model training is done, save the current model state
         filepath = os.path.join(self.file_prefix, "torch_model")
