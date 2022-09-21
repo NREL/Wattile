@@ -95,9 +95,30 @@ class AlgoMainRNNBase(ABC):
         :return: earliest time input should include, latest time input should include.
         :rtype: dt.datetime, datetime
         """
-        # ????
 
-        return datetime.now(), datetime.now()
+        # set prediction time with pandas timedelta
+        predict_time = pd.Timedelta()
+
+        # maybe the whole point of class is to avoid this type of ifs?? can't think of alternative
+        if self.configs["learning_algorithm"]["arch_version"] == "alfa":
+            window_start_offset = "0min"
+            window_end_offset = "0min"
+        elif self.configs["learning_algorithm"]["arch_version"] == "bravo":
+            window_start_offset = "0min"
+            window_end_offset = self.configs["data_processing"]["input_output_window"][
+                "window_width_target"
+            ]
+        elif self.configs["learning_algorithm"]["arch_version"] == "charlie":
+            window_start_offset = self.configs["data_processing"][
+                "input_output_window"
+            ]["window_width_source"]
+            window_end_offset = "0min"
+
+        # calculate timestamps for input data window
+        window_start_time = predict_time - pd.Timedelta(window_start_offset)
+        window_end_time = predict_time - pd.Timedelta(window_end_offset)
+
+        return window_start_time, window_end_time
 
     def get_pediction_vector_for_time(self, output_time: datetime) -> List[timedelta]:
         """Given the time for which we want to predict, return a vector of actual timestamps
