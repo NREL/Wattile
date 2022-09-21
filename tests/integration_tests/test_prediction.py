@@ -2,6 +2,7 @@ import json
 import pathlib
 import shutil
 
+import pandas as pd
 import pytest
 
 import wattile.entry_point as epb
@@ -89,8 +90,15 @@ def test_prediction_bravo(config_for_tests, tmpdir):
     results = epb.main(config_for_tests)
 
     num_timestamps = (
-        config_for_tests["data_processing"]["S2S_stagger"]["initial_num"]
-        + config_for_tests["data_processing"]["S2S_stagger"]["secondary_num"]
+        int(
+            pd.Timedelta(
+                config_for_tests["data_processing"]["input_output_window"][
+                    "window_width_target"
+                ]
+            )
+            / pd.Timedelta(config_for_tests["data_processing"]["resample_interval"])
+        )
+        + config_for_tests["data_processing"]["input_output_window"]["secondary_num"]
     )
     assert results.shape[1:] == (
         len(config_for_tests["learning_algorithm"]["quantiles"]),

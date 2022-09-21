@@ -235,9 +235,16 @@ def timelag_predictors_target(data, configs):
     # reading configuration parameters
     lag_interval = configs["data_processing"]["feat_timelag"]["lag_interval"]
     lag_count = configs["data_processing"]["feat_timelag"]["lag_count"]
-    initial_num = configs["data_processing"]["S2S_stagger"]["initial_num"]
-    secondary_num = configs["data_processing"]["S2S_stagger"]["secondary_num"]
-    decay = configs["data_processing"]["S2S_stagger"]["decay"]
+    window_width_target = configs["data_processing"]["input_output_window"][
+        "window_width_target"
+    ]
+    resample_interval = configs["data_processing"]["resample_interval"]
+    initial_num = int(
+        pd.Timedelta(window_width_target) / pd.Timedelta(resample_interval)
+    )
+    # initial_num = configs["data_processing"]["S2S_stagger"]["initial_num"]
+    secondary_num = configs["data_processing"]["input_output_window"]["secondary_num"]
+    decay = configs["data_processing"]["input_output_window"]["decay"]
     target_var = configs["data_input"]["target_var"]
 
     target = data[target_var]
@@ -293,10 +300,10 @@ def roll_predictors_target(data, configs):
     """
 
     # setting configuration parameters
-    window_width_source = configs["data_processing"]["S2S_window"][
+    window_width_source = configs["data_processing"]["input_output_window"][
         "window_width_source"
     ]
-    window_width_target = configs["data_processing"]["S2S_window"][
+    window_width_target = configs["data_processing"]["input_output_window"][
         "window_width_target"
     ]
     resample_interval = configs["data_processing"]["resample_interval"]

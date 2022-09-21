@@ -397,7 +397,7 @@ class CharlieModel:
         """
         process the data into three-dimensional for S2S model, train the model, and test the restuls
         """
-        window_target_size = self.configs["data_processing"]["S2S_window"][
+        window_target_size = self.configs["data_processing"]["input_output_window"][
             "window_width_target"
         ]
         hidden_size = self.configs["learning_algorithm"]["hidden_size"]
