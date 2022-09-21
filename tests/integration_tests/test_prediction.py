@@ -89,17 +89,14 @@ def test_prediction_bravo(config_for_tests, tmpdir):
 
     results = epb.main(config_for_tests)
 
-    num_timestamps = (
-        int(
-            pd.Timedelta(
-                config_for_tests["data_processing"]["input_output_window"][
-                    "window_width_target"
-                ]
-            )
-            / pd.Timedelta(config_for_tests["data_processing"]["resample_interval"])
-        )
-        + config_for_tests["data_processing"]["input_output_window"]["secondary_num"]
+    data_processing_configs = config_for_tests["data_processing"]
+    window_width_target = pd.Timedelta(
+        data_processing_configs["input_output_window"]["window_width_target"]
     )
+    resample_interval = pd.Timedelta(data_processing_configs["resample_interval"])
+    secondary_num = data_processing_configs["input_output_window"]["secondary_num"]
+    num_timestamps = (window_width_target // resample_interval) + secondary_num
+
     assert results.shape[1:] == (
         len(config_for_tests["learning_algorithm"]["quantiles"]),
         num_timestamps,

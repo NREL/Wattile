@@ -239,9 +239,7 @@ def timelag_predictors_target(data, configs):
         "window_width_target"
     ]
     resample_interval = configs["data_processing"]["resample_interval"]
-    initial_num = int(
-        pd.Timedelta(window_width_target) / pd.Timedelta(resample_interval)
-    )
+    initial_num = pd.Timedelta(window_width_target) // pd.Timedelta(resample_interval)
     secondary_num = configs["data_processing"]["input_output_window"]["secondary_num"]
     decay = configs["data_processing"]["input_output_window"]["decay"]
     target_var = configs["data_input"]["target_var"]
