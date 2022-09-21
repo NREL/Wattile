@@ -40,7 +40,7 @@
   },
   "input_output_window": {
     "window_width_source": "180min",
-    "window_width_target": "45min",
+    "window_width_target": "1080min",
     "decay": 0,
     "secondary_num": 0
    },
