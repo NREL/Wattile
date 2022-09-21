@@ -2,7 +2,9 @@ import json
 import logging
 import os
 from abc import ABC
+from datetime import datetime, timedelta
 from pathlib import Path
+from typing import List, Tuple
 
 import pandas as pd
 import torch
@@ -81,6 +83,34 @@ class AlgoMainRNNBase(ABC):
             num_train_data = 0
 
         return train_bt_size, val_bt_size, num_train_data
+
+    def get_input_window_for_output_time(
+        self, output_time: datetime
+    ) -> Tuple[datetime, datetime]:
+        """Given the time for which we want to predict, return the time window of the required
+        input.
+
+        :param output_time: the time for which we want to predict
+        :type output_time: datatime
+        :return: earliest time input should include, latest time input should include.
+        :rtype: dt.datetime, datetime
+        """
+        # ????
+
+        return datetime.now(), datetime.now()
+
+    def get_pediction_vector_for_time(self, output_time: datetime) -> List[timedelta]:
+        """Given the time for which we want to predict, return a vector of actual timestamps
+        corresponding to the predictions returned by the model
+
+        :param output_time: the time for which we want to predict
+        :type output_time: datetime
+        :return: a vector of actual timestamps corresponding to the predictions
+        :rtype: List[timedelta]
+        """
+        # ????
+
+        return [timedelta(hours=0)]
 
     def data_transform(self, train_data, val_data, transformation_method, run_train):
         """
