@@ -129,9 +129,29 @@ class AlgoMainRNNBase(ABC):
         :return: a vector of actual timestamps corresponding to the predictions
         :rtype: List[timedelta]
         """
-        # ????
 
-        return [timedelta(hours=0)]
+        # initialize horizon vector
+        horizon_vector = []
+
+        # set up variables
+        resample_interval = self.configs["data_processing"]["resample_interval"]
+        window_start_time = (
+            "0min"  # TODO: this has to be tied with decay and secondary_num in configs
+        )
+        window_width_target = self.configs["data_processing"]["input_output_window"][
+            "window_width_target"
+        ]
+        count_horizon = int(
+            pd.Timedelta(window_width_target) / pd.Timedelta(resample_interval)
+        )
+
+        # create horizon vector by adding timedelta via loop
+        timedelta = window_start_time
+        for i in range(count_horizon):
+            timedelta = pd.Timedelta(timedelta) + pd.Timedelta(resample_interval)
+            horizon_vector.append(timedelta)
+
+        return horizon_vector
 
     def data_transform(self, train_data, val_data, transformation_method, run_train):
         """
