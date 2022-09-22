@@ -97,7 +97,7 @@ class AlgoMainRNNBase(ABC):
         """
 
         # set prediction time with pandas timedelta
-        predict_time = pd.Timedelta()  # current time needs to go in here
+        predict_time = ()  # current time needs to go in here
 
         # maybe the whole point of class is to avoid this type of ifs?? can't think of alternative
         if self.configs["learning_algorithm"]["arch_version"] == "alfa":
