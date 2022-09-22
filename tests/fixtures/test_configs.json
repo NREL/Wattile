@@ -38,15 +38,11 @@
     "lag_count": 12,
     "lag_interval_forecast": "0min"
    },
-   "S2S_stagger": {
-    "initial_num": 72,
+   "input_output_window": {
+    "window_width_source": "180min",
+    "window_width_target": "1080min",
     "decay": 0,
     "secondary_num": 0
-   },
-   "S2S_window": {
-    "window_width_source": "180min",
-    "window_width_target": "45min",
-    "normalization": false
    },
    "random_seed": 1,
    "sequential_splicer": {
