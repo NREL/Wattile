@@ -28,6 +28,13 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
         "plot_comparison_portion_start"
     ]
     plot_comparison_portion_end = configs["data_output"]["plot_comparison_portion_end"]
+    window_width_target = configs["data_processing"]["input_output_window"][
+        "window_width_target"
+    ]
+    resample_interval = configs["data_processing"]["resample_interval"]
+    initial_num = int(
+        pd.Timedelta(window_width_target) / pd.Timedelta(resample_interval)
+    )
     predictions = predictions.iloc[
         int(predictions.shape[0] * plot_comparison_portion_start) : int(
             predictions.shape[0] * plot_comparison_portion_end
@@ -58,7 +65,9 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
     list_c_is.reverse()
     y_min = 10000000
     y_max = 0
-    window_target_size = configs["data_processing"]["S2S_window"]["window_width_target"]
+    window_target_size = configs["data_processing"]["input_output_window"][
+        "window_width_target"
+    ]
     resample_interval = configs["data_processing"]["resample_interval"]
 
     ######################################################################
@@ -104,13 +113,8 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
 
         elif configs["learning_algorithm"]["arch_version"] == "bravo":
 
-            idx_col_med_start = (
-                len_c_list * configs["data_processing"]["S2S_stagger"]["initial_num"]
-            )
-            idx_col_med_end = (
-                idx_col_med_start
-                + configs["data_processing"]["S2S_stagger"]["initial_num"]
-            )
+            idx_col_med_start = len_c_list * initial_num
+            idx_col_med_end = idx_col_med_start + initial_num
             prediction_median = (
                 predictions.iloc[:, idx_col_med_start:idx_col_med_end]
                 .iloc[:, time_ahead]
@@ -151,16 +155,9 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
 
             elif configs["learning_algorithm"]["arch_version"] == "bravo":
 
-                idx_col_low_start = (
-                    qntl * configs["data_processing"]["S2S_stagger"]["initial_num"]
-                )
-                idx_col_low_end = (
-                    qntl * configs["data_processing"]["S2S_stagger"]["initial_num"]
-                    + configs["data_processing"]["S2S_stagger"]["initial_num"]
-                )
-                idx_col_high_start = (len_tot - idx_col_low_start) - configs[
-                    "data_processing"
-                ]["S2S_stagger"]["initial_num"]
+                idx_col_low_start = qntl * initial_num
+                idx_col_low_end = qntl * initial_num + initial_num
+                idx_col_high_start = (len_tot - idx_col_low_start) - initial_num
                 idx_col_high_end = len_tot - idx_col_low_start
 
                 prediction_low = predictions.iloc[

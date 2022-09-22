@@ -107,9 +107,16 @@ class BravoModel(AlgoMainRNNBase):
         return train_loader, val_loader
 
     def pinball_np(self, output, target):
+        window_width_target = self.configs["data_processing"]["input_output_window"][
+            "window_width_target"
+        ]
+        resample_interval = self.configs["data_processing"]["resample_interval"]
+        initial_num = pd.Timedelta(window_width_target) // pd.Timedelta(
+            resample_interval
+        )
         num_future_time_instances = (
-            self.configs["data_processing"]["S2S_stagger"]["initial_num"]
-            + self.configs["data_processing"]["S2S_stagger"]["secondary_num"]
+            initial_num
+            + self.configs["data_processing"]["input_output_window"]["secondary_num"]
         )
         resid = target - output
         tau = np.repeat(
@@ -134,9 +141,16 @@ class BravoModel(AlgoMainRNNBase):
         :return: (Tensor) Loss for this study (single number)
         """
 
+        window_width_target = self.configs["data_processing"]["input_output_window"][
+            "window_width_target"
+        ]
+        resample_interval = self.configs["data_processing"]["resample_interval"]
+        initial_num = int(
+            pd.Timedelta(window_width_target) / pd.Timedelta(resample_interval)
+        )
         num_future_time_instances = (
-            self.configs["data_processing"]["S2S_stagger"]["initial_num"]
-            + self.configs["data_processing"]["S2S_stagger"]["secondary_num"]
+            initial_num
+            + self.configs["data_processing"]["input_output_window"]["secondary_num"]
         )
         resid = target - output
 
@@ -193,9 +207,18 @@ class BravoModel(AlgoMainRNNBase):
         """
         with torch.no_grad():
             # Plug the val set into the model
+            window_width_target = self.configs["data_processing"][
+                "input_output_window"
+            ]["window_width_target"]
+            resample_interval = self.configs["data_processing"]["resample_interval"]
+            initial_num = int(
+                pd.Timedelta(window_width_target) / pd.Timedelta(resample_interval)
+            )
             num_timestamps = (
-                self.configs["data_processing"]["S2S_stagger"]["initial_num"]
-                + self.configs["data_processing"]["S2S_stagger"]["secondary_num"]
+                initial_num
+                + self.configs["data_processing"]["input_output_window"][
+                    "secondary_num"
+                ]
             )
             model.eval()
             preds = []
@@ -439,6 +462,13 @@ class BravoModel(AlgoMainRNNBase):
 
         weight_decay = float(self.configs["learning_algorithm"]["weight_decay"])
         input_dim = self.configs["input_dim"]
+        window_width_target = self.configs["data_processing"]["input_output_window"][
+            "window_width_target"
+        ]
+        resample_interval = self.configs["data_processing"]["resample_interval"]
+        initial_num = int(
+            pd.Timedelta(window_width_target) / pd.Timedelta(resample_interval)
+        )
 
         # Write the configurations used for this training process to a json file
         path = os.path.join(self.file_prefix, "configs.json")
@@ -694,9 +724,7 @@ class BravoModel(AlgoMainRNNBase):
 
                     # Add parody plot to TensorBoard
                     fig1, ax1 = plt.subplots()
-                    for lag in range(
-                        self.configs["data_processing"]["S2S_stagger"]["initial_num"]
-                    ):
+                    for lag in range(initial_num):
                         ax1.scatter(
                             predictions[
                                 :,
@@ -937,6 +965,14 @@ class BravoModel(AlgoMainRNNBase):
         model, _, _ = load_model(self.configs)
         model.eval()
 
+        window_width_target = self.configs["data_processing"]["input_output_window"][
+            "window_width_target"
+        ]
+        resample_interval = self.configs["data_processing"]["resample_interval"]
+        initial_num = int(
+            pd.Timedelta(window_width_target) / pd.Timedelta(resample_interval)
+        )
+
         logger.info("Loaded model from file, given run_train=False\n")
 
         with torch.no_grad():
@@ -1008,8 +1044,8 @@ class BravoModel(AlgoMainRNNBase):
                 )
 
         num_timestamps = (
-            self.configs["data_processing"]["S2S_stagger"]["initial_num"]
-            + self.configs["data_processing"]["S2S_stagger"]["secondary_num"]
+            initial_num
+            + self.configs["data_processing"]["input_output_window"]["secondary_num"]
         )
         final_preds = np.array(final_preds)
         final_preds = final_preds.reshape(
