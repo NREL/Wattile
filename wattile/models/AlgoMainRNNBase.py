@@ -97,7 +97,7 @@ class AlgoMainRNNBase(ABC):
         """
 
         # set prediction time with pandas timedelta
-        predict_time = pd.Timedelta()
+        predict_time = pd.Timedelta()  # current time needs to go in here
 
         # maybe the whole point of class is to avoid this type of ifs?? can't think of alternative
         if self.configs["learning_algorithm"]["arch_version"] == "alfa":
@@ -135,18 +135,16 @@ class AlgoMainRNNBase(ABC):
 
         # set up variables
         resample_interval = self.configs["data_processing"]["resample_interval"]
-        window_start_time = (
-            "0min"  # TODO: this has to be tied with decay and secondary_num in configs
-        )
+        window_start_delta = "0min"  # TODO: tie with window_width_futurecast in configs
         window_width_target = self.configs["data_processing"]["input_output_window"][
             "window_width_target"
         ]
-        count_horizon = int(
-            pd.Timedelta(window_width_target) / pd.Timedelta(resample_interval)
+        count_horizon = pd.Timedelta(window_width_target) // pd.Timedelta(
+            resample_interval
         )
 
         # create horizon vector by adding timedelta via loop
-        timedelta = window_start_time
+        timedelta = window_start_delta
         for i in range(count_horizon):
             timedelta = pd.Timedelta(timedelta) + pd.Timedelta(resample_interval)
             horizon_vector.append(timedelta)
