@@ -105,9 +105,7 @@ class AlgoMainRNNBase(ABC):
             window_end_offset = "0min"
         elif self.configs["learning_algorithm"]["arch_version"] == "bravo":
             window_start_offset = "0min"
-            window_end_offset = self.configs["data_processing"]["input_output_window"][
-                "window_width_target"
-            ]
+            window_end_offset = "0min"
         elif self.configs["learning_algorithm"]["arch_version"] == "charlie":
             window_start_offset = self.configs["data_processing"][
                 "input_output_window"
