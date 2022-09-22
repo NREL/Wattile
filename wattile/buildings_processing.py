@@ -185,7 +185,9 @@ def timelag_predictors(data, configs):
     # reading configuration parameters
     lag_interval = configs["data_processing"]["feat_timelag"]["lag_interval"]
     lag_count = configs["data_processing"]["feat_timelag"]["lag_count"]
-    window_width_futurecast = configs["input_output_window"]["window_width_futurecast"]
+    window_width_futurecast = configs["data_processing"]["input_output_window"][
+        "window_width_futurecast"
+    ]
     target_var = configs["data_input"]["target_var"]
 
     # splitting predictors and target
