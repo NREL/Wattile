@@ -1,5 +1,6 @@
 import pathlib
 
+import pandas as pd
 import torch
 
 from wattile.error import ConfigsError
@@ -18,6 +19,12 @@ def save_model(model, epoch_num, n_iter, filepath):
 
 
 def _get_output_dim(configs):
+
+    window_width_target = configs["data_processing"]["input_output_window"][
+        "window_width_target"
+    ]
+    resample_interval = configs["data_processing"]["resample_interval"]
+    initial_num = pd.Timedelta(window_width_target) // pd.Timedelta(resample_interval)
     arch_version = configs["learning_algorithm"]["arch_version"]
 
     if arch_version == "alfa":
@@ -25,8 +32,8 @@ def _get_output_dim(configs):
 
     elif arch_version == "bravo":
         return (
-            configs["data_processing"]["S2S_stagger"]["initial_num"]
-            + configs["data_processing"]["S2S_stagger"]["secondary_num"]
+            initial_num
+            + configs["data_processing"]["input_output_window"]["secondary_num"]
         ) * len(configs["learning_algorithm"]["quantiles"])
 
     else:
