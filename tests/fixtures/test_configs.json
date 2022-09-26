@@ -22,13 +22,17 @@
   "plot_comparison_portion_end":1.0
  },
  "data_processing": {
-    "feat_time": {
+   "feat_time": {
     "month_of_year": ["sincos"],
     "day_of_week": ["binary_reg"],
     "hour_of_day": ["sincos"],
     "holidays": false
    },
-   "resample_interval": "15min",
+   "resample": {
+    "bin_interval": "15min",
+    "bin_closed": "right",
+    "bin_label": "right"
+   },
    "feat_stats": {
     "active": true,
     "window_width": "15min"
