@@ -497,13 +497,12 @@ def prep_for_rnn(configs, data):
 def resample_or_rolling_stats(data, configs):
 
     # reading configuration parameters.
-    # resample_label_on is hard coded for now.
     # default is right labeled and right-closed window.
-    # window closing is currently tied to resample_label_on
     # window_position is hard coded for now.
     # default is right-closed and backward-looking window.
     bin_interval = configs["data_processing"]["resample"]["bin_interval"]
-    resample_label_on = "right"  # left, right
+    bin_closed = configs["data_processing"]["resample"]["bin_closed"]
+    bin_label = configs["data_processing"]["resample"]["bin_label"]
     window_width = configs["data_processing"]["feat_stats"]["window_width"]
     window_position = "backward"  # forward, center, backward
 
@@ -515,14 +514,14 @@ def resample_or_rolling_stats(data, configs):
 
         # resampling for each statistics separately
         data_resampler = X_data.resample(
-            rule=bin_interval, closed=resample_label_on, label=resample_label_on
+            rule=bin_interval, closed=bin_closed, label=bin_label
         )
         data_resample_min = data_resampler.min().add_suffix("_min")
         data_resample_max = data_resampler.max().add_suffix("_max")
         data_resample_sum = data_resampler.sum().add_suffix("_sum")
         data_resample_count = data_resampler.count().add_suffix("_count")
 
-        # setting configuration settings depending on window_position and resample_label_on
+        # setting configuration settings depending on window_position and bin_closed
         if window_position == "backward":
             arg_center = False
         elif window_position == "center":
@@ -533,17 +532,17 @@ def resample_or_rolling_stats(data, configs):
             data_resample_max = data_resample_max[::-1]
             data_resample_sum = data_resample_sum[::-1]
             data_resample_count = data_resample_count[::-1]
-            if resample_label_on == "left":
-                resample_label_on = "right"
-            elif resample_label_on == "right":
-                resample_label_on = "left"
+            if bin_closed == "left":
+                bin_closed = "right"
+            elif bin_closed == "right":
+                bin_closed = "left"
 
         # adding rolling window statistics: minimum
         mins = data_resample_min.rolling(
             window=window_width,
             min_periods=1,
             center=arg_center,
-            closed=resample_label_on,
+            closed=bin_closed,
         ).min()
 
         # adding rolling window statistics: maximum
@@ -551,7 +550,7 @@ def resample_or_rolling_stats(data, configs):
             window=window_width,
             min_periods=1,
             center=arg_center,
-            closed=resample_label_on,
+            closed=bin_closed,
         ).max()
 
         # adding rolling window statistics: sum
@@ -559,7 +558,7 @@ def resample_or_rolling_stats(data, configs):
             window=window_width,
             min_periods=1,
             center=arg_center,
-            closed=resample_label_on,
+            closed=bin_closed,
         ).sum()
 
         # adding rolling window statistics: count
@@ -567,7 +566,7 @@ def resample_or_rolling_stats(data, configs):
             window=window_width,
             min_periods=1,
             center=arg_center,
-            closed=resample_label_on,
+            closed=bin_closed,
         ).sum()  # this has to be sum for proper count calculation
 
         # adding rolling window statistics: mean
@@ -598,19 +597,17 @@ def resample_or_rolling_stats(data, configs):
 def _resample_data(data, configs):
 
     # reading configuration parameters.
-    # resample_label_on are hard coded for now. default is right labeled and right-closed window.
     bin_interval = configs["data_processing"]["resample"]["bin_interval"]
-    resample_label_on = "right"  # left, right
+    bin_closed = configs["data_processing"]["resample"]["bin_closed"]
+    bin_label = configs["data_processing"]["resample"]["bin_label"]
 
     # resample data
-    data = data.resample(
-        rule=bin_interval, label=resample_label_on, closed=resample_label_on
-    )
+    data = data.resample(rule=bin_interval, label=bin_label, closed=bin_closed)
 
     # take the closest value from the label
-    if resample_label_on == "left":
+    if bin_label == "left":
         data = data.first()
-    elif resample_label_on == "right":
+    elif bin_label == "right":
         data = data.last()
 
     return data
