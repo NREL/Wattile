@@ -110,7 +110,7 @@ class BravoModel(AlgoMainRNNBase):
         window_width_target = self.configs["data_processing"]["input_output_window"][
             "window_width_target"
         ]
-        resample_interval = self.configs["data_processing"]["resample_interval"]
+        resample_interval = self.configs["data_processing"]["resample"]["bin_interval"]
         initial_num = pd.Timedelta(window_width_target) // pd.Timedelta(
             resample_interval
         )
@@ -144,7 +144,7 @@ class BravoModel(AlgoMainRNNBase):
         window_width_target = self.configs["data_processing"]["input_output_window"][
             "window_width_target"
         ]
-        resample_interval = self.configs["data_processing"]["resample_interval"]
+        resample_interval = self.configs["data_processing"]["resample"]["bin_interval"]
         initial_num = int(
             pd.Timedelta(window_width_target) / pd.Timedelta(resample_interval)
         )
@@ -210,7 +210,9 @@ class BravoModel(AlgoMainRNNBase):
             window_width_target = self.configs["data_processing"][
                 "input_output_window"
             ]["window_width_target"]
-            resample_interval = self.configs["data_processing"]["resample_interval"]
+            resample_interval = self.configs["data_processing"]["resample"][
+                "bin_interval"
+            ]
             initial_num = int(
                 pd.Timedelta(window_width_target) / pd.Timedelta(resample_interval)
             )
@@ -465,7 +467,7 @@ class BravoModel(AlgoMainRNNBase):
         window_width_target = self.configs["data_processing"]["input_output_window"][
             "window_width_target"
         ]
-        resample_interval = self.configs["data_processing"]["resample_interval"]
+        resample_interval = self.configs["data_processing"]["resample"]["bin_interval"]
         initial_num = int(
             pd.Timedelta(window_width_target) / pd.Timedelta(resample_interval)
         )
@@ -968,7 +970,7 @@ class BravoModel(AlgoMainRNNBase):
         window_width_target = self.configs["data_processing"]["input_output_window"][
             "window_width_target"
         ]
-        resample_interval = self.configs["data_processing"]["resample_interval"]
+        resample_interval = self.configs["data_processing"]["resample"]["bin_interval"]
         initial_num = int(
             pd.Timedelta(window_width_target) / pd.Timedelta(resample_interval)
         )

@@ -238,7 +238,7 @@ def timelag_predictors_target(data, configs):
     window_width_target = configs["data_processing"]["input_output_window"][
         "window_width_target"
     ]
-    resample_interval = configs["data_processing"]["resample_interval"]
+    resample_interval = configs["data_processing"]["resample"]["bin_interval"]
     initial_num = pd.Timedelta(window_width_target) // pd.Timedelta(resample_interval)
     secondary_num = configs["data_processing"]["input_output_window"]["secondary_num"]
     decay = configs["data_processing"]["input_output_window"]["decay"]
@@ -303,7 +303,7 @@ def roll_predictors_target(data, configs):
     window_width_target = configs["data_processing"]["input_output_window"][
         "window_width_target"
     ]
-    resample_interval = configs["data_processing"]["resample_interval"]
+    resample_interval = configs["data_processing"]["resample"]["bin_interval"]
     target_var = configs["data_input"]["target_var"]
 
     # initialize lists
@@ -502,7 +502,7 @@ def resample_or_rolling_stats(data, configs):
     # window closing is currently tied to resample_label_on
     # window_position is hard coded for now.
     # default is right-closed and backward-looking window.
-    resample_interval = configs["data_processing"]["resample_interval"]
+    resample_interval = configs["data_processing"]["resample"]["bin_interval"]
     resample_label_on = "right"  # left, right
     window_width = configs["data_processing"]["feat_stats"]["window_width"]
     window_position = "backward"  # forward, center, backward
@@ -599,7 +599,7 @@ def _resample_data(data, configs):
 
     # reading configuration parameters.
     # resample_label_on are hard coded for now. default is right labeled and right-closed window.
-    resample_interval = configs["data_processing"]["resample_interval"]
+    resample_interval = configs["data_processing"]["resample"]["bin_interval"]
     resample_label_on = "right"  # left, right
 
     # resample data
