@@ -31,10 +31,8 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
     window_width_target = configs["data_processing"]["input_output_window"][
         "window_width_target"
     ]
-    resample_interval = configs["data_processing"]["resample"]["bin_interval"]
-    initial_num = int(
-        pd.Timedelta(window_width_target) / pd.Timedelta(resample_interval)
-    )
+    bin_interval = configs["data_processing"]["resample"]["bin_interval"]
+    initial_num = int(pd.Timedelta(window_width_target) / pd.Timedelta(bin_interval))
     predictions = predictions.iloc[
         int(predictions.shape[0] * plot_comparison_portion_start) : int(
             predictions.shape[0] * plot_comparison_portion_end
@@ -68,7 +66,7 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
     window_target_size = configs["data_processing"]["input_output_window"][
         "window_width_target"
     ]
-    resample_interval = configs["data_processing"]["resample"]["bin_interval"]
+    bin_interval = configs["data_processing"]["resample"]["bin_interval"]
 
     ######################################################################
     # initialize plotting area
@@ -124,7 +122,7 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
         elif configs["learning_algorithm"]["arch_version"] == "charlie":
 
             window_target_size_count = window_target_size_count = int(
-                pd.Timedelta(window_target_size) / pd.Timedelta(resample_interval)
+                pd.Timedelta(window_target_size) / pd.Timedelta(bin_interval)
             )
             idx_col_med_start = len_c_list * window_target_size_count
             idx_col_med_end = idx_col_med_start + window_target_size_count
@@ -170,7 +168,7 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
             elif configs["learning_algorithm"]["arch_version"] == "charlie":
 
                 window_target_size_count = int(
-                    pd.Timedelta(window_target_size) / pd.Timedelta(resample_interval)
+                    pd.Timedelta(window_target_size) / pd.Timedelta(bin_interval)
                 )
 
                 idx_col_low_start = qntl * window_target_size_count

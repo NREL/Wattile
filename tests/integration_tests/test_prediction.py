@@ -93,9 +93,9 @@ def test_prediction_bravo(config_for_tests, tmpdir):
     window_width_target = pd.Timedelta(
         data_processing_configs["input_output_window"]["window_width_target"]
     )
-    resample_interval = pd.Timedelta(data_processing_configs["resample_interval"])
+    bin_interval = pd.Timedelta(data_processing_configs["bin_interval"])
     secondary_num = data_processing_configs["input_output_window"]["secondary_num"]
-    num_timestamps = (window_width_target // resample_interval) + secondary_num
+    num_timestamps = (window_width_target // bin_interval) + secondary_num
 
     assert results.shape[1:] == (
         len(config_for_tests["learning_algorithm"]["quantiles"]),

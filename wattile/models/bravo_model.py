@@ -110,10 +110,8 @@ class BravoModel(AlgoMainRNNBase):
         window_width_target = self.configs["data_processing"]["input_output_window"][
             "window_width_target"
         ]
-        resample_interval = self.configs["data_processing"]["resample"]["bin_interval"]
-        initial_num = pd.Timedelta(window_width_target) // pd.Timedelta(
-            resample_interval
-        )
+        bin_interval = self.configs["data_processing"]["resample"]["bin_interval"]
+        initial_num = pd.Timedelta(window_width_target) // pd.Timedelta(bin_interval)
         num_future_time_instances = (
             initial_num
             + self.configs["data_processing"]["input_output_window"]["secondary_num"]
@@ -144,9 +142,9 @@ class BravoModel(AlgoMainRNNBase):
         window_width_target = self.configs["data_processing"]["input_output_window"][
             "window_width_target"
         ]
-        resample_interval = self.configs["data_processing"]["resample"]["bin_interval"]
+        bin_interval = self.configs["data_processing"]["resample"]["bin_interval"]
         initial_num = int(
-            pd.Timedelta(window_width_target) / pd.Timedelta(resample_interval)
+            pd.Timedelta(window_width_target) / pd.Timedelta(bin_interval)
         )
         num_future_time_instances = (
             initial_num
@@ -210,11 +208,9 @@ class BravoModel(AlgoMainRNNBase):
             window_width_target = self.configs["data_processing"][
                 "input_output_window"
             ]["window_width_target"]
-            resample_interval = self.configs["data_processing"]["resample"][
-                "bin_interval"
-            ]
+            bin_interval = self.configs["data_processing"]["resample"]["bin_interval"]
             initial_num = int(
-                pd.Timedelta(window_width_target) / pd.Timedelta(resample_interval)
+                pd.Timedelta(window_width_target) / pd.Timedelta(bin_interval)
             )
             num_timestamps = (
                 initial_num
@@ -467,9 +463,9 @@ class BravoModel(AlgoMainRNNBase):
         window_width_target = self.configs["data_processing"]["input_output_window"][
             "window_width_target"
         ]
-        resample_interval = self.configs["data_processing"]["resample"]["bin_interval"]
+        bin_interval = self.configs["data_processing"]["resample"]["bin_interval"]
         initial_num = int(
-            pd.Timedelta(window_width_target) / pd.Timedelta(resample_interval)
+            pd.Timedelta(window_width_target) / pd.Timedelta(bin_interval)
         )
 
         # Write the configurations used for this training process to a json file
@@ -970,9 +966,9 @@ class BravoModel(AlgoMainRNNBase):
         window_width_target = self.configs["data_processing"]["input_output_window"][
             "window_width_target"
         ]
-        resample_interval = self.configs["data_processing"]["resample"]["bin_interval"]
+        bin_interval = self.configs["data_processing"]["resample"]["bin_interval"]
         initial_num = int(
-            pd.Timedelta(window_width_target) / pd.Timedelta(resample_interval)
+            pd.Timedelta(window_width_target) / pd.Timedelta(bin_interval)
         )
 
         logger.info("Loaded model from file, given run_train=False\n")

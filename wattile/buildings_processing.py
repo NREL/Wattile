@@ -238,8 +238,8 @@ def timelag_predictors_target(data, configs):
     window_width_target = configs["data_processing"]["input_output_window"][
         "window_width_target"
     ]
-    resample_interval = configs["data_processing"]["resample"]["bin_interval"]
-    initial_num = pd.Timedelta(window_width_target) // pd.Timedelta(resample_interval)
+    bin_interval = configs["data_processing"]["resample"]["bin_interval"]
+    initial_num = pd.Timedelta(window_width_target) // pd.Timedelta(bin_interval)
     secondary_num = configs["data_processing"]["input_output_window"]["secondary_num"]
     decay = configs["data_processing"]["input_output_window"]["decay"]
     target_var = configs["data_input"]["target_var"]
@@ -303,7 +303,7 @@ def roll_predictors_target(data, configs):
     window_width_target = configs["data_processing"]["input_output_window"][
         "window_width_target"
     ]
-    resample_interval = configs["data_processing"]["resample"]["bin_interval"]
+    bin_interval = configs["data_processing"]["resample"]["bin_interval"]
     target_var = configs["data_input"]["target_var"]
 
     # initialize lists
@@ -312,10 +312,10 @@ def roll_predictors_target(data, configs):
 
     # calculate number of rows based on window size defined by time
     window_source_size_count = int(
-        pd.Timedelta(window_width_source) / pd.Timedelta(resample_interval)
+        pd.Timedelta(window_width_source) / pd.Timedelta(bin_interval)
     )
     window_target_size_count = int(
-        pd.Timedelta(window_width_target) / pd.Timedelta(resample_interval)
+        pd.Timedelta(window_width_target) / pd.Timedelta(bin_interval)
     )
 
     # set aside timeindex
@@ -502,7 +502,7 @@ def resample_or_rolling_stats(data, configs):
     # window closing is currently tied to resample_label_on
     # window_position is hard coded for now.
     # default is right-closed and backward-looking window.
-    resample_interval = configs["data_processing"]["resample"]["bin_interval"]
+    bin_interval = configs["data_processing"]["resample"]["bin_interval"]
     resample_label_on = "right"  # left, right
     window_width = configs["data_processing"]["feat_stats"]["window_width"]
     window_position = "backward"  # forward, center, backward
@@ -515,7 +515,7 @@ def resample_or_rolling_stats(data, configs):
 
         # resampling for each statistics separately
         data_resampler = X_data.resample(
-            rule=resample_interval, closed=resample_label_on, label=resample_label_on
+            rule=bin_interval, closed=resample_label_on, label=resample_label_on
         )
         data_resample_min = data_resampler.min().add_suffix("_min")
         data_resample_max = data_resampler.max().add_suffix("_max")
@@ -599,12 +599,12 @@ def _resample_data(data, configs):
 
     # reading configuration parameters.
     # resample_label_on are hard coded for now. default is right labeled and right-closed window.
-    resample_interval = configs["data_processing"]["resample"]["bin_interval"]
+    bin_interval = configs["data_processing"]["resample"]["bin_interval"]
     resample_label_on = "right"  # left, right
 
     # resample data
     data = data.resample(
-        rule=resample_interval, label=resample_label_on, closed=resample_label_on
+        rule=bin_interval, label=resample_label_on, closed=resample_label_on
     )
 
     # take the closest value from the label
