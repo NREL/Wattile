@@ -208,16 +208,14 @@ def timelag_predictors(data, configs):
     temp_holder.reverse()
     data = pd.concat(temp_holder, axis=1)
 
-    # If this is an RNN model
-    if configs["learning_algorithm"]["arch_type"] == "RNN":
-        # re-append the shifted target column to the dataframe
-        data[target_var] = target.shift(freq="-" + lag_interval_forecast)
+    # re-append the shifted target column to the dataframe
+    data[target_var] = target.shift(freq="-" + lag_interval_forecast)
 
-        # drop all nans
-        data = data.dropna(how="any")
+    # drop all nans
+    data = data.dropna(how="any")
 
-        # adjust time index to match the EC values
-        data.index = data.index.shift(freq=lag_interval_forecast)
+    # adjust time index to match the EC values
+    data.index = data.index.shift(freq=lag_interval_forecast)
 
     return data
 
