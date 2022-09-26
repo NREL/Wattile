@@ -133,7 +133,9 @@ def test_rolling_stats():
         configs={
             "data_input": {"target_var": "target_var"},
             "data_processing": {
-                "bin_interval": "1min",
+                "resample": {
+                    "bin_interval": "1min",
+                },
                 "feat_stats": {
                     "active": True,
                     "window_width": "5min",
