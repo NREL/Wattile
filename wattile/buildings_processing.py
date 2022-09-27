@@ -214,9 +214,6 @@ def timelag_predictors(data, configs):
     # drop all nans
     data = data.dropna(how="any")
 
-    # adjust time index to match the EC values
-    data.index = data.index.shift(freq=window_width_futurecast)
-
     return data
 
 
