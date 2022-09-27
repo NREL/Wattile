@@ -236,15 +236,23 @@ def timelag_predictors_target(data, configs):
     window_width_target = configs["data_processing"]["input_output_window"][
         "window_width_target"
     ]
+    window_width_futurecast = configs["data_processing"]["input_output_window"][
+        "window_width_futurecast"
+    ]
     resample_interval = configs["data_processing"]["resample_interval"]
     initial_num = pd.Timedelta(window_width_target) // pd.Timedelta(resample_interval)
     secondary_num = configs["data_processing"]["input_output_window"]["secondary_num"]
     decay = configs["data_processing"]["input_output_window"]["decay"]
     target_var = configs["data_input"]["target_var"]
 
+    # shift target for futurecast
+    data[target_var] = data[target_var].shift(freq="-" + window_width_futurecast)
+
+    # split predictors and target
     target = data[target_var]
     data = data.drop(target_var, axis=1)
     data_orig = data
+
     # Pad the exogenous variables
     temp_holder = list()
     temp_holder.append(data_orig)
@@ -298,11 +306,17 @@ def roll_predictors_target(data, configs):
     window_width_source = configs["data_processing"]["input_output_window"][
         "window_width_source"
     ]
+    window_width_futurecast = configs["data_processing"]["input_output_window"][
+        "window_width_futurecast"
+    ]
     window_width_target = configs["data_processing"]["input_output_window"][
         "window_width_target"
     ]
     resample_interval = configs["data_processing"]["resample_interval"]
     target_var = configs["data_input"]["target_var"]
+
+    # shift target for futurecast
+    data[target_var] = data[target_var].shift(freq="-" + window_width_futurecast)
 
     # initialize lists
     data_predictor = []
