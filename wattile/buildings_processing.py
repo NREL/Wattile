@@ -248,9 +248,6 @@ def timelag_predictors_target(data, configs):
     # shift target for futurecast
     data[target_var] = data[target_var].shift(freq="-" + window_width_futurecast)
 
-    # adjust time index to match the EC values
-    data.index = data.index.shift(freq=window_width_futurecast)
-
     # split predictors and target
     target = data[target_var]
     data = data.drop(target_var, axis=1)
@@ -320,9 +317,6 @@ def roll_predictors_target(data, configs):
 
     # shift target for futurecast
     data[target_var] = data[target_var].shift(freq="-" + window_width_futurecast)
-
-    # adjust time index to match the EC values
-    data.index = data.index.shift(freq=window_width_futurecast)
 
     # initialize lists
     data_predictor = []
