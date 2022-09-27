@@ -97,26 +97,56 @@ class AlgoMainRNNBase(ABC):
         """
 
         # set prediction time with pandas timedelta
-        predict_time = ()  # current time needs to go in here
+        timestamp_cast = pd.to_datetime(datetime)  # current time needs to go in here
 
-        # maybe the whole point of class is to avoid this type of ifs?? can't think of alternative
+        config_data_processing = self.configs["data_processing"]
+        config_feat_timelag = config_data_processing["feat_timelag"]
+        config_input_output_window = config_data_processing["input_output_window"]
+
+        # i guess the whole point of class is to avoid this type of IFs.
+        # maybe it's better to put these methods under each model.
         if self.configs["learning_algorithm"]["arch_version"] == "alfa":
-            window_start_offset = "0min"
-            window_end_offset = "0min"
+
+            window_start_offset = (
+                pd.Timedelta(config_feat_timelag["lag_interval"])
+                * config_feat_timelag["lag_count"]
+            )
+
+            window_end_offset = pd.Timedelta("0min") + pd.Timedelta(
+                config_input_output_window["window_width_futurecast"]
+            )
+
+            timestamp_cast = timestamp_cast - window_end_offset
+
         elif self.configs["learning_algorithm"]["arch_version"] == "bravo":
-            window_start_offset = "0min"
-            window_end_offset = "0min"
+
+            window_start_offset = (
+                pd.Timedelta(config_feat_timelag["lag_interval"])
+                * config_feat_timelag["lag_count"]
+            )
+
+            window_end_offset = (
+                pd.Timedelta(config_input_output_window["window_width_target"])
+                - pd.Timedelta(config_data_processing["resample_interval"])
+                + pd.Timedelta(config_input_output_window["window_width_futurecast"])
+            )
+
+            timestamp_cast = timestamp_cast - window_end_offset
+
         elif self.configs["learning_algorithm"]["arch_version"] == "charlie":
-            window_start_offset = self.configs["data_processing"][
-                "input_output_window"
-            ]["window_width_source"]
-            window_end_offset = "0min"
 
-        # calculate timestamps for input data window
-        window_start_time = predict_time - pd.Timedelta(window_start_offset)
-        window_end_time = predict_time - pd.Timedelta(window_end_offset)
+            window_start_offset = pd.Timedelta(
+                config_input_output_window["window_width_source"]
+            )
 
-        return window_start_time, window_end_time
+            window_end_offset = pd.Timedelta(
+                config_input_output_window["window_width_target"]
+            ) - pd.Timedelta(config_data_processing["resample_interval"])
+
+        prediction_window_start_time = timestamp_cast - window_start_offset
+        prediction_window_end_time = timestamp_cast + window_end_offset
+
+        return prediction_window_start_time, prediction_window_end_time
 
     def get_prediction_vector_for_time(self, output_time: datetime) -> List[timedelta]:
         """Given the time for which we want to predict, return a vector of actual timestamps
