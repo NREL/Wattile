@@ -214,7 +214,7 @@ def timelag_predictors(data, configs):
     # drop all nans
     data = data.dropna(how="any")
 
-    # adjust time index to match the EC values
+    # adjust time index to match with current time stamp
     data.index = data.index.shift(freq=window_width_futurecast)
 
     return data
@@ -248,7 +248,7 @@ def timelag_predictors_target(data, configs):
     # shift target for futurecast
     data[target_var] = data[target_var].shift(freq="-" + window_width_futurecast)
 
-    # adjust time index to match the EC values
+    # adjust time index to match with current time stamp
     data.index = data.index.shift(freq=window_width_futurecast)
 
     # split predictors and target
@@ -321,7 +321,7 @@ def roll_predictors_target(data, configs):
     # shift target for futurecast
     data[target_var] = data[target_var].shift(freq="-" + window_width_futurecast)
 
-    # adjust time index to match the EC values
+    # adjust time index to match with current time stamp
     data.index = data.index.shift(freq=window_width_futurecast)
 
     # initialize lists
