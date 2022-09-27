@@ -185,8 +185,8 @@ def timelag_predictors(data, configs):
     # reading configuration parameters
     lag_interval = configs["data_processing"]["feat_timelag"]["lag_interval"]
     lag_count = configs["data_processing"]["feat_timelag"]["lag_count"]
-    lag_interval_forecast = configs["data_processing"]["feat_timelag"][
-        "lag_interval_forecast"
+    window_width_futurecast = configs["data_processing"]["input_output_window"][
+        "window_width_futurecast"
     ]
     target_var = configs["data_input"]["target_var"]
 
@@ -209,13 +209,13 @@ def timelag_predictors(data, configs):
     data = pd.concat(temp_holder, axis=1)
 
     # re-append the shifted target column to the dataframe
-    data[target_var] = target.shift(freq="-" + lag_interval_forecast)
+    data[target_var] = target.shift(freq="-" + window_width_futurecast)
 
     # drop all nans
     data = data.dropna(how="any")
 
     # adjust time index to match the EC values
-    data.index = data.index.shift(freq=lag_interval_forecast)
+    data.index = data.index.shift(freq=window_width_futurecast)
 
     return data
 

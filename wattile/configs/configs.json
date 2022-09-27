@@ -35,11 +35,11 @@
    },
    "feat_timelag": {
     "lag_interval": "15min",
-    "lag_count": 24,
-    "lag_interval_forecast": "0min"
+    "lag_count": 24
    },
    "input_output_window": {
     "window_width_source": "180min",
+    "window_width_futurecast":"0min",
     "window_width_target": "45min",
     "decay": 0,
     "secondary_num": 0
