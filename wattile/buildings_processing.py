@@ -240,8 +240,6 @@ def timelag_predictors_target(data, configs):
     ]
     resample_interval = configs["data_processing"]["resample_interval"]
     initial_num = pd.Timedelta(window_width_target) // pd.Timedelta(resample_interval)
-    secondary_num = configs["data_processing"]["input_output_window"]["secondary_num"]
-    decay = configs["data_processing"]["input_output_window"]["decay"]
     target_var = configs["data_input"]["target_var"]
 
     target = data[target_var]
@@ -269,14 +267,6 @@ def timelag_predictors_target(data, configs):
             local["{}_lag_{}".format(target_var, i)] = target.shift(
                 freq="-" + (i * lag_interval)
             )
-
-    # Do additional coarse padding for future predictions
-    for i in range(1, secondary_num + 1):
-        base = initial_num
-        new = int(base + decay * i)
-        local["{}_lag_{}".format(target_var, base + i)] = target.shift(
-            freq="-" + (new * lag_interval)
-        )
 
     data = pd.concat([data, local], axis=1)
 

@@ -31,10 +31,7 @@ def _get_output_dim(configs):
         return len(configs["learning_algorithm"]["quantiles"])
 
     elif arch_version == "bravo":
-        return (
-            initial_num
-            + configs["data_processing"]["input_output_window"]["secondary_num"]
-        ) * len(configs["learning_algorithm"]["quantiles"])
+        return (initial_num) * len(configs["learning_algorithm"]["quantiles"])
 
     else:
         ConfigsError(f"{arch_version} not a valid arch_version")
