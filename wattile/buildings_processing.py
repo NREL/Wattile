@@ -209,13 +209,13 @@ def timelag_predictors(data, configs):
     data = pd.concat(temp_holder, axis=1)
 
     # re-append the shifted target column to the dataframe
-    data[target_var] = target.shift(freq="-" + window_width_futurecast).copy()
+    data[target_var] = target.shift(freq="-" + window_width_futurecast)
 
     # drop all nans
     data = data.dropna(how="any")
 
     # adjust time index to match the EC values
-    data.index = data.index.shift(freq=window_width_futurecast).copy()
+    data.index = data.index.shift(freq=window_width_futurecast)
 
     return data
 
@@ -246,7 +246,7 @@ def timelag_predictors_target(data, configs):
     target_var = configs["data_input"]["target_var"]
 
     # shift target for futurecast
-    data[target_var] = data[target_var].shift(freq="-" + window_width_futurecast).copy()
+    data[target_var] = data[target_var].shift(freq="-" + window_width_futurecast)
 
     # split predictors and target
     target = data[target_var]
@@ -316,7 +316,7 @@ def roll_predictors_target(data, configs):
     target_var = configs["data_input"]["target_var"]
 
     # shift target for futurecast
-    data[target_var] = data[target_var].shift(freq="-" + window_width_futurecast).copy()
+    data[target_var] = data[target_var].shift(freq="-" + window_width_futurecast)
 
     # initialize lists
     data_predictor = []
