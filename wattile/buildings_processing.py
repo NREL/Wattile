@@ -244,9 +244,10 @@ def timelag_predictors_target(data, configs):
     secondary_num = configs["data_processing"]["input_output_window"]["secondary_num"]
     decay = configs["data_processing"]["input_output_window"]["decay"]
     target_var = configs["data_input"]["target_var"]
+    target_temp = data[target_var].copy()
 
     # shift target for futurecast
-    data[target_var] = data[target_var].shift(freq="-" + window_width_futurecast)
+    data[target_var] = target_temp.shift(freq="-" + window_width_futurecast)
 
     # split predictors and target
     target = data[target_var]
@@ -314,9 +315,10 @@ def roll_predictors_target(data, configs):
     ]
     resample_interval = configs["data_processing"]["resample_interval"]
     target_var = configs["data_input"]["target_var"]
+    target = data[target_var].copy()
 
     # shift target for futurecast
-    data[target_var] = data[target_var].shift(freq="-" + window_width_futurecast)
+    data[target_var] = target.shift(freq="-" + window_width_futurecast)
 
     # initialize lists
     data_predictor = []
