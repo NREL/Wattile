@@ -118,7 +118,7 @@ class AlgoMainRNNBase(ABC):
 
         return window_start_time, window_end_time
 
-    def get_pediction_vector_for_time(self, output_time: datetime) -> List[timedelta]:
+    def get_prediction_vector_for_time(self, output_time: datetime) -> List[timedelta]:
         """Given the time for which we want to predict, return a vector of actual timestamps
         corresponding to the predictions returned by the model
 
