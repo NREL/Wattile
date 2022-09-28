@@ -687,3 +687,38 @@ class CharlieModel:
         prediction_window_end_time = timestamp_cast + window_end_offset
 
         return prediction_window_start_time, prediction_window_end_time
+
+    def get_prediction_vector_for_time(self):
+        """Given the time for which we want to predict, return a vector of actual timestamps
+        corresponding to the predictions returned by the model
+
+        :param output_time: the time for which we want to predict
+        :type output_time: datetime
+        :return: a vector of actual timestamps corresponding to the predictions
+        :rtype: List[timedelta]
+        """
+
+        # initialize horizon vector
+        future_horizon_vector = []
+
+        # set up variables
+        resample_interval = self.configs["data_processing"]["resample_interval"]
+        window_start_delta = self.configs["data_processing"]["input_output_window"][
+            "window_width_futurecast"
+        ]
+        window_width_target = self.configs["data_processing"]["input_output_window"][
+            "window_width_target"
+        ]
+
+        # calculate future time horizon count
+        count_horizon = (
+            pd.Timedelta(window_width_target) // pd.Timedelta(resample_interval) + 1
+        )
+
+        # create horizon vector by adding timedelta via loop
+        timedelta = pd.Timedelta(window_start_delta)
+        for i in range(count_horizon):
+            future_horizon_vector.append(timedelta)
+            timedelta = pd.Timedelta(timedelta) + pd.Timedelta(resample_interval)
+
+        return future_horizon_vector
