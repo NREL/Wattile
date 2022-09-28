@@ -2,9 +2,7 @@ import json
 import logging
 import os
 from abc import ABC
-from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List
 
 import pandas as pd
 import torch
@@ -83,47 +81,6 @@ class AlgoMainRNNBase(ABC):
             num_train_data = 0
 
         return train_bt_size, val_bt_size, num_train_data
-
-    def get_prediction_vector_for_time(self, output_time: datetime) -> List[timedelta]:
-        """Given the time for which we want to predict, return a vector of actual timestamps
-        corresponding to the predictions returned by the model
-
-        :param output_time: the time for which we want to predict
-        :type output_time: datetime
-        :return: a vector of actual timestamps corresponding to the predictions
-        :rtype: List[timedelta]
-        """
-
-        # initialize horizon vector
-        future_horizon_vector = []
-
-        # set up variables
-        resample_interval = self.configs["data_processing"]["resample_interval"]
-        window_start_delta = self.configs["data_processing"]["input_output_window"][
-            "window_width_futurecast"
-        ]
-        window_width_target = self.configs["data_processing"]["input_output_window"][
-            "window_width_target"
-        ]
-
-        if self.configs["learning_algorithm"]["arch_version"] == "alfa":
-            count_horizon = 1
-
-        elif (self.configs["learning_algorithm"]["arch_version"] == "bravo") | (
-            self.configs["learning_algorithm"]["arch_version"] == "charlie"
-        ):
-            count_horizon = (
-                pd.Timedelta(window_width_target) // pd.Timedelta(resample_interval) + 1
-            )
-
-        # create horizon vector by adding timedelta via loop
-        timedelta = pd.Timedelta(window_start_delta)
-        for i in range(count_horizon):
-
-            future_horizon_vector.append(timedelta)
-            timedelta = pd.Timedelta(timedelta) + pd.Timedelta(resample_interval)
-
-        return future_horizon_vector
 
     def data_transform(self, train_data, val_data, transformation_method, run_train):
         """
