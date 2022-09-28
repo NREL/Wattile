@@ -24,7 +24,9 @@ def _get_output_dim(configs):
         "window_width_target"
     ]
     resample_interval = configs["data_processing"]["resample_interval"]
-    initial_num = pd.Timedelta(window_width_target) // pd.Timedelta(resample_interval)
+    initial_num = (
+        pd.Timedelta(window_width_target) // pd.Timedelta(resample_interval) + 1
+    )
     arch_version = configs["learning_algorithm"]["arch_version"]
 
     if arch_version == "alfa":

@@ -32,8 +32,8 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
         "window_width_target"
     ]
     resample_interval = configs["data_processing"]["resample_interval"]
-    initial_num = int(
-        pd.Timedelta(window_width_target) / pd.Timedelta(resample_interval)
+    initial_num = (
+        int(pd.Timedelta(window_width_target) / pd.Timedelta(resample_interval)) + 1
     )
     predictions = predictions.iloc[
         int(predictions.shape[0] * plot_comparison_portion_start) : int(
