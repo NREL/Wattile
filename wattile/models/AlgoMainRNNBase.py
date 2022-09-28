@@ -169,9 +169,16 @@ class AlgoMainRNNBase(ABC):
         window_width_target = self.configs["data_processing"]["input_output_window"][
             "window_width_target"
         ]
-        count_horizon = (
-            pd.Timedelta(window_width_target) // pd.Timedelta(resample_interval) + 1
-        )
+
+        if self.configs["learning_algorithm"]["arch_version"] == "alfa":
+            count_horizon = 1
+
+        elif (self.configs["learning_algorithm"]["arch_version"] == "bravo") | (
+            self.configs["learning_algorithm"]["arch_version"] == "charlie"
+        ):
+            count_horizon = (
+                pd.Timedelta(window_width_target) // pd.Timedelta(resample_interval) + 1
+            )
 
         # create horizon vector by adding timedelta via loop
         timedelta = pd.Timedelta(window_start_delta)
