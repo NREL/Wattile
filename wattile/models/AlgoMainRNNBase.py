@@ -159,11 +159,13 @@ class AlgoMainRNNBase(ABC):
         """
 
         # initialize horizon vector
-        horizon_vector = []
+        future_horizon_vector = []
 
         # set up variables
         resample_interval = self.configs["data_processing"]["resample_interval"]
-        window_start_delta = "0min"  # TODO: tie with window_width_futurecast in configs
+        window_start_delta = self.configs["data_processing"]["input_output_window"][
+            "window_width_futurecast"
+        ]
         window_width_target = self.configs["data_processing"]["input_output_window"][
             "window_width_target"
         ]
@@ -172,12 +174,13 @@ class AlgoMainRNNBase(ABC):
         )
 
         # create horizon vector by adding timedelta via loop
-        timedelta = window_start_delta
+        timedelta = pd.Timedelta(window_start_delta)
         for i in range(count_horizon):
-            timedelta = pd.Timedelta(timedelta) + pd.Timedelta(resample_interval)
-            horizon_vector.append(timedelta)
 
-        return horizon_vector
+            future_horizon_vector.append(timedelta)
+            timedelta = pd.Timedelta(timedelta) + pd.Timedelta(resample_interval)
+
+        return future_horizon_vector
 
     def data_transform(self, train_data, val_data, transformation_method, run_train):
         """
