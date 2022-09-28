@@ -112,11 +112,9 @@ class AlgoMainRNNBase(ABC):
                 * config_feat_timelag["lag_count"]
             )
 
-            window_end_offset = pd.Timedelta("0min") + pd.Timedelta(
+            window_end_offset = pd.Timedelta(
                 config_input_output_window["window_width_futurecast"]
             )
-
-            timestamp_cast = timestamp_cast - window_end_offset
 
         elif self.configs["learning_algorithm"]["arch_version"] == "bravo":
 
@@ -131,9 +129,11 @@ class AlgoMainRNNBase(ABC):
                 + pd.Timedelta(config_input_output_window["window_width_futurecast"])
             )
 
-            timestamp_cast = timestamp_cast - window_end_offset
+            timestamp_cast = timestamp_cast - pd.Timedelta(
+                config_input_output_window["window_width_futurecast"]
+            )
 
-        elif self.configs["learning_algorithm"]["arch_version"] == "charlie":
+        elif self.onfigs["learning_algorithm"]["arch_version"] == "charlie":
 
             window_start_offset = pd.Timedelta(
                 config_input_output_window["window_width_source"]
