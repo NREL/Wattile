@@ -169,8 +169,8 @@ class AlgoMainRNNBase(ABC):
         window_width_target = self.configs["data_processing"]["input_output_window"][
             "window_width_target"
         ]
-        count_horizon = pd.Timedelta(window_width_target) // pd.Timedelta(
-            resample_interval
+        count_horizon = (
+            pd.Timedelta(window_width_target) // pd.Timedelta(resample_interval) + 1
         )
 
         # create horizon vector by adding timedelta via loop
