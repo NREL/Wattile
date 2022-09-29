@@ -1086,7 +1086,6 @@ class BravoModel(AlgoMainRNNBase):
         window_end_offset = pd.Timedelta(window_width_target) + pd.Timedelta(
             window_width_futurecast
         )
-        timestamp_cast = timestamp_cast - pd.Timedelta(window_width_futurecast)
 
         # calculating start and end time windows for input data
         prediction_window_start_time = timestamp_cast - window_start_offset
