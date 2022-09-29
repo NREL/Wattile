@@ -6,7 +6,7 @@ import pytest
 
 from wattile.models.AlgoMainRNNBase import AlgoMainRNNBase
 
-TESTS_PATH = Path(__file__).parents[1]
+TESTS_PATH = Path(__file__).parents[2]
 TESTS_FIXTURES_PATH = TESTS_PATH / "fixtures"
 
 
