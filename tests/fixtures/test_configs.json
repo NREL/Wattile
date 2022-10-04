@@ -22,13 +22,17 @@
   "plot_comparison_portion_end":1.0
  },
  "data_processing": {
-    "feat_time": {
+   "feat_time": {
     "month_of_year": ["sincos"],
     "day_of_week": ["binary_reg"],
     "hour_of_day": ["sincos"],
     "holidays": false
    },
-   "resample_interval": "15min",
+   "resample": {
+    "bin_interval": "15min",
+    "bin_closed": "right",
+    "bin_label": "right"
+   },
    "feat_stats": {
     "active": true,
     "window_width": "15min"
@@ -40,9 +44,7 @@
    "input_output_window": {
     "window_width_source": "180min",
     "window_width_futurecast":"0min",
-    "window_width_target": "1080min",
-    "decay": 0,
-    "secondary_num": 0
+    "window_width_target": "1080min"
    },
    "random_seed": 1,
    "sequential_splicer": {

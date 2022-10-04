@@ -23,18 +23,15 @@ def _get_output_dim(configs):
     window_width_target = configs["data_processing"]["input_output_window"][
         "window_width_target"
     ]
-    resample_interval = configs["data_processing"]["resample_interval"]
-    initial_num = pd.Timedelta(window_width_target) // pd.Timedelta(resample_interval)
+    bin_interval = configs["data_processing"]["resample"]["bin_interval"]
+    initial_num = pd.Timedelta(window_width_target) // pd.Timedelta(bin_interval)
     arch_version = configs["learning_algorithm"]["arch_version"]
 
     if arch_version == "alfa":
         return len(configs["learning_algorithm"]["quantiles"])
 
     elif arch_version == "bravo":
-        return (
-            initial_num
-            + configs["data_processing"]["input_output_window"]["secondary_num"]
-        ) * len(configs["learning_algorithm"]["quantiles"])
+        return (initial_num) * len(configs["learning_algorithm"]["quantiles"])
 
     else:
         ConfigsError(f"{arch_version} not a valid arch_version")
