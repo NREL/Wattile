@@ -28,7 +28,11 @@
     "hour_of_day": ["sincos", "binary_reg", "binary_fuzzy"],
     "holidays": false
    },
-   "resample_interval": "15min",
+   "resample": {
+    "bin_interval": "15min",
+    "bin_closed": "right",
+    "bin_label": "right"
+   },
    "feat_stats": {
     "active": true,
     "window_width": "15min"
