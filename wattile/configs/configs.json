@@ -44,7 +44,7 @@
    "input_output_window": {
     "window_width_source": "180min",
     "window_width_futurecast":"0min",
-    "window_width_target": "45min",
+    "window_width_target": "45min"
    },
    "random_seed": 382,
    "sequential_splicer": {
