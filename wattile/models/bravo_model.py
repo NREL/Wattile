@@ -141,8 +141,8 @@ class BravoModel(AlgoMainRNNBase):
             "window_width_target"
         ]
         bin_interval = self.configs["data_processing"]["resample"]["bin_interval"]
-        num_future_time_instances = (
-            pd.Timedelta(window_width_target) // pd.Timedelta(bin_interval)
+        num_future_time_instances = pd.Timedelta(window_width_target) // pd.Timedelta(
+            bin_interval
         )
         resid = target - output
 
@@ -203,8 +203,8 @@ class BravoModel(AlgoMainRNNBase):
                 "input_output_window"
             ]["window_width_target"]
             bin_interval = self.configs["data_processing"]["resample"]["bin_interval"]
-            num_timestamps = (
-                pd.Timedelta(window_width_target) // pd.Timedelta(bin_interval)
+            num_timestamps = pd.Timedelta(window_width_target) // pd.Timedelta(
+                bin_interval
             )
             model.eval()
             preds = []
@@ -955,9 +955,7 @@ class BravoModel(AlgoMainRNNBase):
             "window_width_target"
         ]
         bin_interval = self.configs["data_processing"]["resample"]["bin_interval"]
-        num_timestamps = (
-            pd.Timedelta(window_width_target) // pd.Timedelta(bin_interval)
-        )
+        num_timestamps = pd.Timedelta(window_width_target) // pd.Timedelta(bin_interval)
 
         logger.info("Loaded model from file, given run_train=False\n")
 
