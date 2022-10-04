@@ -28,19 +28,23 @@
    "hour_of_day": ["sincos"],
    "holidays": false
   },
-  "resample_interval": "15min",
+  "resample": {
+   "bin_interval": "15min",
+   "bin_closed": "right",
+   "bin_label": "right"
+  },
   "feat_stats": {
    "active": true,
    "window_width": "15min"
   },
   "feat_timelag": {
    "lag_interval": "15min",
-   "lag_count": 12,
-   "lag_interval_forecast": "0min"
+   "lag_count": 12
   },
   "input_output_window": {
     "window_width_source": "180min",
-    "window_width_target": "45min"
+    "window_width_futurecast":"0min",
+    "window_width_target": "45min",
    },
   "random_seed": 1,
   "sequential_splicer": {
