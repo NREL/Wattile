@@ -1,6 +1,6 @@
 {
  "data_input": {
-  "data_dir": "C:\\Users\\JKIM4\\Documents\\GitHub\\intelligentcampus-pred-analytics/tests/data/Synthetic Site",
+  "data_dir": "tests/data/Synthetic Site",
   "data_config": "Synthetic Site Config.json",
   "start_time": "2018-01-01T00:00:00-07:00",
   "end_time": "2022-01-01T00:00:00-07:00",
