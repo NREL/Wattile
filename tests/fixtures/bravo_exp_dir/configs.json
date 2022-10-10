@@ -16,7 +16,7 @@
   "target_var": "Synthetic Site Electricity Main Total Power"
  },
  "data_output": {
-  "exp_dir": "C:\\Users\\JKIM4\\Documents\\GitHub\\intelligentcampus-pred-analytics\\notebooks\\exp_dir",
+  "exp_dir": "exp_dir",
   "plot_comparison": true,
   "plot_comparison_portion_start": 0.0,
   "plot_comparison_portion_end": 1.0
