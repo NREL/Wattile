@@ -145,9 +145,9 @@ Schematic below shows the workflow of wattile layered with configuration groups.
 
     RNN variant type.
     
-    - `alfa` and `bravo` models: supporting `vanilla` and `lstm` (long short-term memory).
+    - alfa and bravo models: supporting `vanilla` and `lstm` (long short-term memory).
     
-    - `charlie` model: supporting `vanilla`, `lstm`, and `gru` (gated recurrent unit).
+    - charlie model: supporting `vanilla`, `lstm`, and `gru` (gated recurrent unit).
     
 - `use_case`: *str ("train", "prediction", "validation")*
 
