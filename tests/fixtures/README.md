@@ -196,7 +196,7 @@ Schematic below shows the workflow of wattile layered with configuration groups.
 
 - `lr_config`: *dict*
 
-    Learning rate configuration.
+    Learning rate configuration. Refer to torch documentation for more details around these parameters related to [optimization algorithm](https://pytorch.org/docs/stable/optim.html).
 
     - `base`: *float*
     - `schedule`: *boolean*
