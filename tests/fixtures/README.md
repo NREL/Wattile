@@ -124,7 +124,7 @@ Schematic below shows the workflow of wattile layered with configuration groups.
 
     - `window_width`: *pandas timedelta*
 
-        Width of sequential (or continuous) data (e.g., `1W` as in 1 week).
+        Width of continuous sequence (e.g., `1W` as in 1 week).
 
 - `data_split`: *str ("x:y:z" where x + y + z = 100)*
 
