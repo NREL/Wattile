@@ -237,7 +237,7 @@ def timelag_predictors_target(data, configs):
         "window_width_futurecast"
     ]
     bin_interval = configs["data_processing"]["resample"]["bin_interval"]
-    initial_num = pd.Timedelta(window_width_target) // pd.Timedelta(bin_interval)
+    initial_num = (pd.Timedelta(window_width_target) // pd.Timedelta(bin_interval)) + 1
     target_var = configs["data_input"]["target_var"]
     target_temp = data[target_var].copy()
 
