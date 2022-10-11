@@ -1,6 +1,6 @@
 # Configuration Parameters and Options
 
-![alt text](/workflow_configs_group.png)
+![alt text](workflow_configs_group.png)
 
 - `building`: *str*
 
