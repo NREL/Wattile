@@ -151,15 +151,15 @@ Schematic below shows the workflow of wattile layered with configuration groups.
     
 - `use_case`: *str ("train", "prediction", "validation")*
 
-    train - use case for training a model
+    - `train` - use case for training a model
 
-    validation - use case for validating an existing (previously trained) model
+    - `validation` - use case for validating an existing (previously trained) model
 
-    prediction - use case for applying data on a trained model for deployment purpose
+    - `prediction` - use case for applying data on an existing (previously trained) model for deployment purpose
     
 - `arch_version`: *int ("alfa", "bravo", or "charlie")*
 
-    model version
+    Model options. `alfa` outputs multiple quantiles and single future-time-horizon predictions (not sequence to sequence). `bravo` outputs multiple quantiles and multiple future-time-horizon predictions. `charlie` outputs single quantile and multiple future-time-horizon predictions (with sequence to sequence).
  
 - `num_epochs`: *int*
 
