@@ -159,7 +159,7 @@ Schematic below shows the workflow of wattile layered with configuration groups.
     
 - `arch_version`: *int ("alfa", "bravo", or "charlie")*
 
-    Model options. `alfa` outputs multiple quantiles and single future-time-horizon predictions. `bravo` outputs multiple quantiles and multiple future-time-horizon predictions (not sequence to sequence). `charlie` outputs single quantile and multiple future-time-horizon predictions (with sequence to sequence).
+    Learning model options. `alfa` outputs multiple quantiles and single future-time-horizon predictions. `bravo` outputs multiple quantiles and multiple future-time-horizon predictions (not sequence to sequence). `charlie` outputs single quantile and multiple future-time-horizon predictions (with sequence to sequence).
  
 - `num_epochs`: *int*
 
