@@ -141,9 +141,13 @@ Schematic below shows the workflow of wattile layered with configuration groups.
 
     Learning architecture type. Currently only supporting Recurrent Neural Network (`RNN`).
     
+- `arch_version`: *int ("alfa", "bravo", or "charlie")*
+
+    Learning model options. `alfa` outputs multiple quantiles and single future-time-horizon predictions. `bravo` outputs multiple quantiles and multiple future-time-horizon predictions (not sequence to sequence). `charlie` outputs single quantile and multiple future-time-horizon predictions (with sequence to sequence).
+    
 - `arch_type_variant`: *str*
 
-    RNN variant type.
+    RNN variant type. This parameter has to be paired properly with learning model types as shown below.
     
     - alfa and bravo models: supporting `vanilla` and `lstm` (long short-term memory).
     
@@ -156,10 +160,6 @@ Schematic below shows the workflow of wattile layered with configuration groups.
     - `validation` - use case for validating an existing (previously trained) model
 
     - `prediction` - use case for applying data on an existing (previously trained) model for deployment purpose
-    
-- `arch_version`: *int ("alfa", "bravo", or "charlie")*
-
-    Learning model options. `alfa` outputs multiple quantiles and single future-time-horizon predictions. `bravo` outputs multiple quantiles and multiple future-time-horizon predictions (not sequence to sequence). `charlie` outputs single quantile and multiple future-time-horizon predictions (with sequence to sequence).
  
 - `num_epochs`: *int*
 
