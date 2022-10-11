@@ -96,19 +96,19 @@ Schematic below shows the workflow of wattile layered with configuration groups 
     
 - `input_output_window`: *dict*
 
-    TBD
+    Containing parameters for properly handling input and output time windows of learning models.
 
   - `window_width_source`: *pandas timedelta*
   
-      TBD
+      Width of the predictor data in time (e.g., `180min`) with respect to the current (or casting) time. This parameter has to be defined as an input to the `charlie` model but not required as an input for `alfa` and `bravo` models. 
       
   - `window_width_futurecast`: *pandas timedelta*
 
-      TBD
+      Width of the future cast in time (e.g., `60min`) with respect to the current (or casting) time. If casting time is 9:00AM and `window_width_futurecast="0min"`, then the timestamp for the first forecast value is 9:00AM. If casting time is 9:00AM and `window_width_futurecast="60min"`, then the timestamp for the first forecast value is 10:00AM. 
       
   - `window_width_target`: *pandas timedelta*
   
-      TBD
+      Width of the target data in time (e.g., `45min`) with respect to the current (or casting) time. This parameter has to be defined as an input to the `charlie` model but not required as an input for `alfa` and `bravo` models.
       
 - `random_seed`: *int*
 
