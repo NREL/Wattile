@@ -91,10 +91,5 @@
    "smoothing_alpha": 0.001,
    "eval_frequency": 500,
    "test_method": "external"
- },
- "external_test": {
-  "year": "2020",
-  "month": [1, 2, 3, 4, 5, 6]
- },
- "trained_model_path":"./EnergyForecasting_Results/RNN_MSyntheticSiteElectricityMainTotalPower_T7-9-21"
+ }
 }
