@@ -231,8 +231,8 @@ Schematic below shows the workflow of wattile layered with configuration groups.
     
 - `plot_comparison_portion_start`: *float*
 
-    Ratio between 0 and 1 to reduce the size of the data being plotted. The value should be less than the value of `plot_comparison_portion_end`.
+    Ratio between 0 and 1 to reduce the size of the data being plotted. The value should be less than the value of `plot_comparison_portion_end`. Using 0 for this parameter means data is plotted from the very beginining and 0.5 means data is plotted from half way to the end (instead of plotting from the beginning). 
     
 - `plot_comparison_portion_end`: *float*
 
-    Ratio between 0 and 1 to reduce the size of the data being plotted. The value should be larger than the value of `plot_comparison_portion_start`.
+    Ratio between 0 and 1 to reduce the size of the data being plotted. The value should be larger than the value of `plot_comparison_portion_start`. Using 1 for this parameter means data is plotted until the very end and 0.5 means data is plotted until half way to the end (instead of plotting until the end).
