@@ -216,23 +216,23 @@ Schematic below shows the workflow of wattile layered with configuration groups.
 
 - `test_method`: *str ("external", "internal")*
 
-    defines the source of testing data, including internal (using training data) or external (using h5 file) 
+    Defines the source of testing data including internal (using training data) or external (using h5 file).
 
 
 ### data output
 
 - `exp_dir`: *str*
 
-    Directory  where model output
+    Directory (e.g., "exp_dir") where model output
     
-- `plot_comparison`: *TBD*
+- `plot_comparison`: *boolean*
+
+    Option to enable or disable timeseries comparison plot based on trained model. If enabled, both interactive (in html format) and static (in svg format) plots are created under `exp_dir` location.
+    
+- `plot_comparison_portion_start`: *float*
 
     TBD
     
-- `plot_comparison_portion_start`: *TBD*
-
-    TBD
-    
-- `plot_comparison_portion_end`: *TBD*
+- `plot_comparison_portion_end`: *float*
 
     TBD
