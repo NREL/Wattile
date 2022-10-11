@@ -88,11 +88,11 @@ Schematic below shows the workflow of wattile layered with configuration groups 
 
   - `lag_interval`: *pandas timedelta*
   
-      TBD
+      Shifting interval (e.g., `15min`) of the time-lagged window.
   
   - `lag_count`: *int*
   
-      TBD
+      Total count of time-lagged window shifts. If `lag_interval=15min` and `lag_count=24`, then additional features include 6 hours worth of shift with 15 minutes incremental shift.
     
 - `input_output_window`: *dict*
 
