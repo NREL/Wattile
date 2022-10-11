@@ -202,14 +202,13 @@ class AlgoMainRNNBase(ABC):
         )
 
         # Already did sequential padding: Convert to iterable dataset (DataLoaders)
-        if self.configs["learning_algorithm"]["train_val_split"] == "Random":
-            train_loader, val_loader = self.data_iterable_random(
-                train_data,
-                val_data,
-                run_train,
-                train_batch_size,
-                val_batch_size,
-            )
+        train_loader, val_loader = self.data_iterable_random(
+            train_data,
+            val_data,
+            run_train,
+            train_batch_size,
+            val_batch_size,
+        )
         logger.info("Data converted to iterable dataset")
 
         if self.configs["learning_algorithm"]["use_case"] == "train":
