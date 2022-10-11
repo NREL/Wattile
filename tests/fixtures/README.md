@@ -116,15 +116,15 @@ Schematic below shows the workflow of wattile layered with configuration groups.
     
 - `sequential_splicer`: *dict*
 
-    group datasets together into sequential chunks just for data split
+    Containing parameters for enabling sequential data splicing. Sequential splicing means when data gets splitted into training, validation, and testing data sets, then each data set retains certain level of continuous data in time.
 
     - `active`: *boolean*
 
-        defines whether splicer is applied
+        Option for enabling (or disabling) sequential splicing.
 
     - `window_width`: *pandas timedelta*
 
-        defines the window size of splicer
+        Width of sequential (or continuous) data (e.g., `1W` as in 1 week).
 
 - `data_split`: *str ("x:y:z" where x + y + z = 100)*
 
