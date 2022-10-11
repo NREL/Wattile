@@ -139,11 +139,15 @@ Schematic below shows the workflow of wattile layered with configuration groups.
 
 - `arch_type`: *str ("RNN")*
 
-    TBD
+    Learning architecture type. Currently only supporting Recurrent Neural Network (RNN).
     
-- `arch_type_variant`: *str ("vanilla" or "lstm")*
+- `arch_type_variant`: *str*
 
-    RNN architecture type
+    RNN variant type.
+    
+    - `alfa` and `bravo` models: supporting `vanilla` and `lstm` (long short-term memory).
+    
+    - `charlie` model: supporting `vanilla`, `lstm`, and `gru` (gated recurrent unit).
     
 - `use_case`: *str ("train", "prediction", "validation")*
 
