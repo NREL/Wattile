@@ -145,7 +145,7 @@ Schematic below shows the workflow of wattile layered with configuration groups.
 
     Learning model options. `alfa` outputs multiple quantiles and single future-time-horizon predictions. `bravo` outputs multiple quantiles and multiple future-time-horizon predictions (not sequence to sequence). `charlie` outputs single quantile and multiple future-time-horizon predictions (with sequence to sequence).
     
-- `arch_type_variant`: *str*
+- `arch_type_variant`: *str ("vanilla", "lstm", or "gru")*
 
     RNN variant type. This parameter has to be paired properly with learning model types as shown below.
     
