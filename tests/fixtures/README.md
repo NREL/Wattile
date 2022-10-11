@@ -13,15 +13,15 @@ Schematic below shows the workflow of wattile layered with configuration groups 
     
 - `data_config`: *TBD*
 
-    TBD
+    name of the data configuration file located in `data_dir` (e.g., `Synthetic Site Config.json`)
     
-- `start_time`: *TBD*
+- `start_time`: *str*
 
-    TBD
+    start of date and time in ISO format (e.g., `2018-01-01T00:00:00-07:00`)
     
-- `end_time`: *TBD*
+- `end_time`: *str*
 
-    TBD
+    end of date and time in ISO format (e.g., `2022-01-01T00:00:00-07:00`)
     
 - `predictor_columns`: *List[str]*
 
