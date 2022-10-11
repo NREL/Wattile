@@ -9,27 +9,27 @@ Schematic below shows the workflow of wattile layered with configuration groups 
 
 - `data_dir`: *str*
 
-    Directory containing the data configuration file and timeseries data in csv.
+    Directory (e.g., `tests/data/Synthetic Site`) containing the data configuration file and timeseries data in csv.
     
 - `data_config`: *str*
 
-    Name of the data configuration file located under `data_dir` (e.g., `Synthetic Site Config.json`).
+    Name (e.g., `Synthetic Site Config.json`) of the data configuration file located under `data_dir`.
     
 - `start_time`: *str*
 
-    Start of date and time in ISO (International Organization for Standardization) format (e.g., `2018-01-01T00:00:00-07:00`). Data before this date and time is dropped before data processing.
+    Start of date and time (e.g., `2018-01-01T00:00:00-07:00`) in ISO (International Organization for Standardization) format. Data before this date and time is dropped before data processing.
     
 - `end_time`: *str*
 
-    End of date and time in ISO format (e.g., `2022-01-01T00:00:00-07:00`). Data after this date and time is dropped before data processing.
+    End of date and time (e.g., `2022-01-01T00:00:00-07:00`) in ISO format. Data after this date and time is dropped before data processing.
     
 - `predictor_columns`: *List[str]*
 
-    List of pre-defined predictor variable names from the input data. Only variables listed in this list are passed to the data processing. If it is an empty list, all predictor variables are passed to the data processing.
+    List of pre-defined predictor variable (or column) names from the input data. Only variables listed in this list are passed to the data processing. If it is an empty list, all predictor variables that were read from the input data are passed to the data processing.
     
 - `target_var`: *str*
 
-    Column name and target variable in the input data that model will predict.
+    Target variable name (or column name) in the input data that model will predict.
     
     
 ### data processing: *dict*
