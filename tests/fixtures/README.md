@@ -80,7 +80,7 @@ Schematic below shows the workflow of wattile layered with configuration groups 
       
   - `window_width`: *pandas timedelta*
   
-      Specifies the width (e.g., `15min`) of the rolling window. Enabled only when `active` is `True`.
+      Width of the rolling window in time (e.g., `15min`). Enabled only when `active` is `True`.
       
 - `feat_timelag`: *dict*
 
