@@ -179,7 +179,7 @@ Schematic below shows the workflow of wattile layered with configuration groups.
     
 - `transformation_method`: *str ("minmaxscale" or "standard")*
 
-    data normalization methods
+    Data normalization methods.
     
 - `train_batch_size`: *int*
 
