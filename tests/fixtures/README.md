@@ -137,7 +137,7 @@ Schematic below shows the workflow of wattile layered with configuration groups.
 
 ### learning algorithm: *dict*
 
-- `arch_type`: *str*
+- `arch_type`: *str ("RNN")*
 
     Learning architecture type. Currently only supporting Recurrent Neural Network (`RNN`).
     
