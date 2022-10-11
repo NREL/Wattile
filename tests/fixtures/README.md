@@ -10,51 +10,31 @@ Schematic below shows the workflow of wattile layered with configuration groups 
 
     The directory containing the data config and csv
     
+- `data_config`: *TBD*
+
+    TBD
+    
+- `start_time`: *TBD*
+
+    TBD
+    
+- `end_time`: *TBD*
+
+    TBD
+    
+- `predictor_columns`: *List[str]*
+
+    Pre-defined predictor variables
+    
+- `target_var`: *str*
+
+    Column name and target variable in the input data that model will predict
+    
 ### data processing group
 
 ### learning algorithm group
 
 ### data output group
-
-- `building`: *str*
-
-    Target building name or experiment ID in the prediction task. It log this parameter in the training_history.csv file for feature selection testing
-
-- `target_var`: *str*
-
-    Column name and target variable in the input data that model will predict
-
-- `start_year`: *int*
-
-    Starting year of selected data for model training/validation/prediction
-
-- `start_month`: *int (1-12)*
-
-    Starting month of selected data for model training/validation/prediction
-
-- `start_day`: *int (1-31)*
-
-    Starting day of selected data for model training/validation/prediction
-
-- `end_year`: *int*
-
-    Last year of selected data for model training/validation/prediction
-
-- `end_month`: *int (1-12)*
-
-    Last month of selected data for model training/validation/prediction
-
-- `end_day`: int *(1-31)*
-
-    Last day of selected data for model training/validation/prediction
-
-- `data_time_interval_mins`: *int*
-
-    Timestep or frequency of data in the unit of minute in the raw data
-
-- `weather_include`: *List[str]*
-
-    Pre-defined predictor variables
 
 - `arch_version`: *int (4 or 5)*
 
