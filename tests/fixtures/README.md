@@ -196,7 +196,7 @@ Schematic below shows the workflow of wattile layered with configuration groups.
 
 - `lr_config`: *dict*
 
-    Learning rate configuration
+    Learning rate configuration.
 
     - `base`: *float*
     - `schedule`: *boolean*
