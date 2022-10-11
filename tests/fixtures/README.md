@@ -1,6 +1,6 @@
 # Configuration Parameters and Options
 
-Schematic below shows the workflow of wattile layered with configuration groups (and parameters underneath) described below.
+Schematic below shows the workflow of wattile layered with configuration groups. Descriptions of all configuration parameters are also presented below where they are classified under each group shown in the figure.
 
 ![alt text](workflow_configs_group.png)
 
@@ -112,7 +112,7 @@ Schematic below shows the workflow of wattile layered with configuration groups 
       
 - `random_seed`: *int*
 
-    random seed to group data into sequential chunks and also the seed number to fix the randomness in torch package
+    Random seed number to fix the randomness in the workflow: splitting data during data processing and shuffling data in learning algorithm.
     
 - `sequential_splicer`: *dict*
 
