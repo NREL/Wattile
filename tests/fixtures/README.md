@@ -49,6 +49,20 @@ Schematic below shows the workflow of wattile layered with configuration groups 
   - `holidays`: *boolean*
 
       Indicator of whether holidays are taken into consideration in the modeling
+      
+- `resample`
+
+  - `bin_interval`: *pandas timedelta*
+  
+      TBD
+      
+  - `bin_closed`: *str ("left", "right")*
+  
+      TBD
+      
+  - `bin_label`: *str ("left", "right")*
+  
+      TBD
     
 - `window`: *int*
 
