@@ -126,9 +126,9 @@ Schematic below shows the workflow of wattile layered with configuration groups.
 
         Width of continuous sequence (e.g., `1W` as in 1 week).
 
-- `data_split`: *str ("x:y:z" where x + y + z = 100)*
+- `data_split`: *str*
 
-    training, validation, and testing data ratio, respectively
+    Split percentages (e.g., "80:10:10") between training, validation, and testing data sets. Format should be "x:y:z" and where x + y + z should equal to 100.
     
 - `train_size_factor`: *int*
 
