@@ -163,15 +163,15 @@ Schematic below shows the workflow of wattile layered with configuration groups.
  
 - `num_epochs`: *int*
 
-    number of epochs 
+    Number of epochs.
     
 - `hidden_size`: *int*
 
-    number of hidden nodes  
+    Number of features in the hidden state. 
    
 - `num_layers`: *int*
 
-    number of layer dimension   
+    Number of recurrent layers.
     
 - `quantiles`: *list[floats]* (floats must be 0-1)
 
