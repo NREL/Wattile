@@ -40,17 +40,17 @@ Schematic below shows the workflow of wattile layered with configuration groups 
 
   - `month_of_year`: *list[str] ("sincos")*
 
-      Options for adding month of year feature.
+      Options for adding month of year feature. If empty, this feature is not added.
       
   - `day_of_week`: *list[str] ("binary_reg", "binary_fuzzy")*
 
-      Options for adding day of week feature.
+      Options for adding day of week feature. If empty, this feature is not added.
 
   - `hour_of_day`: *list[str] ("sincos", "binary_reg", "binary_fuzzy")*
 
-      Options for adding hour of day feature.
+      Options for adding hour of day feature. If empty, this feature is not added.
 
-  - `holidays`: *boolean*
+  - `holidays`: *boolean ("True" or "False")*
 
       Options for adding holiday feature. List of holidays are contained in a separate file shown [here](https://github.com/NREL/Wattile/blob/main/wattile/holidays.py).
       
