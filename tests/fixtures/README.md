@@ -191,7 +191,7 @@ Schematic below shows the workflow of wattile layered with configuration groups.
 
 - `run_resume`: *boolean*
 
-    indicator to resume from a previous training session
+    Indicator to resume from a previous and unfinished training session.
 
 - `weight_decay`: *float*
 
