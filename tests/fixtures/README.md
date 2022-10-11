@@ -179,7 +179,7 @@ Schematic below shows the workflow of wattile layered with configuration groups.
     
 - `transformation_method`: *str ("minmaxscale" or "standard")*
 
-    Data normalization methods.
+    Data normalization methods. `minmaxscale` normalizes the data with minimum and maximum values and `standard` normalizes the data with average and standard deviation.
     
 - `train_batch_size`: *int*
 
