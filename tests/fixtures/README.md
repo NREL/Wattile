@@ -106,24 +106,6 @@ Schematic below shows the workflow of wattile layered with configuration groups 
 
 ### learning algorithm group
 
-### data output group
-
-- `exp_dir`: *str*
-
-    Directory  where model output
-    
-- `plot_comparison`: *TBD*
-
-    TBD
-    
-- `plot_comparison_portion_start`: *TBD*
-
-    TBD
-    
-- `plot_comparison_portion_end`: *TBD*
-
-    TBD
-
 - `arch_version`: *int (4 or 5)*
 
     Architecture version
@@ -214,3 +196,21 @@ Schematic below shows the workflow of wattile layered with configuration groups 
 - `test_method`: *str ("external", "internal")*
 
     Defines the source of testing data, including internal (using training data) or external (using h5 file) 
+
+### data output group
+
+- `exp_dir`: *str*
+
+    Directory  where model output
+    
+- `plot_comparison`: *TBD*
+
+    TBD
+    
+- `plot_comparison_portion_start`: *TBD*
+
+    TBD
+    
+- `plot_comparison_portion_end`: *TBD*
+
+    TBD
