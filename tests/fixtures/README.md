@@ -36,23 +36,23 @@ Schematic below shows the workflow of wattile layered with configuration groups 
 
 - `feat_time`: *dict*
 
-    TBD
+    Containing parameters for adding time-based features.
 
   - `month_of_year`: *list[str] ("sincos")*
 
-      month of year methodology
+      Options for adding month of year feature.
       
   - `day_of_week`: *list[str] ("binary_reg", "binary_fuzzy")*
 
-      day of week methodology
+      Options for adding day of week feature.
 
   - `hour_of_day`: *list[str] ("sincos", "binary_reg", "binary_fuzzy")*
 
-      hour of day methodology
+      Options for adding hour of day feature.
 
   - `holidays`: *boolean*
 
-      indicator of whether holidays are taken into consideration in the modeling
+      Options for adding holiday feature. List of holidays are contained in a separate file shown [here](https://github.com/NREL/Wattile/blob/main/wattile/holidays.py).
       
 - `resample`: *dict*
 
@@ -72,7 +72,7 @@ Schematic below shows the workflow of wattile layered with configuration groups 
       
 - `feat_stats`: *dict*
 
-    TBD
+    Containing parameters for adding statistics-based features.
 
   - `active`: *boolean*
   
@@ -84,7 +84,7 @@ Schematic below shows the workflow of wattile layered with configuration groups 
       
 - `feat_timelag`: *dict*
 
-    TBD
+    Containing parameters for adding time-lagged features.
 
   - `lag_interval`: *pandas timedelta*
   
