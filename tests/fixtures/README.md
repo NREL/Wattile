@@ -4,11 +4,12 @@ Schematic below shows the workflow of wattile layered with configuration groups 
 
 ![alt text](workflow_configs_group.png)
 
+
 ### data input
 
 - `data_dir`: *str*
 
-    The directory containing the data config and csv
+    directory containing the data config and csv
     
 - `data_config`: *TBD*
 
@@ -24,33 +25,38 @@ Schematic below shows the workflow of wattile layered with configuration groups 
     
 - `predictor_columns`: *List[str]*
 
-    Pre-defined predictor variables
+    pre-defined predictor variables
     
 - `target_var`: *str*
 
-    Column name and target variable in the input data that model will predict
+    column name and target variable in the input data that model will predict
+    
     
 ### data processing
 
-- `feat_time`
+- `feat_time`: *dict*
+
+    TBD
 
   - `month_of_year`: *list[str] ("sincos")*
 
-      Month of year methodology
+      month of year methodology
       
   - `day_of_week`: *list[str] ("binary_reg", "binary_fuzzy")*
 
-      Day of week methodology
+      day of week methodology
 
   - `hour_of_day`: *list[str] ("sincos", "binary_reg", "binary_fuzzy")*
 
-      Hour of day methodology
+      hour of day methodology
 
   - `holidays`: *boolean*
 
-      Indicator of whether holidays are taken into consideration in the modeling
+      indicator of whether holidays are taken into consideration in the modeling
       
-- `resample`
+- `resample`: *dict*
+
+    TBD
 
   - `bin_interval`: *pandas timedelta*
   
@@ -63,62 +69,71 @@ Schematic below shows the workflow of wattile layered with configuration groups 
   - `bin_label`: *str ("left", "right")*
   
       TBD
+      
+- `feat_stats`: *dict*
+
+    TBD
+
+  - `active`: *boolean*
+  
+      specify whether or not to use rolling window statistics
+      
+  - `window_width`: *pandas timedelta*
+  
+      specifies the number of minutes to use for the window.
+      
+- `feat_timelag`: *dict*
+
+    TBD
+
+  - `lag_interval`: *pandas timedelta*
+  
+      TBD
+  
+  - `lag_count`: *int*
+  
+      TBD
     
-- `window`: *int*
+- `input_output_window`: *dict*
 
-    Defines numbers of lagged versions of variables. It is also termed as Sequential length
+    TBD
+
+  - `window_width_source`: *pandas timedelta*
+  
+      TBD
+      
+  - `window_width_futurecast`: *pandas timedelta*
+
+      TBD
+      
+  - `window_width_target`: *pandas timedelta*
+  
+      TBD
+      
+- `random_seed`: *int*
+
+    TBD
     
-- `rolling_window`: *dict*
-    - `active`: *boolean*
+- `sequential_splicer`: *dict*
 
-         specify whether or not to use rolling window statistics
-
-    - `type`: *str ("binned", "rolling")*
-
-        **binned** - This method creates min, max, and mean features for each original feature, computed by calculating the statistic over that last N minutes, separated into 
-        stationary bins. This has the same effect as downsampling the data to a lower frequency.
-        
-        **rolling** - This method creates min, max, and mean features for each original feature, computed by calculating the statistic over that last N minutes in a rolling fashion. The time frequency of the original data is preserved.
-
-    - `mintues`: *int*
-
-        Specifies the number of minutes to use for the window. For type binned, this is the size of the downsampling. This should be higher than configs["resample_freq"], since the rolling windows are calculated after this step. For type rolling, this is the size of the rolling window.
-        
-- `EC_future_gap_min`: *int*
-
-    Shift the output variable in the unit of minutes, which defines the first forecasting horizon
-    
-- `sequence_freq_min`: *int*
-
-    The frequency in the unit of minutes to create lagged variables
-
-- `S2S_stagger`: *dict*
-
-    Defines number of timestamps to predict in the future. It is also used for padding in building processing
-
-    - `initial_num`: *int*
-    - `decay`: *int*
-    - `secondary_num`: *int*
-    
-- `splicer`: *dict*
-
-    Group datasets together into sequential chunks just for data split
+    group datasets together into sequential chunks just for data split
 
     - `active`: *boolean*
 
         defines whether splicer is applied
 
-    - `time`: *[pandas.Timedelta](https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html) str*
+    - `window_width`: *pandas timedelta*
 
         defines the window size of splicer
 
-- `train_size_factor`: *int*
-
-    Ensure to pick a training set size that we can then later split into mini batches that have some desired number of samples in each batch. Purely for computational efficiency
-
 - `data_split`: *str ("x:y:z" where x + y + z = 100)*
 
-    Training, validation, and testing data ratio, respectively
+    training, validation, and testing data ratio, respectively
+    
+- `train_size_factor`: *int*
+
+    ensure to pick a training set size that we can then later split into mini batches that have some desired number of samples in each batch. Purely for computational efficiency
+
 
 ### learning algorithm
 
