@@ -132,7 +132,7 @@ Schematic below shows the workflow of wattile layered with configuration groups.
     
 - `train_size_factor`: *int*
 
-    ensure to pick a training set size that we can then later split into mini batches that have some desired number of samples in each batch. Purely for computational efficiency
+    Factor to count and split data properly between training, validation, and testing data sets.
 
 
 ### learning algorithm: *dict*
