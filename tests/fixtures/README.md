@@ -4,6 +4,18 @@ Schematic below shows the workflow of wattile layered with configuration groups 
 
 ![alt text](workflow_configs_group.png)
 
+### data input group
+
+- `data_dir`: *str*
+
+    The directory containing the data config and csv
+    
+### data processing group
+
+### learning algorithm group
+
+### data output group
+
 - `building`: *str*
 
     Target building name or experiment ID in the prediction task. It log this parameter in the training_history.csv file for feature selection testing
@@ -80,9 +92,7 @@ Schematic below shows the workflow of wattile layered with configuration groups 
 
     Directory  where model output
 
-- `data_dir`: *str*
 
-    The directory containing the data config and csv
 - `resample_freq`: *int*
 
     Used to (1) plot, (2) adjust the datetime index so it is in line with the Energy Consumption data
