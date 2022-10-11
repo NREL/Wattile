@@ -189,10 +189,6 @@ Schematic below shows the workflow of wattile layered with configuration groups.
 
     Size of batch in the validation data. It is used to calculate number of batches in the validation data.
 
-- `train_val_split`: *str*
-
-    method to split training and validation data including random
-
 - `run_resume`: *boolean*
 
     indicator to resume from a previous training session
