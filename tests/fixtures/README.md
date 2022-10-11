@@ -52,7 +52,7 @@ Schematic below shows the workflow of wattile layered with configuration groups 
 
   - `holidays`: *boolean*
 
-      Options for adding (or not adding) holiday feature. List of holidays are contained in a separate file shown [here](https://github.com/NREL/Wattile/blob/main/wattile/holidays.py).
+      Option for adding (or not adding) holiday feature. List of holidays are contained in a separate file shown [here](https://github.com/NREL/Wattile/blob/main/wattile/holidays.py).
       
 - `resample`: *dict*
 
@@ -76,11 +76,11 @@ Schematic below shows the workflow of wattile layered with configuration groups 
 
   - `active`: *boolean*
   
-      specify whether or not to use rolling window statistics
+      Option for adding (or not adding) statistics-based features. Currently supporting rolling window statistics of minimum, maximum, and mean.
       
   - `window_width`: *pandas timedelta*
   
-      specifies the number of minutes to use for the window.
+      Specifies the width (e.g., `15min`) of the rolling window. Enabled only when `active` is `True`.
       
 - `feat_timelag`: *dict*
 
