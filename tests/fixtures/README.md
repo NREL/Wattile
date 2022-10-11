@@ -112,7 +112,7 @@ Schematic below shows the workflow of wattile layered with configuration groups 
       
 - `random_seed`: *int*
 
-    TBD
+    random seed to group data into sequential chunks and also the seed number to fix the randomness in torch package
     
 - `sequential_splicer`: *dict*
 
@@ -137,77 +137,65 @@ Schematic below shows the workflow of wattile layered with configuration groups 
 
 ### learning algorithm
 
-- `arch_version`: *int (4 or 5)*
+- `arch_type`: *str ("RNN")*
 
-    Architecture version
-
-- `arch_type_variant`: *str ("vanilla or "lstm")*
+    TBD
+    
+- `arch_type_variant`: *str ("vanilla" or "lstm")*
 
     RNN architecture type
+    
+- `use_case`: *str ("train", "prediction", "validation")*
 
-- `preprocess`: *boolean*
+    train - use case for training a model
 
-    Indicator to run data_preprocessing.py
+    validation - use case for validating an existing (previously trained) model
 
-- `fetch_n_parse`: *boolean*
+    prediction - use case for applying data on a trained model for deployment purpose
+    
+- `arch_version`: *int ("alfa", "bravo", or "charlie")*
 
-    Indicator to fetch data from the API, get it and put it in a JSON
+    model version
+ 
+- `num_epochs`: *int*
 
+    number of epochs 
+    
+- `hidden_size`: *int*
+
+    number of hidden nodes  
+   
+- `num_layers`: *int*
+
+    number of layer dimension   
+    
+- `quantiles`: *list[floats]* (floats must be 0-1)
+
+    quantile list
+    
 - `transformation_method`: *str ("minmaxscale" or "standard")*
 
-    Data normalization methods
-
+    data normalization methods
+    
 - `train_batch_size`: *int*
 
-    Size of batch in the training data. It is used to calculate number of batches in the training data
+    size of batch in the training data. It is used to calculate number of batches in the training data
 
 - `val_batch_size`: *int*
 
-    Size of batch in the validation data. It is used to calculate number of batches in the validation data
+    size of batch in the validation data. It is used to calculate number of batches in the validation data
 
 - `train_val_split`: *str*
 
-    Method to split training and validation data including random
-
-- `random_seed`: *int*
-
-    Random seed to group data into sequential chunks and also the seed number to fix the randomness in torch package
-
-- `qs`: *list[floats]* (floats must be 0-1)
-
-    Quantile list
-
-- `use_case`: *str ("train", "prediction", "validation")*
-
-    **train** - use case for training a model
-
-    **validation** - use case for validating an existing (previously trained) model
-
-    **prediction** - use case for applying data on a trained model for deployment purpose
+    method to split training and validation data including random
 
 - `run_resume`: *boolean*
 
-    Indicator to resume from a previous training session
-
-- `num_epochs`: *int*
-
-    Number of epochs
+    indicator to resume from a previous training session
 
 - `weight_decay`: *float*
 
-    Parameter for optimizer
-
-- `hidden_nodes`: *int*
-
-    Hidden nodes
-
-- `layer_dim`: *int*
-
-    Layer dimension
-
-- `eval_frequency`: *int*
-
-    Frequency (every n iterations) to save the model
+    parameter for optimizer
 
 - `lr_config`: *dict*
 
@@ -220,13 +208,19 @@ Schematic below shows the workflow of wattile layered with configuration groups 
     - `min`: *float*
     - `patience`: *int*
     - `step_size`: *int*
+
 - `smoothing_alpha`: *float*
 
-    Smoothing alpha for pinball loss and quantile loss function
+    smoothing alpha for pinball loss and quantile loss function
+
+- `eval_frequency`: *int*
+
+    frequency (every n iterations) to save the model
 
 - `test_method`: *str ("external", "internal")*
 
-    Defines the source of testing data, including internal (using training data) or external (using h5 file) 
+    defines the source of testing data, including internal (using training data) or external (using h5 file) 
+
 
 ### data output
 
