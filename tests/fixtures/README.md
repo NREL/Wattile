@@ -9,27 +9,27 @@ Schematic below shows the workflow of wattile layered with configuration groups 
 
 - `data_dir`: *str*
 
-    directory containing the data config and csv
+    Directory containing the data configuration file and timeseries data in csv.
     
-- `data_config`: *TBD*
+- `data_config`: *str*
 
-    name of the data configuration file located in `data_dir` (e.g., `Synthetic Site Config.json`)
+    Name of the data configuration file located under `data_dir` (e.g., `Synthetic Site Config.json`).
     
 - `start_time`: *str*
 
-    start of date and time in ISO format (e.g., `2018-01-01T00:00:00-07:00`)
+    Start of date and time in ISO (International Organization for Standardization) format (e.g., `2018-01-01T00:00:00-07:00`). Data before this date and time is dropped before data processing.
     
 - `end_time`: *str*
 
-    end of date and time in ISO format (e.g., `2022-01-01T00:00:00-07:00`)
+    End of date and time in ISO format (e.g., `2022-01-01T00:00:00-07:00`). Data after this date and time is dropped before data processing.
     
 - `predictor_columns`: *List[str]*
 
-    pre-defined predictor variables
+    List of pre-defined predictor variable names from the input data. Only variables listed in this list are passed to the data processing. If it is an empty list, all predictor variables are passed to the data processing.
     
 - `target_var`: *str*
 
-    column name and target variable in the input data that model will predict
+    Column name and target variable in the input data that model will predict.
     
     
 ### data processing: *dict*
