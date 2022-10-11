@@ -231,8 +231,8 @@ Schematic below shows the workflow of wattile layered with configuration groups.
     
 - `plot_comparison_portion_start`: *float*
 
-    TBD
+    Ratio between 0 and 1 to reduce the size of the data being plotted. The value should be less than the value of `plot_comparison_portion_end`.
     
 - `plot_comparison_portion_end`: *float*
 
-    TBD
+    Ratio between 0 and 1 to reduce the size of the data being plotted. The value should be larger than the value of `plot_comparison_portion_start`.
