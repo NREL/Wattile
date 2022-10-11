@@ -42,33 +42,33 @@ Schematic below shows the workflow of wattile layered with configuration groups 
 
       Options for adding month of year feature. If empty, this feature is not added.
       
-  - `day_of_week`: *list[str] ("binary_reg", "binary_fuzzy")*
+  - `day_of_week`: *list[str] ("binary_reg", or "binary_fuzzy")*
 
       Options for adding day of week feature. If empty, this feature is not added.
 
-  - `hour_of_day`: *list[str] ("sincos", "binary_reg", "binary_fuzzy")*
+  - `hour_of_day`: *list[str] ("sincos", "binary_reg", or "binary_fuzzy")*
 
       Options for adding hour of day feature. If empty, this feature is not added.
 
-  - `holidays`: *boolean ("True" or "False")*
+  - `holidays`: *boolean*
 
-      Options for adding holiday feature. List of holidays are contained in a separate file shown [here](https://github.com/NREL/Wattile/blob/main/wattile/holidays.py).
+      Options for adding (or not adding) holiday feature. List of holidays are contained in a separate file shown [here](https://github.com/NREL/Wattile/blob/main/wattile/holidays.py).
       
 - `resample`: *dict*
 
-    TBD
+    Containing parameters for resampling raw input data that might have been measured in irregular timestamps with missing data points.
 
   - `bin_interval`: *pandas timedelta*
   
-      TBD
+      Interval (e.g., `15min`) of binning. 
       
-  - `bin_closed`: *str ("left", "right")*
+  - `bin_closed`: *str ("left" or "right")*
   
-      TBD
+      Which side of the bin interval is closed.
       
-  - `bin_label`: *str ("left", "right")*
+  - `bin_label`: *str ("left" or "right")*
   
-      TBD
+      Which bin edge label to label the bin with.
       
 - `feat_stats`: *dict*
 
