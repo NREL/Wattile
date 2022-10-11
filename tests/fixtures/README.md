@@ -36,13 +36,25 @@ Schematic below shows the workflow of wattile layered with configuration groups 
 
 ### data output group
 
+- `exp_dir`: *str*
+
+    Directory  where model output
+    
+- `plot_comparison`: *TBD*
+
+    TBD
+    
+- `plot_comparison_portion_start`: *TBD*
+
+    TBD
+    
+- `plot_comparison_portion_end`: *TBD*
+
+    TBD
+
 - `arch_version`: *int (4 or 5)*
 
     Architecture version
-
-- `exp_id`: *str*
-
-    A string to define unique experiments
 
 - `arch_type_variant`: *str ("vanilla or "lstm")*
 
@@ -67,10 +79,6 @@ Schematic below shows the workflow of wattile layered with configuration groups 
 - `val_batch_size`: *int*
 
     Size of batch in the validation data. It is used to calculate number of batches in the validation data
-
-- `exp_dir`: *str*
-
-    Directory  where model output
 
 
 - `resample_freq`: *int*
