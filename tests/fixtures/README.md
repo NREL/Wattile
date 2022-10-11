@@ -4,7 +4,7 @@ Schematic below shows the workflow of wattile layered with configuration groups 
 
 ![alt text](workflow_configs_group.png)
 
-### data input group
+### data input
 
 - `data_dir`: *str*
 
@@ -30,23 +30,25 @@ Schematic below shows the workflow of wattile layered with configuration groups 
 
     Column name and target variable in the input data that model will predict
     
-### data processing group
+### data processing
 
-- `DOW`: *list[str] ("binary_reg", "binary_fuzzy")*
+- `feat_time`
 
-    Day of week methodology
+  - `month_of_year`: *list[str] ("sincos")*
 
-- `MOY`: *list[str] ("sincos")*
+      Month of year methodology
+      
+  - `day_of_week`: *list[str] ("binary_reg", "binary_fuzzy")*
 
-    Month of year methodology
+      Day of week methodology
 
-- `HOD`: *list[str] ("sincos", "binary_reg", "binary_fuzzy")*
+  - `hour_of_day`: *list[str] ("sincos", "binary_reg", "binary_fuzzy")*
 
-    Hour of day methodology
+      Hour of day methodology
 
-- `Holidays`: *boolean*
+  - `holidays`: *boolean*
 
-    Indicator of whether holidays are taken into consideration in the modeling
+      Indicator of whether holidays are taken into consideration in the modeling
     
 - `window`: *int*
 
@@ -104,7 +106,7 @@ Schematic below shows the workflow of wattile layered with configuration groups 
 
     Training, validation, and testing data ratio, respectively
 
-### learning algorithm group
+### learning algorithm
 
 - `arch_version`: *int (4 or 5)*
 
@@ -197,7 +199,7 @@ Schematic below shows the workflow of wattile layered with configuration groups 
 
     Defines the source of testing data, including internal (using training data) or external (using h5 file) 
 
-### data output group
+### data output
 
 - `exp_dir`: *str*
 
