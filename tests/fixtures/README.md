@@ -150,15 +150,12 @@ Schematic below shows the workflow of wattile layered with configuration groups.
     RNN variant type. This parameter has to be paired properly with learning model types as shown below.
     
     - alfa and bravo models: supporting `vanilla` and `lstm` (long short-term memory).
-    
     - charlie model: supporting `vanilla`, `lstm`, and `gru` (gated recurrent unit).
     
 - `use_case`: *str ("train", "prediction", "validation")*
 
     - `train` - use case for training a model
-
     - `validation` - use case for validating an existing (previously trained) model
-
     - `prediction` - use case for applying data on an existing (previously trained) model for deployment purpose
  
 - `num_epochs`: *int*
@@ -195,7 +192,7 @@ Schematic below shows the workflow of wattile layered with configuration groups.
 
 - `weight_decay`: *float*
 
-    parameter for optimizer
+    Parameter for optimizer.
 
 - `lr_config`: *dict*
 
