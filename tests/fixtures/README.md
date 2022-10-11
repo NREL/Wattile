@@ -183,11 +183,11 @@ Schematic below shows the workflow of wattile layered with configuration groups.
     
 - `train_batch_size`: *int*
 
-    size of batch in the training data. It is used to calculate number of batches in the training data
+    Size of batch in the training data. It is used to calculate number of batches in the training data.
 
 - `val_batch_size`: *int*
 
-    size of batch in the validation data. It is used to calculate number of batches in the validation data
+    Size of batch in the validation data. It is used to calculate number of batches in the validation data.
 
 - `train_val_split`: *str*
 
