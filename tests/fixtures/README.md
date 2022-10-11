@@ -212,7 +212,7 @@ Schematic below shows the workflow of wattile layered with configuration groups.
 
 - `eval_frequency`: *int*
 
-    frequency (every n iterations) to save the model
+    Frequency (every n iterations) to save the model.
 
 - `test_method`: *str ("external", "internal")*
 
