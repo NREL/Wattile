@@ -56,9 +56,9 @@
  },
  "learning_algorithm": {
    "arch_type": "RNN",
+   "arch_version": "alfa",
    "arch_type_variant": "lstm",
    "use_case": "train",
-   "arch_version": "alfa",
    "num_epochs": 1,
    "hidden_size": 5,
    "num_layers": 1,
