@@ -173,9 +173,9 @@ Schematic below shows the workflow of wattile layered with configuration groups.
 
     Number of recurrent layers.
     
-- `quantiles`: *list[floats]* (floats must be 0-1)
+- `quantiles`: *list[floats]*
 
-    quantile list
+    List of quantiles (e.g., `[0.025, 0.25, 0.5, 0.75, 0.975]` and 0.5 in the list representing median prediction). Numbers in the list must be within 0-1 and `quantiles` only affects models with multiple quantiles predictions.
     
 - `transformation_method`: *str ("minmaxscale" or "standard")*
 
