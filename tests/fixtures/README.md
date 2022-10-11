@@ -5,7 +5,7 @@ Schematic below shows the workflow of wattile layered with configuration groups 
 ![alt text](workflow_configs_group.png)
 
 
-### data input
+### data input: *dict*
 
 - `data_dir`: *str*
 
@@ -32,7 +32,7 @@ Schematic below shows the workflow of wattile layered with configuration groups 
     column name and target variable in the input data that model will predict
     
     
-### data processing
+### data processing: *dict*
 
 - `feat_time`: *dict*
 
@@ -135,7 +135,7 @@ Schematic below shows the workflow of wattile layered with configuration groups 
     ensure to pick a training set size that we can then later split into mini batches that have some desired number of samples in each batch. Purely for computational efficiency
 
 
-### learning algorithm
+### learning algorithm: *dict*
 
 - `arch_type`: *str ("RNN")*
 
