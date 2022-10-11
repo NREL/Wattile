@@ -60,7 +60,7 @@ Schematic below shows the workflow of wattile layered with configuration groups 
 
   - `bin_interval`: *pandas timedelta*
   
-      Interval (e.g., `15min`) of binning. 
+      Interval (e.g., `15min`) of each bin. 
       
   - `bin_closed`: *str ("left" or "right")*
   
