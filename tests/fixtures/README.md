@@ -208,7 +208,7 @@ Schematic below shows the workflow of wattile layered with configuration groups.
 
 - `smoothing_alpha`: *float*
 
-    smoothing alpha for pinball loss and quantile loss function
+    Smoothing alpha for pinball loss and quantile loss function.
 
 - `eval_frequency`: *int*
 
