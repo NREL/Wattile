@@ -36,23 +36,25 @@ Schematic below shows the workflow of wattile (both training and prediction depl
 
 - `feat_time`: *dict*
 
-    Containing parameters for adding time-based features.
+    Containing parameters for adding time-based features. Table below shows an example of time-based features generated against three sample timestamps. 
+    
+    ![alt text](example_feat_time.png)
 
   - `month_of_year`: *list[str] ("sincos")*
 
-      Options for adding month of year feature. If empty, this feature is not added.
+      Option for adding month of year feature. If empty, this feature is not added. As shown in the table above (i.e., rows including MOY labels), Pandas [day of year](https://pandas.pydata.org/docs/reference/api/pandas.Period.dayofyear.html) calculated from the timestamp is converted to periodic outputs as shown [here](https://github.com/NREL/Wattile/blob/ea02ece4401e29b30aa5c366a741bdf41af2f00f/wattile/time_processing.py#L91-L93). 
       
   - `day_of_week`: *list[str] ("binary_reg", or "binary_fuzzy")*
 
-      Options for adding day of week feature. If empty, this feature is not added.
+      Options for adding day of week feature. If empty, this feature is not added. As shown in the table above (i.e., rows including DOW labels), Pandas [weekday](https://pandas.pydata.org/docs/reference/api/pandas.DatetimeIndex.weekday.html) calculated from the timestamp is converted to binary and/or fuzzy outputs as shown [here](https://github.com/NREL/Wattile/blob/ea02ece4401e29b30aa5c366a741bdf41af2f00f/wattile/time_processing.py#L64-L72).
 
   - `hour_of_day`: *list[str] ("sincos", "binary_reg", or "binary_fuzzy")*
 
-      Options for adding hour of day feature. If empty, this feature is not added.
+      Options for adding hour of day feature. If empty, this feature is not added. As shown in the table above (i.e., rows including HOD labels), Pandas [hour](https://pandas.pydata.org/docs/reference/api/pandas.Series.dt.hour.html), [minute](https://pandas.pydata.org/docs/reference/api/pandas.Series.dt.minute.html), and [second](https://pandas.pydata.org/docs/reference/api/pandas.Series.dt.second.html) calculated from the timestamp is converted to periodic, binary, and/or fuzzy outputs as shown [here](https://github.com/NREL/Wattile/blob/ea02ece4401e29b30aa5c366a741bdf41af2f00f/wattile/time_processing.py#L25-L44).
 
   - `holidays`: *boolean*
 
-      Option for adding (or not adding) holiday feature. List of holidays are contained in a separate file shown [here](https://github.com/NREL/Wattile/blob/main/wattile/holidays.py).
+      Option for adding (or not adding) holiday feature. List of holidays are contained in a separate file shown [here](https://github.com/NREL/Wattile/blob/main/wattile/holidays.py). Date of holidays contained in a separate file is used against the timestamp and converted to binary outputs as shown [here](https://github.com/NREL/Wattile/blob/ea02ece4401e29b30aa5c366a741bdf41af2f00f/wattile/time_processing.py#L95-L99).
       
 - `resample`: *dict*
 
