@@ -243,6 +243,8 @@ Schematic below shows the workflow of wattile (both training and prediction depl
 
     Option to enable or disable timeseries comparison plot based on trained model. If enabled, both interactive (in html format) and static (in svg format) plots are created under `exp_dir` location.
     
+    ![alt text](Vis_TimeseriesComparisons.svg)
+    
 - `plot_comparison_portion_start`: *float*
 
     Ratio between 0 and 1 to reduce the size of the data being plotted. The value should be less than the value of `plot_comparison_portion_end`. Using 0 for this parameter means data is plotted from the very beginining and 0.5 means data is plotted from half way to the end (instead of plotting from the beginning). 
