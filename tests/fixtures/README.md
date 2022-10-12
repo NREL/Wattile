@@ -80,7 +80,9 @@ Schematic below shows the workflow of wattile (both training and prediction depl
       
 - `feat_stats`: *dict*
 
-    Containing parameters for adding statistics-based features.
+    Containing parameters for adding statistics-based features. Figure below shows an example of rolling window based statistics features addition for a raw measurement called var1 with certain definitions of the parameters described below.
+    
+    ![alt text](example_feat_stats.png)
 
   - `active`: *boolean*
   
@@ -88,7 +90,7 @@ Schematic below shows the workflow of wattile (both training and prediction depl
       
   - `window_width`: *pandas timedelta*
   
-      Width of the rolling window in time (e.g., `15min`). Enabled only when `active` is `True`.
+      Width of the rolling window in time (e.g., `15min`). Enabled only when `active` is `True`. In the example figure above, this parameter was set with `3min`.
       
 - `feat_timelag`: *dict*
 
