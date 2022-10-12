@@ -108,13 +108,13 @@ Schematic below shows the workflow of wattile (both training and prediction depl
     
 - `input_output_window`: *dict*
 
-    Containing parameters for properly handling input (prior to data processing) and output time windows of learning models. This configuration is an input to the `use_case="prediction"` for alfa, bravo, and charlie models but only an input to the `use_case="training"` for charlie. Figure below illustrates the definitions between parameters based on the `use_case="prediction"`.
+    Containing parameters for properly handling input (prior to data processing) and output time windows of learning models. This configuration is an input to the `use_case="prediction"` for alfa, bravo, and charlie models but only an input to the `use_case="train"` for charlie. Figure below illustrates the definitions between parameters based on the `use_case="prediction"`.
     
     ![alt text](schemetic_input_output_window.png)
 
   - `window_width_source`: *pandas timedelta*
   
-      Width of the predictor data in time (e.g., `180min`) with respect to the current (or casting) time. This parameter has to be defined as an input to the charlie model (for `use_case="training"`) but not required as an input for alfa and bravo models. However, for `use_case="prediction"` of alfa and bravo, this parameter is calculated based on parameters defined from `feat_timelag`. This calculation is required for alfa and bravo because of the nature of data processing method that these models go through (distinct from charlie model).
+      Width of the predictor data in time (e.g., `180min`) with respect to the current (or casting) time. This parameter has to be defined as an input to the charlie model (for `use_case="train"`) but not required as an input for alfa and bravo models. However, for `use_case="prediction"` of alfa and bravo, this parameter is calculated based on parameters defined from `feat_timelag`. This calculation is required for alfa and bravo because of the nature of data processing method that these models go through (distinct from charlie model).
       
   - `window_width_futurecast`: *pandas timedelta*
 
@@ -122,7 +122,7 @@ Schematic below shows the workflow of wattile (both training and prediction depl
       
   - `window_width_target`: *pandas timedelta*
   
-      Width of the target data in time (e.g., `45min`) with respect to the current (or casting) time. This parameter has to be defined as an input to bravo and charlie model (for `use_case="training"`) but not required as an input for alfa model (because alfa is a single future-time-horizon model). For `use_case="prediction"`, this parameter is used to properly calculate timestamps of future-time-horizons (relative to now) with consideration of `window_width_futurecast`.
+      Width of the target data in time (e.g., `45min`) with respect to the current (or casting) time. This parameter has to be defined as an input to bravo and charlie model (for `use_case="train"`) but not required as an input for alfa model (because alfa is a single future-time-horizon model). For `use_case="prediction"`, this parameter is used to properly calculate timestamps of future-time-horizons (relative to now) with consideration of `window_width_futurecast`.
       
 - `random_seed`: *int*
 
