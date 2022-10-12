@@ -40,7 +40,9 @@ Schematic below shows the workflow of wattile (both training and prediction depl
 
   - `month_of_year`: *list[str] ("sincos")*
 
-      Option for adding month of year feature. If empty, this feature is not added. As shown in the table above (i.e., rows including MOY labels), Pandas [day of year](https://pandas.pydata.org/docs/reference/api/pandas.Period.dayofyear.html) calculated from the timestamp is converted to periodic outputs as shown [here](https://github.com/NREL/Wattile/blob/ea02ece4401e29b30aa5c366a741bdf41af2f00f/wattile/time_processing.py#L91-L93). 
+      Option for adding month of year feature. If empty, this feature is not added. As shown in the table above (i.e., rows including MOY labels), Pandas [day of year](https://pandas.pydata.org/docs/reference/api/pandas.Period.dayofyear.html) calculated from the timestamp is converted (as shown [here](https://github.com/NREL/Wattile/blob/ea02ece4401e29b30aa5c366a741bdf41af2f00f/wattile/time_processing.py#L91-L93)) to periodic outputs as shown in the example figure below.
+      
+      ![alt text](example_feat_time_MOY.png)
       
   - `day_of_week`: *list[str] ("binary_reg", or "binary_fuzzy")*
 
