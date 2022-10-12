@@ -62,27 +62,21 @@ Schematic below shows the workflow of wattile (both training and prediction depl
       
 - `resample`: *dict*
 
-    Containing parameters for resampling raw input data that might have been measured in irregular timestamps with missing data points.
+    Containing parameters for resampling raw input data that might have been measured in irregular timestamps with missing data points. Figure below shows an example of resampling based on parameters described below.
     
     ![alt text](example_resample_right-closed_right-label.png)
-    
-    ![alt text](example_resample_left-closed_left-label.png)
-    
-    ![alt text](example_resample_right-closed_left-label.png)
-    
-    ![alt text](example_resample_left-closed_right-label.png)
 
   - `bin_interval`: *pandas timedelta*
   
-      Interval (e.g., `15min`) of each bin. 
+      Interval (e.g., `15min`) of each bin. In the example figure above, this parameter was set with `3min`.
       
   - `bin_closed`: *str ("left" or "right")*
   
-      Which side of the bin interval is closed.
+      Which side of the bin interval is closed. In the example figure above, this parameter was set with `right`.
       
   - `bin_label`: *str ("left" or "right")*
   
-      Which bin edge label to label the bin with.
+      Which bin edge label to label the bin with. In the example figure above, this parameter was set with `right`.
       
 - `feat_stats`: *dict*
 
