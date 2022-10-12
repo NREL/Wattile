@@ -44,7 +44,9 @@ Schematic below shows the workflow of wattile (both training and prediction depl
       
   - `day_of_week`: *list[str] ("binary_reg", or "binary_fuzzy")*
 
-      Options for adding day of week feature. If empty, this feature is not added. As shown in the table above (i.e., rows including DOW labels), Pandas [weekday](https://pandas.pydata.org/docs/reference/api/pandas.DatetimeIndex.weekday.html) calculated from the timestamp is converted to binary and/or fuzzy outputs as shown [here](https://github.com/NREL/Wattile/blob/ea02ece4401e29b30aa5c366a741bdf41af2f00f/wattile/time_processing.py#L64-L72).
+      Options for adding day of week feature. If empty, this feature is not added. As shown in the table above (i.e., rows including DOW labels), Pandas [weekday](https://pandas.pydata.org/docs/reference/api/pandas.DatetimeIndex.weekday.html) calculated from the timestamp is converted (as shown [here](https://github.com/NREL/Wattile/blob/ea02ece4401e29b30aa5c366a741bdf41af2f00f/wattile/time_processing.py#L64-L72)) to binary and/or fuzzy outputs as shown in the example figure below.
+      
+      ![alt text](example_feat_time_DOW.png)
 
   - `hour_of_day`: *list[str] ("sincos", "binary_reg", or "binary_fuzzy")*
 
