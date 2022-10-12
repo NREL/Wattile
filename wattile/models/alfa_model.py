@@ -372,7 +372,9 @@ class AlfaModel(AlgoMainRNNBase):
         :return: None
         """
         num_epochs = num_epochs
-        weight_decay = float(self.configs["learning_algorithm"]["weight_decay"])
+        weight_decay = float(
+            self.configs["learning_algorithm"]["lr_config"]["weight_decay"]
+        )
         input_dim = self.configs["input_dim"]
 
         # Write the configurations used for this training process to a json file

@@ -417,7 +417,7 @@ class CharlieModel:
             pd.Timedelta(window_target_size) / pd.Timedelta(bin_interval)
         )
         lr = self.configs["learning_algorithm"]["lr_config"]["base"]
-        weight_decay = self.configs["learning_algorithm"]["weight_decay"]
+        weight_decay = self.configs["learning_algorithm"]["lr_config"]["weight_decay"]
 
         t0 = time.time()
         np.random.seed(seed)

@@ -446,7 +446,9 @@ class BravoModel(AlgoMainRNNBase):
         :return: None
         """
 
-        weight_decay = float(self.configs["learning_algorithm"]["weight_decay"])
+        weight_decay = float(
+            self.configs["learning_algorithm"]["lr_config"]["weight_decay"]
+        )
         input_dim = self.configs["input_dim"]
         window_width_target = self.configs["data_processing"]["input_output_window"][
             "window_width_target"
