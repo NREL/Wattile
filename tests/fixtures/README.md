@@ -94,7 +94,7 @@ Schematic below shows the workflow of wattile (both training and prediction depl
       
 - `feat_timelag`: *dict*
 
-    Containing parameters for adding time-lagged features.
+    Containing parameters for adding time-lagged features. Currently, these parameters only apply to alfa and bravo models. 
 
   - `lag_interval`: *pandas timedelta*
   
