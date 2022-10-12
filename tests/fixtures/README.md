@@ -48,7 +48,7 @@ Schematic below shows the workflow of wattile (both training and prediction depl
 
   - `hour_of_day`: *list[str] ("sincos", "binary_reg", or "binary_fuzzy")*
 
-      Options for adding hour of day feature. If empty, this feature is not added. Pandas [hour](https://pandas.pydata.org/docs/reference/api/pandas.Series.dt.hour.html), [minute](https://pandas.pydata.org/docs/reference/api/pandas.Series.dt.minute.html), and [second](https://pandas.pydata.org/docs/reference/api/pandas.Series.dt.second.html) calculated from the timestamp is converted (as shown [here](https://github.com/NREL/Wattile/blob/ea02ece4401e29b30aa5c366a741bdf41af2f00f/wattile/time_processing.py#L25-L44)) to periodic, binary, and/or fuzzy outputs as shown in the figure below.
+      Options for adding hour of day feature. If empty, this feature is not added. Pandas [hour](https://pandas.pydata.org/docs/reference/api/pandas.Series.dt.hour.html), [minute](https://pandas.pydata.org/docs/reference/api/pandas.Series.dt.minute.html), and [second](https://pandas.pydata.org/docs/reference/api/pandas.Series.dt.second.html) calculated from the timestamp is converted (as shown [here](https://github.com/NREL/Wattile/blob/ea02ece4401e29b30aa5c366a741bdf41af2f00f/wattile/time_processing.py#L25-L44)) to periodic (sine and cosine), binary, and/or fuzzy outputs as shown in the example figure below.
       
       ![alt text](example_feat_time_HOD.png)
 
