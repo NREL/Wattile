@@ -1,6 +1,6 @@
 # Configuration Parameters and Options
 
-Schematic below shows the workflow of wattile layered with configuration groups. Descriptions of all configuration parameters under each group are also presented below.
+Schematic below shows the workflow of wattile (both training and prediction deployment workflow) layered with configuration groups. Descriptions of all configuration parameters under each group are also presented below.
 
 ![alt text](workflow_configs_group.png)
 
