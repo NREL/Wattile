@@ -63,6 +63,14 @@ Schematic below shows the workflow of wattile (both training and prediction depl
 - `resample`: *dict*
 
     Containing parameters for resampling raw input data that might have been measured in irregular timestamps with missing data points.
+    
+    ![alt text](example_resample_right-closed_right-label.png)
+    
+    ![alt text](example_resample_left-closed_left-label.png)
+    
+    ![alt text](example_resample_right-closed_left-label.png)
+    
+    ![alt text](example_resample_left-closed_right-label.png)
 
   - `bin_interval`: *pandas timedelta*
   
