@@ -62,7 +62,7 @@ Schematic below shows the workflow of wattile (both training and prediction depl
       
 - `resample`: *dict*
 
-    Containing parameters for resampling raw input data that might have been measured in irregular timestamps with missing data points. Figure below shows an example of resampling for a measurement called var1 with certain definitions of the parameters described below.
+    Containing parameters for resampling raw input data that might have been measured in irregular timestamps with missing data points. Figure below shows an example of resampling for a raw measurement called var1 with certain definitions of the parameters described below.
     
     ![alt text](example_resample_right-closed_right-label.png)
 
