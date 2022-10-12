@@ -94,15 +94,17 @@ Schematic below shows the workflow of wattile (both training and prediction depl
       
 - `feat_timelag`: *dict*
 
-    Containing parameters for adding time-lagged features. Currently, these parameters only apply to alfa and bravo models. 
+    Containing parameters for adding time-lagged features. Currently, these parameters only apply to alfa and bravo models. Figure below shows an example of time lag additions for a raw measurement called var1 with certain definitions of the parameters described below.
+    
+    ![alt text](example_feat_timelag.png)
 
   - `lag_interval`: *pandas timedelta*
   
-      Lagging interval (e.g., `15min`) of the time-lagged window.
+      Lagging interval (e.g., `15min`) of the time-lagged window. In the example figure above, this parameter was set with `60min`.
   
   - `lag_count`: *int*
   
-      Total count of time-lagged window shifts. If `lag_interval="15min"` and `lag_count=24`, then additional features include 15 minutes incremental shift and up to 6 hours lag.
+      Total count of time-lagged window shifts. If `lag_interval="15min"` and `lag_count=24`, then additional features include 15 minutes incremental shift and up to 6 hours lag. In the example figure above, this parameter was set with 5.
     
 - `input_output_window`: *dict*
 
