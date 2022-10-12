@@ -58,7 +58,7 @@ Schematic below shows the workflow of wattile (both training and prediction depl
 
   - `holidays`: *boolean*
 
-      Option for adding (or not adding) holiday feature. List of holidays are contained in a separate file shown [here](https://github.com/NREL/Wattile/blob/main/wattile/holidays.py). List of holidays contained in a separate file is used against the timestamp and converted to binary outputs as shown [here](https://github.com/NREL/Wattile/blob/ea02ece4401e29b30aa5c366a741bdf41af2f00f/wattile/time_processing.py#L95-L99).
+      Option for adding (or not adding) holiday feature. List of holidays are contained in a separate file shown [here](https://github.com/NREL/Wattile/blob/main/wattile/holidays.py). List of holidays contained in the separate file is used against the timestamp and converted (as shown [here](https://github.com/NREL/Wattile/blob/ea02ece4401e29b30aa5c366a741bdf41af2f00f/wattile/time_processing.py#L95-L99)) to binary outputs.
       
 - `resample`: *dict*
 
