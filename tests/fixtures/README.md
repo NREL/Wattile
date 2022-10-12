@@ -241,7 +241,7 @@ Schematic below shows the workflow of wattile (both training and prediction depl
     
 - `plot_comparison`: *boolean*
 
-    Option to enable or disable timeseries comparison plot based on trained model. If enabled, both interactive (in html format) and static (in svg format) plots are created under `exp_dir` location.
+    Option to enable or disable timeseries comparison plot (example shown below) based on trained model. If enabled, both interactive (in html format) and static (in svg format) plots are created under `exp_dir` location. Plot created during the training session (`use_case="train"`) will result in randomly sequenced timestamps in the x-axis. However, if user executes the workflow again with `use_case="prediction"` after a trained model is generated, then the x-axis in the plot will be sequentially aligned with respect to time. 
     
     ![alt text](Vis_TimeseriesComparisons.svg)
     
