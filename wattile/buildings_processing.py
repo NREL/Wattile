@@ -269,7 +269,7 @@ def timelag_predictors_target(data, configs):
             local["{}_lag_{}".format(target_var, i)] = target.shift(i)
         else:
             local["{}_lag_{}".format(target_var, i)] = target.shift(
-                freq="-" + (i * lag_interval)
+                freq="-" + (i * bin_interval)
             )
 
     data = pd.concat([data, local], axis=1)
