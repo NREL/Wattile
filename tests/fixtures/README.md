@@ -94,7 +94,7 @@ Schematic below shows the workflow of wattile (both training and prediction depl
       
 - `feat_timelag`: *dict*
 
-    Containing parameters for adding time-lagged features. Currently, this configuration only apply to alfa and bravo models. Figure below shows an example of time lag additions for a raw measurement called var1 with certain definitions of the parameters described below.
+    Containing parameters for adding time-lagged features. Currently, this configuration only applies to alfa and bravo models. Figure below shows an example of time lag additions for a raw measurement called var1 with certain definitions of the parameters described below.
     
     ![alt text](example_feat_timelag.png)
 
