@@ -204,9 +204,9 @@ Schematic below shows the workflow of wattile (both training and prediction depl
 
     Indicator to resume from a previous and unfinished training session.
 
-- `lr_config`: *dict*
+- `optimizer_config`: *dict*
 
-    Learning rate configuration. Refer to torch documentation for more details around these parameters related to [optimization algorithm](https://pytorch.org/docs/stable/optim.html).
+    Optimizer configuration including learning rate. Refer to torch documentation for more details around these parameters related to [optimization algorithm](https://pytorch.org/docs/stable/optim.html).
 
     - `weight_decay`: *float*
     - `base`: *float*
