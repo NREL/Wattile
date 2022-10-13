@@ -416,8 +416,10 @@ class CharlieModel:
         window_target_size_count = int(
             pd.Timedelta(window_target_size) / pd.Timedelta(bin_interval)
         )
-        lr = self.configs["learning_algorithm"]["lr_config"]["base"]
-        weight_decay = self.configs["learning_algorithm"]["lr_config"]["weight_decay"]
+        lr = self.configs["learning_algorithm"]["optimizer_config"]["base"]
+        weight_decay = self.configs["learning_algorithm"]["optimizer_config"][
+            "weight_decay"
+        ]
 
         t0 = time.time()
         np.random.seed(seed)

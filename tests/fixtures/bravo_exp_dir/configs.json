@@ -74,7 +74,7 @@
   "val_batch_size": 1,
   "train_val_split": "Random",
   "run_resume": false,
-  "lr_config": {
+  "optimizer_config": {
    "weight_decay": 0.001,
    "base": 0.001,
    "schedule": false,
