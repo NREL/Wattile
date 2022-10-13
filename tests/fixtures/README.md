@@ -80,7 +80,7 @@ Schematic below shows the workflow of wattile (both training and prediction depl
       
 - `feat_stats`: *dict*
 
-    Containing parameters for adding statistics-based features. Figure below shows an example of rolling window based statistics features addition for a raw measurement called var1 with certain definitions of the parameters described below. Settings for `resample` are the same as in the previous example.
+    Containing parameters for adding statistics-based features. Figure below shows an example (settings for `resample` are the same as in the previous example) of rolling window based statistics features addition for a raw measurement called var1 with certain definitions of the parameters described below.
     
     ![alt text](example_feat_stats.png)
 
