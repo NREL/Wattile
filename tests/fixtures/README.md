@@ -94,13 +94,13 @@ Schematic below shows the workflow of wattile (both training and prediction depl
       
 - `feat_timelag`: *dict*
 
-    Containing parameters for adding time-lagged features. Currently, this configuration only applies to alfa and bravo models. Figure below shows an example of time lag additions (i.e., variables labeled with the term lag) for a raw measurement called var1 with certain definitions of the parameters described below. Refer to Pandas [shift](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.shift.html) for more details on the mechanism of a time-lagged data processing.
+    Containing parameters for adding time-lagged features. Currently, this configuration only applies to alfa and bravo models. Figure below shows an example of time lag additions (i.e., variables labeled with the term lag) for a raw measurement called var1 with certain definitions of the parameters described below. 
     
     ![alt text](example_feat_timelag.png)
 
   - `lag_interval`: *pandas timedelta*
   
-      Lagging interval (e.g., `15min`) of the time-lagged window. In the example figure above, this parameter was set with `60min`.
+      Lagging interval (e.g., `15min`) of the time-lagged window. In the example figure above, this parameter was set with `60min`. Refer to Pandas [shift](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.shift.html) for more details on the mechanism of a time-lagged data processing.
   
   - `lag_count`: *int*
   
