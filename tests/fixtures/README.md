@@ -108,7 +108,7 @@ Schematic below shows the workflow of wattile (both training and prediction depl
     
 - `input_output_window`: *dict*
 
-    Containing parameters for properly handling input (prior to data processing) and output time windows of learning models. This configuration is a required input to the `use_case="prediction"` for alfa, bravo, and charlie models but only an input to the `use_case="train"` for charlie. Figure below illustrates the definitions between parameters based on the `use_case="prediction"`.
+    Containing parameters for properly handling input (prior to data processing) and output time windows of learning models. This configuration is a required input to alfa, bravo, and charlie models when `use_case="prediction"`, but only an input to charlie model when `use_case="train"`. Figure below illustrates the definitions between parameters based on the `use_case="prediction"`.
     
     ![alt text](schemetic_input_output_window.png)
 
