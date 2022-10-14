@@ -302,10 +302,6 @@ def roll_predictors_target(data, configs):
     ]
     bin_interval = configs["data_processing"]["resample"]["bin_interval"]
     target_var = configs["data_input"]["target_var"]
-    target = data[target_var].copy()
-
-    # shift target for futurecast
-    data[target_var] = target.shift(freq="-" + window_width_futurecast)
 
     # initialize lists
     data_predictor = []
@@ -318,14 +314,22 @@ def roll_predictors_target(data, configs):
     window_target_size_count = int(
         pd.Timedelta(window_width_target) / pd.Timedelta(bin_interval)
     )
+    window_futurecast_size_count = int(
+        pd.Timedelta(window_width_futurecast) / pd.Timedelta(bin_interval)
+    )
 
     # set aside timeindex
     timestamp = data.iloc[
-        : -(window_source_size_count + window_target_size_count - 1), :
+        window_source_size_count : -(
+            window_target_size_count + window_futurecast_size_count - 1
+        ),
+        :,
     ].index
 
     # create 3D predictor data
-    data_shifted_predictor = data.iloc[:-window_target_size_count, :]
+    data_shifted_predictor = data.iloc[
+        : -(window_target_size_count + window_futurecast_size_count), :
+    ]
     for window in data_shifted_predictor.rolling(window=window_width_source):
         if window.shape[0] == window_source_size_count:
             data_predictor.append(
@@ -336,8 +340,14 @@ def roll_predictors_target(data, configs):
 
     # create 3D target data
     data_shifted_target = data.loc[
-        data.index >= data.shift(freq=window_width_source).index[0], :
+        data.index
+        >= data.shift(freq=window_width_source + window_width_futurecast).index[0],
+        :,
     ][target_var]
+
+    # shift target for futurecast
+    data_shifted_target = data_shifted_target.shift(freq=window_width_futurecast)
+
     for window in data_shifted_target.rolling(window=window_width_target):
         if window.shape[0] == window_target_size_count:
             data_target.append(window.values.reshape((1, window_target_size_count, 1)))
