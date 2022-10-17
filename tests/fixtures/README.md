@@ -130,7 +130,7 @@ Schematic below shows the workflow of wattile (both training and prediction depl
     
 - `sequential_splicer`: *dict*
 
-    Containing parameters for enabling sequential data splicing. Sequential splicing means when data gets splitted into training, validation, and testing data sets, then each data set retains certain level of continuous data in time.
+    Containing parameters for enabling sequential data splicing. Sequential splicing means when data is split into training, validation, and testing data sets, then each data set retains certain level of continuous data in time.
 
     - `active`: *boolean*
 
