@@ -168,9 +168,9 @@ Schematic below shows the workflow of wattile (both training and prediction depl
     
 - `use_case`: *str ("train", "prediction", "validation")*
 
-    - `train` - use case for training a model
-    - `validation` - use case for validating an existing (previously trained) model
-    - `prediction` - use case for applying data on an existing (previously trained) model for deployment purpose
+    - `train` - use case for training a model.
+    - `validation` - use case for validating an existing (previously trained) model.
+    - `prediction` - use case for executing predictions using an existing (previously trained) model in a production environment.
  
 - `num_epochs`: *int*
 
