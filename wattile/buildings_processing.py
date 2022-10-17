@@ -321,7 +321,7 @@ def roll_predictors_target(data, configs):
     # set aside timeindex
     timestamp = data.iloc[
         window_source_size_count : -(
-            window_target_size_count + window_target_size_count
+            window_target_size_count + window_futurecast_size_count
         ),
         :,
     ].index
