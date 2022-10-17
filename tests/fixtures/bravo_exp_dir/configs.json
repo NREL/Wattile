@@ -72,7 +72,6 @@
   "transformation_method": "minmaxscale",
   "train_batch_size": 5,
   "val_batch_size": 1,
-  "train_val_split": "Random",
   "run_resume": false,
   "weight_decay": 0.001,
   "lr_config": {
