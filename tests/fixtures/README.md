@@ -234,7 +234,7 @@ Schematic below shows the workflow of wattile (both training and prediction depl
 
 - `exp_dir`: *str*
 
-    Directory/path (e.g., "exp_dir") where model will be output. This path can either be absolute or relative (to the top directory `/wattile/`) path.
+    Directory/path (e.g., "exp_dir") where the model will be output. This path can either be absolute or relative (to the top directory `/wattile/`) path.
     
 - `plot_comparison`: *boolean*
 
