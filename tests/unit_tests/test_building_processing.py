@@ -510,7 +510,6 @@ def test_roll_predictors_target(configs):
             timestamp - (bin_interval * (j))
             for j in reversed(range(window_source_size_count + 1))
         ]
-        print(timestamp, needed_predictors_timestamps)
         assert_array_equal(
             predictor.flatten(), input["var_1"][needed_predictors_timestamps].to_numpy()
         )
@@ -527,5 +526,3 @@ def test_roll_predictors_target(configs):
             -1, 1
         )
         assert_array_equal(target, except_target)
-
-    assert False
