@@ -9,7 +9,7 @@ Schematic below shows the workflow of wattile (both training and prediction depl
 
 - `data_dir`: *str*
 
-    Directory (e.g., `tests/data/Synthetic Site`) containing the data configuration file and timeseries data in csv.
+    Directory/path (e.g., `tests/data/Synthetic Site`) containing the data configuration file and timeseries data in csv. This path can either be absolute or relative (to the top directory `/wattile/`) path.
     
 - `data_config`: *str*
 
@@ -234,7 +234,7 @@ Schematic below shows the workflow of wattile (both training and prediction depl
 
 - `exp_dir`: *str*
 
-    Directory (e.g., "exp_dir") where model output
+    Directory/path (e.g., "exp_dir") where model will be output. This path can either be absolute or relative (to the top directory `/wattile/`) path.
     
 - `plot_comparison`: *boolean*
 
