@@ -155,7 +155,7 @@ Schematic below shows the workflow of wattile (both training and prediction depl
 
     Learning architecture type. Currently only supporting Recurrent Neural Network (`RNN`).
     
-- `arch_version`: *int ("alfa", "bravo", or "charlie")*
+- `arch_version`: *str ("alfa", "bravo", or "charlie")*
 
     Learning model options. alfa outputs multiple quantiles and single future-time-horizon predictions. bravo outputs multiple quantiles and multiple future-time-horizon predictions (not sequence to sequence). charlie outputs single quantile and multiple future-time-horizon predictions (with sequence to sequence).
     
