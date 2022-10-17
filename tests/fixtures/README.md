@@ -62,7 +62,7 @@ Schematic below shows the workflow of wattile (both training and prediction depl
       
 - `resample`: *dict*
 
-    Containing parameters for resampling raw input data that might have been measured in irregular timestamps with missing data points. Figure below shows an example of resampling for a raw measurement called var1 with certain definitions of the parameters described below. More details on each of these parameters can be found in Pandas [resample](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.resample.html).
+    Containing parameters for resampling raw input data that might have been measured in irregular timestamps with missing data points. Figure below shows an example of resampling for a raw measurement called var1 with certain definitions of the parameters described below. The initial data processing with `resample` itself does no time averaging; it simply takes the closest data point based on `bin_interval`, `bin_closed`, and `bin_label` definitions. As an example shown in the figure below, a bin with 3 minutes interval (`bin_interval="3min"`) between time 1:03 to 1:06 contains three data points where the values vary between 1 to 4. The sampled data point that represents this bin is selected with the one closest to the right edge (`bin_label="right"`) of the bin and dropping the two previous data points. More details on each of these parameters can be found in Pandas [resample](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.resample.html). For using the statistics (e.g., average, minimum, maximum, etc.) on the bin resampling, refer to `feat_stats`.
     
     ![alt text](example_resample_right-closed_right-label.png)
 
