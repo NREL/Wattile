@@ -146,7 +146,7 @@ Schematic below shows the workflow of wattile (both training and prediction depl
     
 - `train_size_factor`: *int*
 
-    Factor to count and split data properly between training, validation, and testing data sets. For example, if the data contains 345 rows and if the user defined the trained portion as 85% (e.g., `data_split="85:10:5"`, the 85% of 345 rows is mathematically 293.25. The `train_size_factor=3` will calculate the remainer (=2.25) of 293.25 divided by 3. And the result (=291) of the remainder (=2.25) subtracted from 293.25 is used to randomly assign 291 rows (i.e., 85% is adjusted to 84.3%) in the data set (with 345 rows) to extract the training data set.
+    Factor to count and split data properly between training, validation, and testing data sets. For example, if the data contains 345 rows and if the user defined the trained portion as 85% (e.g., `data_split="85:10:5"`), the 85% of 345 rows is mathematically 293.25. The `train_size_factor=3` will calculate the remainer (=2.25) of 293.25 divided by 3. And the result (=291) of the remainder (=2.25) subtracted from 293.25 is used to randomly assign 291 rows (i.e., 85% is adjusted to 84.3%) in the data set (with 345 rows) to extract the training data set.
 
 
 ### learning algorithm: *dict*
