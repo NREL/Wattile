@@ -80,7 +80,7 @@ Schematic below shows the workflow of wattile (both training and prediction depl
       
 - `feat_stats`: *dict*
 
-    Containing parameters for adding statistics-based features. Figure below shows an example (settings for `resample` are the same as in the previous example) of rolling window based statistics features addition for a raw measurement called var1 with certain definitions of the parameters described below. Configuration parameters specified in `resample` also affects to the calculation of statistics against the timestamps. For example, if `bin_label="left"`, three statistics (minimum, mean, and maximum) shown in timestamp 1:06 in the figure below will shift to the timestamp of 1:03 to represent the statistics of the bin (1:03 - 1:06) from the left edge. 
+    Containing parameters for adding statistics-based features. Figure below shows an example (settings for `resample` are the same as in the previous example) of rolling window based statistics features addition for a raw measurement called var1 with certain definitions of the parameters described below. Configuration parameters specified in `resample` also affects to the calculation of statistics against the timestamps. For example, if `bin_label="left"` is chosen instead of `bin_label="right"`, three statistics (minimum, mean, and maximum) shown in timestamp 1:06 in the figure below will shift to the timestamp of 1:03 to represent the statistics of the bin (1:03 - 1:06) from the left edge. 
     
     ![alt text](example_feat_stats.png)
 
