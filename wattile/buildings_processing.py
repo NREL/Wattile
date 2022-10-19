@@ -302,48 +302,58 @@ def roll_predictors_target(data, configs):
     ]
     bin_interval = configs["data_processing"]["resample"]["bin_interval"]
     target_var = configs["data_input"]["target_var"]
-    target = data[target_var].copy()
-
-    # shift target for futurecast
-    data[target_var] = target.shift(freq="-" + window_width_futurecast)
 
     # initialize lists
     data_predictor = []
     data_target = []
 
     # calculate number of rows based on window size defined by time
-    window_source_size_count = int(
-        pd.Timedelta(window_width_source) / pd.Timedelta(bin_interval)
+    window_source_size_count = pd.Timedelta(window_width_source) // pd.Timedelta(
+        bin_interval
     )
-    window_target_size_count = int(
-        pd.Timedelta(window_width_target) / pd.Timedelta(bin_interval)
+    window_target_size_count = pd.Timedelta(window_width_target) // pd.Timedelta(
+        bin_interval
     )
+    window_futurecast_size_count = pd.Timedelta(
+        window_width_futurecast
+    ) // pd.Timedelta(bin_interval)
 
     # set aside timeindex
     timestamp = data.iloc[
-        : -(window_source_size_count + window_target_size_count - 1), :
+        window_source_size_count : -(
+            window_target_size_count + window_futurecast_size_count
+        ),
+        :,
     ].index
 
     # create 3D predictor data
-    data_shifted_predictor = data.iloc[:-window_target_size_count, :]
-    for window in data_shifted_predictor.rolling(window=window_width_source):
-        if window.shape[0] == window_source_size_count:
+    data_shifted_predictor = data.iloc[
+        : -(window_target_size_count + window_futurecast_size_count), :
+    ].loc[:, data.columns != target_var]
+    for window in data_shifted_predictor.rolling(
+        window=window_width_source, closed="both"
+    ):
+        if window.shape[0] == window_source_size_count + 1:
             data_predictor.append(
                 window.values.reshape(
-                    (1, window_source_size_count, data_shifted_predictor.shape[1])
+                    (1, window_source_size_count + 1, data_shifted_predictor.shape[1])
                 )
             )
-
-    # create 3D target data
-    data_shifted_target = data.loc[
-        data.index >= data.shift(freq=window_width_source).index[0], :
-    ][target_var]
-    for window in data_shifted_target.rolling(window=window_width_target):
-        if window.shape[0] == window_target_size_count:
-            data_target.append(window.values.reshape((1, window_target_size_count, 1)))
-
     # reshape data dimension
     data_predictor = np.concatenate(np.array(data_predictor), axis=0)
+
+    # create 3D target data
+    data_shifted_target = data.iloc[
+        (window_source_size_count + window_futurecast_size_count) :, :
+    ][target_var]
+    for window in data_shifted_target.rolling(
+        window=window_width_target, closed="both"
+    ):
+        if window.shape[0] == window_target_size_count + 1:
+            data_target.append(
+                window.values.reshape((1, window_target_size_count + 1, 1))
+            )
+    # reshape data dimension
     data_target = np.concatenate(np.array(data_target), axis=0)
 
     # combine 3D predictor and target data into dictionary
