@@ -10,6 +10,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.nn import init
 
+from wattile.error import ConfigsError
+
 PROJECT_DIRECTORY = Path().resolve().parent.parent
 
 
@@ -411,11 +413,9 @@ class CharlieModel:
             pd.Timedelta(window_target_size) / pd.Timedelta(resample_interval)
         )
         # currently, only supporting single float number for loss_function_qs
-        if isinstance(
-            self.configs["qs"], list
-        ):  # override to 0.5 if any arbitrary list is defined
-            loss_function_qs = 0.5
-        elif type(self.configs["qs"]) == float:
+        if isinstance(self.configs["qs"], list):
+            raise ConfigsError("Charile required a singluar qs.")
+        else:
             loss_function_qs = self.configs["qs"]
 
         t0 = time.time()

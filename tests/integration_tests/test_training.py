@@ -50,7 +50,7 @@ ARCH_VERSION_BRAVO_STANDARD_TRANSFORMATION_CONFIG_PATCH = {
     "arch_version": "bravo",
     "transformation_method": "standard",
 }
-ARCH_VERSION_CHARLIE_CONFIG_PATCH = {"arch_version": "charlie"}
+ARCH_VERSION_CHARLIE_CONFIG_PATCH = {"arch_version": "charlie", "qs": 0.5}
 
 
 @pytest.mark.parametrize(
