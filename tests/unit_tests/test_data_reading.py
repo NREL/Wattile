@@ -31,7 +31,7 @@ def test_create_input_dataframe(config_for_tests, tmpdir):
     exp_dir.mkdir(parents=True, exist_ok=True)
 
     # get data
-    data = read_dataset_from_file(config_for_tests)
+    data, config_for_tests = read_dataset_from_file(config_for_tests)
 
     assert data.index.inferred_type == "datetime64"
     assert set(data.columns) == set(

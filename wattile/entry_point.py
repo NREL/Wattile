@@ -57,11 +57,11 @@ def create_input_dataframe(configs):
     ):
         data = pd.read_hdf(os.path.join(local_results_dir, "internal_test.h5"))
     else:
-        data = read_dataset_from_file(configs)
+        data, configs = read_dataset_from_file(configs)
 
     train_df, val_df = bp.prep_for_rnn(configs, data)
 
-    return train_df, val_df
+    return train_df, val_df, configs
 
 
 def run_model(configs, train_df, val_df):
@@ -138,7 +138,7 @@ def main(configs):
     :return: None
     """
     init_logging(local_results_dir=pathlib.Path(configs["data_output"]["exp_dir"]))
-    train_df, val_df = create_input_dataframe(configs)
+    train_df, val_df, configs = create_input_dataframe(configs)
 
     return run_model(configs, train_df, val_df)
 

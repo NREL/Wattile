@@ -31,7 +31,10 @@ def _concat_data_from_files(filepaths, needed_columns):
 
     for filepaths in filepaths:
         try:
-            data = pd.read_csv(Path(filepaths))[["Timestamp"] + needed_columns]
+            if len(needed_columns) == 0:
+                data = pd.read_csv(Path(filepaths))
+            else:
+                data = pd.read_csv(Path(filepaths))[["Timestamp"] + needed_columns]
             full_data = pd.concat([full_data, data])
 
         except Exception:
@@ -117,6 +120,9 @@ def read_dataset_from_file(configs):
         needed_columns=configs["data_input"]["predictor_columns"],
     )
 
+    if configs["data_input"]["predictor_columns"] == []:
+        configs["data_input"]["predictor_columns"] = list(data_full_p.columns)
+
     # read in target data
     target_data_info = df_inputdata[df_inputdata.contentType == "targets"]
     data_full_t = _concat_data_from_files(
@@ -145,4 +151,4 @@ def read_dataset_from_file(configs):
     else:
         data_full = pd.merge(data_full_p, data_full_t, how="outer", on="Timestamp")
 
-    return data_full
+    return data_full, configs
