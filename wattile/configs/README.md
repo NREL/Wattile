@@ -90,7 +90,7 @@ Schematic below shows the workflow of wattile (both training and prediction depl
       
   - `window_width`: *pandas timedelta*
   
-      Width of the rolling window in time (e.g., `15min`). Enabled only when `active` is `True`. In the example figure above, this parameter was set with `3min`. Refer to Pandas [rolling](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.rolling.html) for more details on the mechanism of a rolling window calculation.
+      Width of the rolling window in time (e.g., `15min`). Enabled only when `active` is `True`. In the example figure above, this parameter was set with `3min`. Refer to Pandas [rolling](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.rolling.html) for more details on the mechanism of a rolling window calculation. This parameter should be the same as or a multiplication of `bin_interval`.
       
 - `feat_timelag`: *dict*
 
