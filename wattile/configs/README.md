@@ -100,7 +100,7 @@ Schematic below shows the workflow of wattile (both training and prediction depl
 
   - `lag_interval`: *pandas timedelta*
   
-      Lagging interval (e.g., `15min`) of the time-lagged window. In the example figure above, this parameter was set with `60min`. Refer to Pandas [shift](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.shift.html) for more details on the mechanism of a time-lagged data processing.
+      Lagging interval (e.g., `15min`) of the time-lagged window. In the example figure above, this parameter was set with `60min`. Refer to Pandas [shift](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.shift.html) for more details on the mechanism of a time-lagged data processing. This parameter should be the same as or a multiplication of `bin_interval`.
   
   - `lag_count`: *int*
   
