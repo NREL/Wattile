@@ -351,8 +351,7 @@ def test_timelag_predictors_target(configs):
     num_front_missing_rows = lag_count * int(lag_interval / bin_interval)
     # TODO: why is this right?
     num_back_missing_rows = int(
-        (window_width_futurecast / bin_interval)
-        + (window_width_target / bin_interval) * (lag_interval / bin_interval)
+        (window_width_futurecast / bin_interval) + (window_width_target / bin_interval)
     )
     assert_index_equal(
         output.index, input.index[num_front_missing_rows : -1 * num_back_missing_rows]
@@ -380,7 +379,7 @@ def test_timelag_predictors_target(configs):
         target_var_with_lag = f"target_var_lag_{i}"
 
         input_target_var_with_lag = input["target_var"].copy()
-        lag = window_width_futurecast + lag_interval * i
+        lag = window_width_futurecast + bin_interval * i
         input_target_var_with_lag.index -= lag
 
         assert_series_equal(
