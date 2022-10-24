@@ -186,7 +186,7 @@ Schematic below shows the workflow of wattile (both training and prediction depl
     
 - `quantiles`: *list[floats]*
 
-    List of quantiles (e.g., `[0.025, 0.25, 0.5, 0.75, 0.975]` and 0.5 in the list representing median prediction). Numbers in the list must be within 0-1 and `quantiles` only affects models with multiple quantiles predictions.
+    List of quantiles (e.g., `[0.025, 0.25, 0.5, 0.75, 0.975]` and 0.5 in the list representing median prediction). Numbers in the list must be within 0-1 and `quantiles` only affects models with multiple quantiles predictions. Currently, alfa and bravo models take a *list* of quantiles as inputs while charlie model takes one float number as an input.
     
 - `transformation_method`: *str ("minmaxscale" or "standard")*
 
