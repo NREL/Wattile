@@ -9,7 +9,7 @@ Schematic below shows the workflow of wattile (both training and prediction depl
 
 - `data_dir`: *str*
 
-    Directory/path (e.g., `tests/data/Synthetic Site`) containing the data configuration file and timeseries data in csv. This path can either be absolute or relative (to the top directory `/wattile/`) path.
+    Directory/path (e.g., `tests/data/Synthetic Site`) containing the data configuration file and timeseries data in csv. This path can either be absolute or relative (to the top directory `/wattile/`) path. More details (e.g., format, test data) of the input data can be found [here](https://github.com/NREL/Wattile/blob/main/tests/data/README.md).
     
 - `data_config`: *str*
 
