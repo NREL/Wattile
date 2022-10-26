@@ -1064,9 +1064,7 @@ class BravoModel(AlgoMainRNNBase):
         lag_interval = config_data_processing["feat_timelag"]["lag_interval"]
         lag_count = config_data_processing["feat_timelag"]["lag_count"]
         config_input_output_window = config_data_processing["input_output_window"]
-        window_width_futurecast = config_input_output_window[
-            "config_input_output_window"
-        ]
+        window_width_futurecast = config_input_output_window["window_width_futurecast"]
         window_width_target = config_input_output_window["window_width_target"]
 
         # calculating offsets
@@ -1095,11 +1093,12 @@ class BravoModel(AlgoMainRNNBase):
         future_horizon_vector = []
 
         # set up variables
-        resample_interval = self.configs["data_processing"]["resample_interval"]
-        window_start_delta = self.configs["data_processing"]["input_output_window"][
+        config_data_processing = self.configs["data_processing"]
+        resample_interval = config_data_processing["resample"]["bin_interval"]
+        window_start_delta = config_data_processing["input_output_window"][
             "window_width_futurecast"
         ]
-        window_width_target = self.configs["data_processing"]["input_output_window"][
+        window_width_target = config_data_processing["input_output_window"][
             "window_width_target"
         ]
 
