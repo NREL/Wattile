@@ -11,6 +11,8 @@ from wattile.error import ConfigsError
 
 PROJECT_DIRECTORY = pathlib.Path(__file__).resolve().parent
 
+print("PROJECT_DIRECTORY = {}".format(PROJECT_DIRECTORY))
+
 logger = logging.getLogger(str(os.getpid()))
 
 
