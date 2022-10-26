@@ -185,8 +185,8 @@ def timelag_predictors(data, configs):
     # reading configuration parameters
     lag_interval = configs["data_processing"]["feat_timelag"]["lag_interval"]
     lag_count = configs["data_processing"]["feat_timelag"]["lag_count"]
-    lag_interval_forecast = configs["data_processing"]["feat_timelag"][
-        "lag_interval_forecast"
+    window_width_futurecast = configs["data_processing"]["input_output_window"][
+        "window_width_futurecast"
     ]
     target_var = configs["data_input"]["target_var"]
 
@@ -208,16 +208,11 @@ def timelag_predictors(data, configs):
     temp_holder.reverse()
     data = pd.concat(temp_holder, axis=1)
 
-    # If this is an RNN model
-    if configs["learning_algorithm"]["arch_type"] == "RNN":
-        # re-append the shifted target column to the dataframe
-        data[target_var] = target.shift(freq="-" + lag_interval_forecast)
+    # re-append the shifted target column to the dataframe
+    data[target_var] = target.shift(freq="-" + window_width_futurecast)
 
-        # drop all nans
-        data = data.dropna(how="any")
-
-        # adjust time index to match the EC values
-        data.index = data.index.shift(freq=lag_interval_forecast)
+    # drop all nans
+    data = data.dropna(how="any")
 
     return data
 
@@ -238,15 +233,22 @@ def timelag_predictors_target(data, configs):
     window_width_target = configs["data_processing"]["input_output_window"][
         "window_width_target"
     ]
-    resample_interval = configs["data_processing"]["resample_interval"]
-    initial_num = pd.Timedelta(window_width_target) // pd.Timedelta(resample_interval)
-    secondary_num = configs["data_processing"]["input_output_window"]["secondary_num"]
-    decay = configs["data_processing"]["input_output_window"]["decay"]
+    window_width_futurecast = configs["data_processing"]["input_output_window"][
+        "window_width_futurecast"
+    ]
+    bin_interval = configs["data_processing"]["resample"]["bin_interval"]
+    initial_num = (pd.Timedelta(window_width_target) // pd.Timedelta(bin_interval)) + 1
     target_var = configs["data_input"]["target_var"]
+    target_temp = data[target_var].copy()
 
+    # shift target for futurecast
+    data[target_var] = target_temp.shift(freq="-" + window_width_futurecast)
+
+    # split predictors and target
     target = data[target_var]
     data = data.drop(target_var, axis=1)
     data_orig = data
+
     # Pad the exogenous variables
     temp_holder = list()
     temp_holder.append(data_orig)
@@ -267,16 +269,8 @@ def timelag_predictors_target(data, configs):
             local["{}_lag_{}".format(target_var, i)] = target.shift(i)
         else:
             local["{}_lag_{}".format(target_var, i)] = target.shift(
-                freq="-" + (i * lag_interval)
+                freq="-" + (i * bin_interval)
             )
-
-    # Do additional coarse padding for future predictions
-    for i in range(1, secondary_num + 1):
-        base = initial_num
-        new = int(base + decay * i)
-        local["{}_lag_{}".format(target_var, base + i)] = target.shift(
-            freq="-" + (new * lag_interval)
-        )
 
     data = pd.concat([data, local], axis=1)
 
@@ -300,10 +294,13 @@ def roll_predictors_target(data, configs):
     window_width_source = configs["data_processing"]["input_output_window"][
         "window_width_source"
     ]
+    window_width_futurecast = configs["data_processing"]["input_output_window"][
+        "window_width_futurecast"
+    ]
     window_width_target = configs["data_processing"]["input_output_window"][
         "window_width_target"
     ]
-    resample_interval = configs["data_processing"]["resample_interval"]
+    bin_interval = configs["data_processing"]["resample"]["bin_interval"]
     target_var = configs["data_input"]["target_var"]
 
     # initialize lists
@@ -311,38 +308,52 @@ def roll_predictors_target(data, configs):
     data_target = []
 
     # calculate number of rows based on window size defined by time
-    window_source_size_count = int(
-        pd.Timedelta(window_width_source) / pd.Timedelta(resample_interval)
+    window_source_size_count = pd.Timedelta(window_width_source) // pd.Timedelta(
+        bin_interval
     )
-    window_target_size_count = int(
-        pd.Timedelta(window_width_target) / pd.Timedelta(resample_interval)
+    window_target_size_count = pd.Timedelta(window_width_target) // pd.Timedelta(
+        bin_interval
     )
+    window_futurecast_size_count = pd.Timedelta(
+        window_width_futurecast
+    ) // pd.Timedelta(bin_interval)
 
     # set aside timeindex
     timestamp = data.iloc[
-        : -(window_source_size_count + window_target_size_count - 1), :
+        window_source_size_count : -(
+            window_target_size_count + window_futurecast_size_count
+        ),
+        :,
     ].index
 
     # create 3D predictor data
-    data_shifted_predictor = data.iloc[:-window_target_size_count, :]
-    for window in data_shifted_predictor.rolling(window=window_width_source):
-        if window.shape[0] == window_source_size_count:
+    data_shifted_predictor = data.iloc[
+        : -(window_target_size_count + window_futurecast_size_count), :
+    ].loc[:, data.columns != target_var]
+    for window in data_shifted_predictor.rolling(
+        window=window_width_source, closed="both"
+    ):
+        if window.shape[0] == window_source_size_count + 1:
             data_predictor.append(
                 window.values.reshape(
-                    (1, window_source_size_count, data_shifted_predictor.shape[1])
+                    (1, window_source_size_count + 1, data_shifted_predictor.shape[1])
                 )
             )
-
-    # create 3D target data
-    data_shifted_target = data.loc[
-        data.index >= data.shift(freq=window_width_source).index[0], :
-    ][target_var]
-    for window in data_shifted_target.rolling(window=window_width_target):
-        if window.shape[0] == window_target_size_count:
-            data_target.append(window.values.reshape((1, window_target_size_count, 1)))
-
     # reshape data dimension
     data_predictor = np.concatenate(np.array(data_predictor), axis=0)
+
+    # create 3D target data
+    data_shifted_target = data.iloc[
+        (window_source_size_count + window_futurecast_size_count) :, :
+    ][target_var]
+    for window in data_shifted_target.rolling(
+        window=window_width_target, closed="both"
+    ):
+        if window.shape[0] == window_target_size_count + 1:
+            data_target.append(
+                window.values.reshape((1, window_target_size_count + 1, 1))
+            )
+    # reshape data dimension
     data_target = np.concatenate(np.array(data_target), axis=0)
 
     # combine 3D predictor and target data into dictionary
@@ -497,13 +508,12 @@ def prep_for_rnn(configs, data):
 def resample_or_rolling_stats(data, configs):
 
     # reading configuration parameters.
-    # resample_label_on is hard coded for now.
     # default is right labeled and right-closed window.
-    # window closing is currently tied to resample_label_on
     # window_position is hard coded for now.
     # default is right-closed and backward-looking window.
-    resample_interval = configs["data_processing"]["resample_interval"]
-    resample_label_on = "right"  # left, right
+    bin_interval = configs["data_processing"]["resample"]["bin_interval"]
+    bin_closed = configs["data_processing"]["resample"]["bin_closed"]
+    bin_label = configs["data_processing"]["resample"]["bin_label"]
     window_width = configs["data_processing"]["feat_stats"]["window_width"]
     window_position = "backward"  # forward, center, backward
 
@@ -515,14 +525,14 @@ def resample_or_rolling_stats(data, configs):
 
         # resampling for each statistics separately
         data_resampler = X_data.resample(
-            rule=resample_interval, closed=resample_label_on, label=resample_label_on
+            rule=bin_interval, closed=bin_closed, label=bin_label
         )
         data_resample_min = data_resampler.min().add_suffix("_min")
         data_resample_max = data_resampler.max().add_suffix("_max")
         data_resample_sum = data_resampler.sum().add_suffix("_sum")
         data_resample_count = data_resampler.count().add_suffix("_count")
 
-        # setting configuration settings depending on window_position and resample_label_on
+        # setting configuration settings depending on window_position and bin_closed
         if window_position == "backward":
             arg_center = False
         elif window_position == "center":
@@ -533,17 +543,17 @@ def resample_or_rolling_stats(data, configs):
             data_resample_max = data_resample_max[::-1]
             data_resample_sum = data_resample_sum[::-1]
             data_resample_count = data_resample_count[::-1]
-            if resample_label_on == "left":
-                resample_label_on = "right"
-            elif resample_label_on == "right":
-                resample_label_on = "left"
+            if bin_closed == "left":
+                bin_closed = "right"
+            elif bin_closed == "right":
+                bin_closed = "left"
 
         # adding rolling window statistics: minimum
         mins = data_resample_min.rolling(
             window=window_width,
             min_periods=1,
             center=arg_center,
-            closed=resample_label_on,
+            closed=bin_closed,
         ).min()
 
         # adding rolling window statistics: maximum
@@ -551,7 +561,7 @@ def resample_or_rolling_stats(data, configs):
             window=window_width,
             min_periods=1,
             center=arg_center,
-            closed=resample_label_on,
+            closed=bin_closed,
         ).max()
 
         # adding rolling window statistics: sum
@@ -559,7 +569,7 @@ def resample_or_rolling_stats(data, configs):
             window=window_width,
             min_periods=1,
             center=arg_center,
-            closed=resample_label_on,
+            closed=bin_closed,
         ).sum()
 
         # adding rolling window statistics: count
@@ -567,7 +577,7 @@ def resample_or_rolling_stats(data, configs):
             window=window_width,
             min_periods=1,
             center=arg_center,
-            closed=resample_label_on,
+            closed=bin_closed,
         ).sum()  # this has to be sum for proper count calculation
 
         # adding rolling window statistics: mean
@@ -598,19 +608,17 @@ def resample_or_rolling_stats(data, configs):
 def _resample_data(data, configs):
 
     # reading configuration parameters.
-    # resample_label_on are hard coded for now. default is right labeled and right-closed window.
-    resample_interval = configs["data_processing"]["resample_interval"]
-    resample_label_on = "right"  # left, right
+    bin_interval = configs["data_processing"]["resample"]["bin_interval"]
+    bin_closed = configs["data_processing"]["resample"]["bin_closed"]
+    bin_label = configs["data_processing"]["resample"]["bin_label"]
 
     # resample data
-    data = data.resample(
-        rule=resample_interval, label=resample_label_on, closed=resample_label_on
-    )
+    data = data.resample(rule=bin_interval, label=bin_label, closed=bin_closed)
 
     # take the closest value from the label
-    if resample_label_on == "left":
+    if bin_label == "left":
         data = data.first()
-    elif resample_label_on == "right":
+    elif bin_label == "right":
         data = data.last()
 
     return data

@@ -34,11 +34,11 @@ Wattile has two main functions:
 - `create_input_dataframe`, which creates a dataframe for model input from the configs file and raw data.
 - `run_model` which runs either training, validation, or prediction on input dataframes according to the configs.
 
-Docs for the configs [here](./tests/fixtures/README.md).
+Docs for the configs [here](./docs/Configs.md).
 
-Docs for the format of the raw data is [here](./tests/data/README.md).
+Docs for the format of the raw data is [here](./docs/Data_configs.md).
 
-Docs for the format of the output is [here](./tests/fixtures/bravo_exp_dir/README.md).
+Docs for the format of the output is [here](./docs/Output.md).
 
 ```py
 import json 

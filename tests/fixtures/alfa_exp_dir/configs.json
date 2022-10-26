@@ -28,21 +28,23 @@
    "hour_of_day": ["sincos"],
    "holidays": false
   },
-  "resample_interval": "15min",
+  "resample": {
+   "bin_interval": "15min",
+   "bin_closed": "right",
+   "bin_label": "right"
+  },
   "feat_stats": {
    "active": true,
    "window_width": "15min"
   },
   "feat_timelag": {
    "lag_interval": "15min",
-   "lag_count": 12,
-   "lag_interval_forecast": "0min"
+   "lag_count": 12
   },
   "input_output_window": {
     "window_width_source": "180min",
-    "window_width_target": "45min",
-    "decay": 0,
-    "secondary_num": 0
+    "window_width_futurecast":"0min",
+    "window_width_target": "45min"
    },
   "random_seed": 1,
   "sequential_splicer": {
@@ -54,9 +56,9 @@
  },
  "learning_algorithm": {
    "arch_type": "RNN",
+   "arch_version": "alfa",
    "arch_type_variant": "lstm",
    "use_case": "train",
-   "arch_version": "alfa",
    "num_epochs": 1,
    "hidden_size": 5,
    "num_layers": 1,
@@ -70,10 +72,9 @@
    "transformation_method": "minmaxscale",
    "train_batch_size": 5,
    "val_batch_size": 1,
-   "train_val_split": "Random",
    "run_resume": false,
-   "weight_decay": 0.001,
-   "lr_config": {
+   "optimizer_config": {
+    "weight_decay": 0.001,
     "base": 0.001,
     "schedule": false,
     "type": "performance",

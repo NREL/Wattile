@@ -110,14 +110,10 @@ class BravoModel(AlgoMainRNNBase):
         window_width_target = self.configs["data_processing"]["input_output_window"][
             "window_width_target"
         ]
-        resample_interval = self.configs["data_processing"]["resample_interval"]
-        initial_num = pd.Timedelta(window_width_target) // pd.Timedelta(
-            resample_interval
-        )
+        bin_interval = self.configs["data_processing"]["resample"]["bin_interval"]
         num_future_time_instances = (
-            initial_num
-            + self.configs["data_processing"]["input_output_window"]["secondary_num"]
-        )
+            pd.Timedelta(window_width_target) // pd.Timedelta(bin_interval)
+        ) + 1
         resid = target - output
         tau = np.repeat(
             self.configs["learning_algorithm"]["quantiles"], num_future_time_instances
@@ -144,14 +140,10 @@ class BravoModel(AlgoMainRNNBase):
         window_width_target = self.configs["data_processing"]["input_output_window"][
             "window_width_target"
         ]
-        resample_interval = self.configs["data_processing"]["resample_interval"]
-        initial_num = int(
-            pd.Timedelta(window_width_target) / pd.Timedelta(resample_interval)
-        )
+        bin_interval = self.configs["data_processing"]["resample"]["bin_interval"]
         num_future_time_instances = (
-            initial_num
-            + self.configs["data_processing"]["input_output_window"]["secondary_num"]
-        )
+            pd.Timedelta(window_width_target) // pd.Timedelta(bin_interval)
+        ) + 1
         resid = target - output
 
         # logger.info("Resid device: ".format(resid.device))
@@ -210,16 +202,10 @@ class BravoModel(AlgoMainRNNBase):
             window_width_target = self.configs["data_processing"][
                 "input_output_window"
             ]["window_width_target"]
-            resample_interval = self.configs["data_processing"]["resample_interval"]
-            initial_num = int(
-                pd.Timedelta(window_width_target) / pd.Timedelta(resample_interval)
-            )
+            bin_interval = self.configs["data_processing"]["resample"]["bin_interval"]
             num_timestamps = (
-                initial_num
-                + self.configs["data_processing"]["input_output_window"][
-                    "secondary_num"
-                ]
-            )
+                pd.Timedelta(window_width_target) // pd.Timedelta(bin_interval)
+            ) + 1
             model.eval()
             preds = []
             targets = []
@@ -460,15 +446,17 @@ class BravoModel(AlgoMainRNNBase):
         :return: None
         """
 
-        weight_decay = float(self.configs["learning_algorithm"]["weight_decay"])
+        weight_decay = float(
+            self.configs["learning_algorithm"]["optimizer_config"]["weight_decay"]
+        )
         input_dim = self.configs["input_dim"]
         window_width_target = self.configs["data_processing"]["input_output_window"][
             "window_width_target"
         ]
-        resample_interval = self.configs["data_processing"]["resample_interval"]
-        initial_num = int(
-            pd.Timedelta(window_width_target) / pd.Timedelta(resample_interval)
-        )
+        bin_interval = self.configs["data_processing"]["resample"]["bin_interval"]
+        initial_num = (
+            pd.Timedelta(window_width_target) // pd.Timedelta(bin_interval)
+        ) + 1
 
         # Write the configurations used for this training process to a json file
         path = os.path.join(self.file_prefix, "configs.json")
@@ -508,47 +496,49 @@ class BravoModel(AlgoMainRNNBase):
         # Instantiate Optimizer Class
         optimizer = torch.optim.Adam(
             model.parameters(),
-            lr=self.configs["learning_algorithm"]["lr_config"]["base"],
+            lr=self.configs["learning_algorithm"]["optimizer_config"]["base"],
             weight_decay=weight_decay,
         )
 
         # Set up learning rate scheduler
-        if not self.configs["learning_algorithm"]["lr_config"]["schedule"]:
+        if not self.configs["learning_algorithm"]["optimizer_config"]["schedule"]:
             pass
         elif (
-            self.configs["learning_algorithm"]["lr_config"]["schedule"]
-            and self.configs["learning_algorithm"]["lr_config"]["type"] == "performance"
+            self.configs["learning_algorithm"]["optimizer_config"]["schedule"]
+            and self.configs["learning_algorithm"]["optimizer_config"]["type"]
+            == "performance"
         ):
             # Patience (for our case) is # of iterations, not epochs,
             # but self.configs specification is num epochs
             scheduler = ReduceLROnPlateau(
                 optimizer,
                 mode="min",
-                factor=self.configs["learning_algorithm"]["lr_config"]["factor"],
-                min_lr=self.configs["learning_algorithm"]["lr_config"]["min"],
+                factor=self.configs["learning_algorithm"]["optimizer_config"]["factor"],
+                min_lr=self.configs["learning_algorithm"]["optimizer_config"]["min"],
                 patience=int(
-                    self.configs["learning_algorithm"]["lr_config"]["patience"]
+                    self.configs["learning_algorithm"]["optimizer_config"]["patience"]
                     * (num_train_data / train_batch_size)
                 ),
                 verbose=True,
             )
         elif (
-            self.configs["learning_algorithm"]["lr_config"]["schedule"]
-            and self.configs["learning_algorithm"]["lr_config"]["type"] == "absolute"
+            self.configs["learning_algorithm"]["optimizer_config"]["schedule"]
+            and self.configs["learning_algorithm"]["optimizer_config"]["type"]
+            == "absolute"
         ):
             # scheduler = StepLR(
             #     optimizer,
             #     step_size=int(
-            #         self.configs["learning_algorithm"]["lr_config"]["step_size"]
+            #         self.configs["learning_algorithm"]["optimizer_config"]["step_size"]
             #           * (num_train_data / train_batch_size)
             #     ),
-            #     gamma=self.configs["learning_algorithm"]["lr_config"]["factor"],
+            #     gamma=self.configs["learning_algorithm"]["optimizer_config"]["factor"],
             # )
             pass
         else:
             raise ConfigsError(
                 "{} is not a supported method of LR scheduling".format(
-                    self.configs["learning_algorithm"]["lr_config"]["type"]
+                    self.configs["learning_algorithm"]["optimizer_config"]["type"]
                 )
             )
 
@@ -598,18 +588,20 @@ class BravoModel(AlgoMainRNNBase):
 
             # Do manual learning rate scheduling, if requested
             if (
-                self.configs["learning_algorithm"]["lr_config"]["schedule"]
-                and self.configs["learning_algorithm"]["lr_config"]["type"]
+                self.configs["learning_algorithm"]["optimizer_config"]["schedule"]
+                and self.configs["learning_algorithm"]["optimizer_config"]["type"]
                 == "absolute"
                 and epoch_num
-                % self.configs["learning_algorithm"]["lr_config"]["step_size"]
+                % self.configs["learning_algorithm"]["optimizer_config"]["step_size"]
                 == 0
             ):
                 for param_group in optimizer.param_groups:
                     old_lr = param_group["lr"]
                     param_group["lr"] = (
                         param_group["lr"]
-                        * self.configs["learning_algorithm"]["lr_config"]["factor"]
+                        * self.configs["learning_algorithm"]["optimizer_config"][
+                            "factor"
+                        ]
                     )
                     new_lr = param_group["lr"]
                 logger.info(
@@ -665,8 +657,8 @@ class BravoModel(AlgoMainRNNBase):
                 time5 = timeit.default_timer()
 
                 if (
-                    self.configs["learning_algorithm"]["lr_config"]["schedule"]
-                    and self.configs["learning_algorithm"]["lr_config"]["type"]
+                    self.configs["learning_algorithm"]["optimizer_config"]["schedule"]
+                    and self.configs["learning_algorithm"]["optimizer_config"]["type"]
                     == "performance"
                 ):
                     scheduler.step(loss)
@@ -968,10 +960,10 @@ class BravoModel(AlgoMainRNNBase):
         window_width_target = self.configs["data_processing"]["input_output_window"][
             "window_width_target"
         ]
-        resample_interval = self.configs["data_processing"]["resample_interval"]
-        initial_num = int(
-            pd.Timedelta(window_width_target) / pd.Timedelta(resample_interval)
-        )
+        bin_interval = self.configs["data_processing"]["resample"]["bin_interval"]
+        num_timestamps = (
+            pd.Timedelta(window_width_target) // pd.Timedelta(bin_interval)
+        ) + 1
 
         logger.info("Loaded model from file, given run_train=False\n")
 
@@ -1043,10 +1035,6 @@ class BravoModel(AlgoMainRNNBase):
                     )
                 )
 
-        num_timestamps = (
-            initial_num
-            + self.configs["data_processing"]["input_output_window"]["secondary_num"]
-        )
         final_preds = np.array(final_preds)
         final_preds = final_preds.reshape(
             (
