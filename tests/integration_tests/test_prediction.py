@@ -4,8 +4,9 @@ import shutil
 
 import pandas as pd
 import pytest
+import xarray as xr
 
-import wattile.entry_point as epb
+from wattile.entry_point import create_input_dataframe, run_model
 
 TESTS_PATH = pathlib.Path(__file__).parents[1]
 TESTS_FIXTURES_PATH = TESTS_PATH / "fixtures"
@@ -47,6 +48,7 @@ BRAVO_CONFIG_PATCH = {"arch_version": "bravo"}
 
 
 def test_prediction_alfa(config_for_tests, tmpdir):
+    # SETUP
     # don't run training
     config_for_tests["learning_algorithm"]["arch_version"] = "alfa"
     config_for_tests["learning_algorithm"]["use_case"] = "prediction"
@@ -62,12 +64,30 @@ def test_prediction_alfa(config_for_tests, tmpdir):
     data_dir = tmpdir / "data"
     popluate_test_data_dir_with_prediction_data(data_dir)
 
-    results = epb.main(config_for_tests)
+    # ACTION
+    train_df, val_df, configs = create_input_dataframe(config_for_tests)
+    results = run_model(configs, train_df, val_df)
 
-    assert results.shape[1:] == (
-        len(config_for_tests["learning_algorithm"]["quantiles"]),
-        1,
-    )  # one for 1 timestamp
+    # ASSERTION
+    window_width_futurecast = pd.Timedelta(
+        config_for_tests["data_processing"]["input_output_window"][
+            "window_width_futurecast"
+        ]
+    )
+    quantiles = config_for_tests["learning_algorithm"]["quantiles"]
+
+    # assert results is the right shape
+    assert isinstance(results, xr.DataArray)
+    assert results.shape == (val_df.shape[0], len(quantiles), 1)
+    assert results.dims == ("timestamp", "quantile", "horizon")
+
+    # assert results is indexed correctly
+    timestamp, quantile, horizon = results.indexes.values()
+    assert timestamp.to_list() == val_df.index.to_list()
+    assert quantile.to_list() == quantiles
+    assert horizon.to_list() == [window_width_futurecast]
+
+    # assert output file was made
     assert (exp_dir / "output.out").exists()
 
 
@@ -87,18 +107,32 @@ def test_prediction_bravo(config_for_tests, tmpdir):
     data_dir = tmpdir / "data"
     popluate_test_data_dir_with_prediction_data(data_dir)
 
-    results = epb.main(config_for_tests)
+    # ACTION
+    train_df, val_df, configs = create_input_dataframe(config_for_tests)
+    results = run_model(configs, train_df, val_df)
 
-    data_processing_configs = config_for_tests["data_processing"]
+    # ASSERTION
+    cdp = configs["data_processing"]
+    window_width_futurecast = cdp["input_output_window"]["window_width_futurecast"]
     window_width_target = pd.Timedelta(
-        data_processing_configs["input_output_window"]["window_width_target"]
+        cdp["input_output_window"]["window_width_target"]
     )
-    bin_interval = pd.Timedelta(data_processing_configs["resample"]["bin_interval"])
-    num_timestamps = window_width_target // bin_interval + 1
+    bin_interval = pd.Timedelta(cdp["resample"]["bin_interval"])
+    quantiles = config_for_tests["learning_algorithm"]["quantiles"]
 
-    assert results.shape[1:] == (
-        len(config_for_tests["learning_algorithm"]["quantiles"]),
-        num_timestamps,
-    )
+    num_lagged_targets = int(window_width_target / bin_interval) + 1
+
+    # assert results is the right shape
+    assert isinstance(results, xr.DataArray)
+    assert results.shape == (val_df.shape[0], len(quantiles), num_lagged_targets)
+    assert results.dims == ("timestamp", "quantile", "horizon")
+
+    # assert results is indexed correctly
+    timestamp, quantile, horizon = results.indexes.values()
+    assert timestamp.to_list() == val_df.index.to_list()
+    assert quantile.to_list() == quantiles
+    assert horizon.to_list() == [
+        window_width_futurecast + bin_interval * i for i in range(num_lagged_targets)
+    ]
 
     assert (exp_dir / "output.out").exists()
