@@ -280,10 +280,15 @@ def timelag_predictors_target(data, configs):
                 freq="-" + (i * bin_interval)
             )
 
-    data = pd.concat([data, local], axis=1)
+    print(data)
 
-    # Drop all nans
-    data = data.dropna(how="any")
+    if configs["learning_algorithm"]["use_case"] == "prediction":
+        data = data.dropna(how="any")
+        data = pd.concat([data, local], axis=1, join="inner")
+
+    else:
+        data = pd.concat([data, local], axis=1)
+        data = data.dropna(how="any")
 
     return data
 
