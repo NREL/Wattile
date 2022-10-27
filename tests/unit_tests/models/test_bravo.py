@@ -128,3 +128,41 @@ def test_get_input_window_for_output_time(tmpdir, data_processing_configs):
 
     assert preprocessed_data.shape[0] == 1
     assert preprocessed_data.index[0] == predict_for_time - window_width_futurecast
+
+
+@pytest.mark.parametrize(
+    "data_processing_configs",
+    [
+        DATA_PROCESSING_CONFIGS0,
+        DATA_PROCESSING_CONFIGS1,
+        DATA_PROCESSING_CONFIGS2,
+        DATA_PROCESSING_CONFIGS3,
+    ],
+)
+def test_get_prediction_vector_for_time(tmpdir, data_processing_configs):
+    # SETUP
+    configs = CONFIGS
+    configs["data_output"] = {"exp_dir": tmpdir}
+    configs["data_processing"].update(data_processing_configs)
+
+    window_width_futurecast = pd.Timedelta(
+        data_processing_configs["input_output_window"]["window_width_futurecast"]
+    )
+    window_width_target = pd.Timedelta(
+        data_processing_configs["input_output_window"]["window_width_target"]
+    )
+    lag_interval = pd.Timedelta(data_processing_configs["feat_timelag"]["lag_interval"])
+
+    # ACTION
+    alfa_model = BravoModel(configs)
+    results = alfa_model.get_prediction_vector_for_time()
+
+    # ASSERT
+    assert (
+        results
+        == pd.timedelta_range(
+            start=pd.Timedelta("0 days"),
+            end=window_width_futurecast + window_width_target,
+            freq=lag_interval,
+        ).to_list()
+    )

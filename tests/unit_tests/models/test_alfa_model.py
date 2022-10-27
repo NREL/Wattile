@@ -112,3 +112,28 @@ def test_get_input_window_for_output_time(tmpdir, data_processing_configs):
     assert preprocessed_data.index[0] == predict_for_time - window_width_futurecast
 
     assert False
+
+
+@pytest.mark.parametrize(
+    "data_processing_configs",
+    [
+        DATA_PROCESSING_CONFIGS0,
+        DATA_PROCESSING_CONFIGS1,
+        DATA_PROCESSING_CONFIGS2,
+    ],
+)
+def test_get_prediction_vector_for_time(tmpdir, data_processing_configs):
+    # SETUP
+    configs = CONFIGS
+    configs["data_output"] = {"exp_dir": tmpdir}
+    configs["data_processing"].update(data_processing_configs)
+
+    window_width_futurecast = pd.Timedelta(
+        data_processing_configs["input_output_window"]["window_width_futurecast"]
+    )
+
+    # ACTION
+    alfa_model = AlfaModel(configs)
+    results = alfa_model.get_prediction_vector_for_time()
+
+    assert results == [window_width_futurecast]
