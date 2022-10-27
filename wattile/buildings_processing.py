@@ -208,19 +208,10 @@ def timelag_predictors(data, configs):
     temp_holder.reverse()
     data = pd.concat(temp_holder, axis=1)
 
-    print("++ pre drop ++")
-    print(data)
+    if configs["learning_algorithm"]["use_case"] != "prediction":
+        data[target_var] = target.shift(freq="-" + window_width_futurecast)
 
-    if configs["learning_algorithm"]["use_case"] == "prediction":
-        # drop all nans
-        data = data.dropna(how="any")
-        # re-append the shifted target column to the dataframe
-        data[target_var] = target.shift(freq="-" + window_width_futurecast)
-    else:
-        # re-append the shifted target column to the dataframe
-        data[target_var] = target.shift(freq="-" + window_width_futurecast)
-        # drop all nans
-        data = data.dropna(how="any")
+    data = data.dropna(how="any")
 
     return data
 
@@ -280,15 +271,10 @@ def timelag_predictors_target(data, configs):
                 freq="-" + (i * bin_interval)
             )
 
-    print(data)
-
-    if configs["learning_algorithm"]["use_case"] == "prediction":
-        data = data.dropna(how="any")
-        data = pd.concat([data, local], axis=1, join="inner")
-
-    else:
+    if configs["learning_algorithm"]["use_case"] != "prediction":
         data = pd.concat([data, local], axis=1)
-        data = data.dropna(how="any")
+
+    data = data.dropna(how="any")
 
     return data
 

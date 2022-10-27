@@ -113,19 +113,6 @@ def test_get_input_window_for_output_time(tmpdir, data_processing_configs):
     configs["data_input"]["end_time"] = str(prediction_window_end_time)
     preprocessed_data = _preprocess_data(configs, data.copy())
 
-    print("++ data_processing_configs ++")
-    print(data_processing_configs)
-    print("++ predict_for_time ++")
-    print(predict_for_time)
-    print("++  prediction_window start/end time ++")
-    print(prediction_window_start_time, prediction_window_end_time)
-    print("++ unprocessed data ++")
-    print(data)
-    print("++ unprocessed data predict_for_time ++")
-    print(data["target_var"][predict_for_time])
-    print("++ processed_data ++")
-    print(preprocessed_data)
-
     assert preprocessed_data.shape[0] == 1
     assert preprocessed_data.index[0] == predict_for_time - window_width_futurecast
 
