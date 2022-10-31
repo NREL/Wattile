@@ -84,6 +84,7 @@ DATA_PROCESSING_CONFIGS4 = {
         DATA_PROCESSING_CONFIGS1,
         DATA_PROCESSING_CONFIGS2,
         DATA_PROCESSING_CONFIGS3,
+        DATA_PROCESSING_CONFIGS4,
     ],
 )
 def test_get_input_window_for_output_time(tmpdir, data_processing_configs):

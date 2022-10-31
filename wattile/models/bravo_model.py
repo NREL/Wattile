@@ -1067,7 +1067,9 @@ class BravoModel(AlgoMainRNNBase):
         window_width_futurecast = config_input_output_window["window_width_futurecast"]
 
         # calculating offsets
-        window_start_offset = pd.Timedelta(lag_interval) * lag_count
+        window_start_offset = pd.Timedelta(lag_interval) * lag_count + pd.Timedelta(
+            window_width_futurecast
+        )
         window_end_offset = pd.Timedelta(window_width_futurecast)
 
         # calculating start and end time windows for input data
