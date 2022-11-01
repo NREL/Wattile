@@ -24,11 +24,6 @@ CONFIGS = {
             "month_of_year": [],
             "holidays": False,
         },
-        "resample": {
-            "bin_interval": "15min",
-            "bin_closed": "right",
-            "bin_label": "right",
-        },
         "feat_stats": {
             "active": False,
             "window_width": "15min",
@@ -46,12 +41,22 @@ DATA_PROCESSING_CONFIGS0 = {
         "window_width_futurecast": "0min",
         "window_width_target": "0min",
     },
+    "resample": {
+        "bin_interval": "15min",
+        "bin_closed": "right",
+        "bin_label": "right",
+    },
 }
 DATA_PROCESSING_CONFIGS1 = {
     "feat_timelag": {"lag_interval": "15min", "lag_count": 4},
     "input_output_window": {
         "window_width_futurecast": "0min",
         "window_width_target": "0min",
+    },
+    "resample": {
+        "bin_interval": "15min",
+        "bin_closed": "right",
+        "bin_label": "right",
     },
 }
 DATA_PROCESSING_CONFIGS2 = {
@@ -60,6 +65,11 @@ DATA_PROCESSING_CONFIGS2 = {
         "window_width_futurecast": "0min",
         "window_width_target": "15min",
     },
+    "resample": {
+        "bin_interval": "15min",
+        "bin_closed": "right",
+        "bin_label": "right",
+    },
 }
 DATA_PROCESSING_CONFIGS3 = {
     "feat_timelag": {"lag_interval": "15min", "lag_count": 4},
@@ -67,12 +77,34 @@ DATA_PROCESSING_CONFIGS3 = {
         "window_width_futurecast": "0min",
         "window_width_target": "45min",
     },
+    "resample": {
+        "bin_interval": "15min",
+        "bin_closed": "right",
+        "bin_label": "right",
+    },
 }
 DATA_PROCESSING_CONFIGS4 = {
     "feat_timelag": {"lag_interval": "15min", "lag_count": 4},
     "input_output_window": {
         "window_width_futurecast": "30min",
         "window_width_target": "45min",
+    },
+    "resample": {
+        "bin_interval": "15min",
+        "bin_closed": "right",
+        "bin_label": "right",
+    },
+}
+DATA_PROCESSING_CONFIGS5 = {
+    "feat_timelag": {"lag_interval": "15min", "lag_count": 4},
+    "input_output_window": {
+        "window_width_futurecast": "30min",
+        "window_width_target": "45min",
+    },
+    "resample": {
+        "bin_interval": "5min",
+        "bin_closed": "right",
+        "bin_label": "right",
     },
 }
 
@@ -85,6 +117,7 @@ DATA_PROCESSING_CONFIGS4 = {
         DATA_PROCESSING_CONFIGS2,
         DATA_PROCESSING_CONFIGS3,
         DATA_PROCESSING_CONFIGS4,
+        DATA_PROCESSING_CONFIGS5,
     ],
 )
 def test_get_input_window_for_output_time(tmpdir, data_processing_configs):
@@ -125,6 +158,8 @@ def test_get_input_window_for_output_time(tmpdir, data_processing_configs):
         DATA_PROCESSING_CONFIGS1,
         DATA_PROCESSING_CONFIGS2,
         DATA_PROCESSING_CONFIGS3,
+        DATA_PROCESSING_CONFIGS4,
+        DATA_PROCESSING_CONFIGS5,
     ],
 )
 def test_get_prediction_vector_for_time(tmpdir, data_processing_configs):
@@ -139,7 +174,7 @@ def test_get_prediction_vector_for_time(tmpdir, data_processing_configs):
     window_width_target = pd.Timedelta(
         data_processing_configs["input_output_window"]["window_width_target"]
     )
-    lag_interval = pd.Timedelta(data_processing_configs["feat_timelag"]["lag_interval"])
+    bin_interval = pd.Timedelta(data_processing_configs["resample"]["bin_interval"])
 
     # ACTION
     alfa_model = BravoModel(configs)
@@ -149,8 +184,8 @@ def test_get_prediction_vector_for_time(tmpdir, data_processing_configs):
     assert (
         results
         == pd.timedelta_range(
-            start=pd.Timedelta("0 days"),
+            start=window_width_futurecast,
             end=window_width_futurecast + window_width_target,
-            freq=lag_interval,
+            freq=bin_interval,
         ).to_list()
     )
