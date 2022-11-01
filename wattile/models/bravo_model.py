@@ -1065,17 +1065,16 @@ class BravoModel(AlgoMainRNNBase):
         lag_count = config_data_processing["feat_timelag"]["lag_count"]
         config_input_output_window = config_data_processing["input_output_window"]
         window_width_futurecast = config_input_output_window["window_width_futurecast"]
-        window_width_target = config_input_output_window["window_width_target"]
 
         # calculating offsets
-        window_start_offset = pd.Timedelta(lag_interval) * lag_count
-        window_end_offset = pd.Timedelta(window_width_target) + pd.Timedelta(
+        window_start_offset = pd.Timedelta(lag_interval) * lag_count + pd.Timedelta(
             window_width_futurecast
         )
+        window_end_offset = pd.Timedelta(window_width_futurecast)
 
         # calculating start and end time windows for input data
         prediction_window_start_time = timestamp_cast - window_start_offset
-        prediction_window_end_time = timestamp_cast + window_end_offset
+        prediction_window_end_time = timestamp_cast - window_end_offset
 
         return prediction_window_start_time, prediction_window_end_time
 
