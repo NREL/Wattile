@@ -961,23 +961,13 @@ class AlfaModel(AlgoMainRNNBase):
         :rtype: List[timedelta]
         """
 
-        # initialize horizon vector
-        future_horizon_vector = []
-
         # set up variables
         config_data_processing = self.configs["data_processing"]
-        resample_interval = config_data_processing["resample"]["bin_interval"]
-        window_start_delta = config_data_processing["input_output_window"][
+        window_width_futurecast = config_data_processing["input_output_window"][
             "window_width_futurecast"
         ]
 
-        # calculate future time horizon count
-        count_horizon = 1
-
-        # create horizon vector by adding timedelta
-        timedelta = pd.Timedelta(window_start_delta)
-        for i in range(count_horizon):
-            future_horizon_vector.append(timedelta)
-            timedelta = pd.Timedelta(timedelta) + pd.Timedelta(resample_interval)
+        # set future horizon vector
+        future_horizon_vector = [pd.Timedelta(window_width_futurecast)]
 
         return future_horizon_vector
