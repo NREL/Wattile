@@ -1049,7 +1049,6 @@ class BravoModel(AlgoMainRNNBase):
     def get_input_window_for_output_time(self, datetime):
         """Given the time for which we want to predict, return the time window of the required
         input.
-
         :param output_time: the time for which we want to predict
         :type output_time: datatime
         :return: earliest time input should include, latest time input should include.
@@ -1063,18 +1062,13 @@ class BravoModel(AlgoMainRNNBase):
         config_data_processing = self.configs["data_processing"]
         lag_interval = config_data_processing["feat_timelag"]["lag_interval"]
         lag_count = config_data_processing["feat_timelag"]["lag_count"]
-        config_input_output_window = config_data_processing["input_output_window"]
-        window_width_futurecast = config_input_output_window["window_width_futurecast"]
 
         # calculating offsets
-        window_start_offset = pd.Timedelta(lag_interval) * lag_count + pd.Timedelta(
-            window_width_futurecast
-        )
-        window_end_offset = pd.Timedelta(window_width_futurecast)
+        window_offset = pd.Timedelta(lag_interval) * lag_count
 
         # calculating start and end time windows for input data
-        prediction_window_start_time = timestamp_cast - window_start_offset
-        prediction_window_end_time = timestamp_cast - window_end_offset
+        prediction_window_start_time = timestamp_cast - window_offset
+        prediction_window_end_time = timestamp_cast
 
         return prediction_window_start_time, prediction_window_end_time
 

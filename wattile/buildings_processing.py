@@ -221,7 +221,6 @@ def timelag_predictors_target(data, configs):
     """
     Create lagged versions of predictor and target variables in a DataFrame.
     Used specifically for bravo learning methods.
-
     :param data: (DataFrame)
     :param configs: (Dict)
     :return: (DataFrame)
@@ -274,6 +273,9 @@ def timelag_predictors_target(data, configs):
 
     if configs["learning_algorithm"]["use_case"] != "prediction":
         data = pd.concat([data, local], axis=1)
+    else:
+        for col in local.columns:
+            data[col] = 0  # dummy
 
     data = data.dropna(how="any")
 
