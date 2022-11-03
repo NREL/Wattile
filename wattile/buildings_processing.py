@@ -176,7 +176,6 @@ def timelag_predictors(data, configs):
     """
     Create lagged versions of predictor variables in a DataFrame.
     Used specifically for alfa learning methods.
-
     :param data: (DataFrame)
     :param configs: (Dict)
     :return: (DataFrame)
@@ -210,6 +209,8 @@ def timelag_predictors(data, configs):
 
     if configs["learning_algorithm"]["use_case"] != "prediction":
         data[target_var] = target.shift(freq="-" + window_width_futurecast)
+    else:
+        data[target_var] = 0  # dummy
 
     data = data.dropna(how="any")
 
