@@ -1088,22 +1088,19 @@ class BravoModel(AlgoMainRNNBase):
         # set up variables
         config_data_processing = self.configs["data_processing"]
         resample_interval = config_data_processing["resample"]["bin_interval"]
-        window_start_delta = config_data_processing["input_output_window"][
+        window_width_futurecast = config_data_processing["input_output_window"][
             "window_width_futurecast"
         ]
         window_width_target = config_data_processing["input_output_window"][
             "window_width_target"
         ]
 
-        # calculate future time horizon count
-        count_horizon = (
-            pd.Timedelta(window_width_target) // pd.Timedelta(resample_interval) + 1
-        )
-
         # create horizon vector by adding timedelta via loop
-        timedelta = pd.Timedelta(window_start_delta)
-        for i in range(count_horizon):
-            future_horizon_vector.append(timedelta)
-            timedelta = pd.Timedelta(timedelta) + pd.Timedelta(resample_interval)
+        future_horizon_vector = pd.timedelta_range(
+            start=window_width_futurecast,
+            end=pd.Timedelta(window_width_target)
+            + pd.Timedelta(window_width_futurecast),
+            freq=resample_interval,
+        ).tolist()
 
         return future_horizon_vector
