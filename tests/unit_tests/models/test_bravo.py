@@ -127,28 +127,29 @@ def test_get_input_window_for_output_time(tmpdir, data_processing_configs):
     configs["data_processing"].update(data_processing_configs)
 
     lag_interval = pd.Timedelta(data_processing_configs["feat_timelag"]["lag_interval"])
-    window_width_futurecast = pd.Timedelta(
-        data_processing_configs["input_output_window"]["window_width_futurecast"]
-    )
 
     # ACTION
     bravo_model = BravoModel(configs)
-    predict_for_time = pd.Timestamp(year=2020, month=1, day=1, tz=dt.timezone.utc)
+    nominal_prediction_time = pd.Timestamp(
+        year=2020, month=1, day=1, tz=dt.timezone.utc
+    )
     (
         prediction_window_start_time,
         prediction_window_end_time,
-    ) = bravo_model.get_input_window_for_output_time(predict_for_time)
+    ) = bravo_model.get_input_window_for_output_time(nominal_prediction_time)
 
     # ASSERTION
     # When data with given start and end time is fed to _preprocess_data,
-    # it should return one row, where the target_var is for the predict_for_time
-    data = get_dummy_data(prediction_window_start_time, predict_for_time, lag_interval)
+    # it should return one row, where the index is nominal_prediction_time
+    data = get_dummy_data(
+        prediction_window_start_time, prediction_window_end_time, lag_interval
+    )
     configs["data_input"]["start_time"] = str(prediction_window_start_time)
     configs["data_input"]["end_time"] = str(prediction_window_end_time)
     preprocessed_data = _preprocess_data(configs, data.copy())
 
     assert preprocessed_data.shape[0] == 1
-    assert preprocessed_data.index[0] == predict_for_time - window_width_futurecast
+    assert preprocessed_data.index[0] == nominal_prediction_time
 
 
 @pytest.mark.parametrize(
