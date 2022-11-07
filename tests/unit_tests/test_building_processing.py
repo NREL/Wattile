@@ -220,6 +220,10 @@ TIMELAG_PREDICTORS_CONFIGS2 = {
 )
 def test_timelag_predictors(configs):
     # Setup
+    configs["learning_algorithm"] = {
+        "arch_version": "alfa",
+        "use_case": "train",
+    }
     cdp = configs["data_processing"]
     lag_interval = pd.Timedelta(cdp["feat_timelag"]["lag_interval"])
     lag_count = cdp["feat_timelag"]["lag_count"]
@@ -326,6 +330,10 @@ TIMELAG_PREDICTORS_TARGET_CONFIGS2 = {
     ],
 )
 def test_timelag_predictors_target(configs):
+    configs["learning_algorithm"] = {
+        "arch_version": "bravo",
+        "use_case": "train",
+    }
     cdp = configs["data_processing"]
     lag_interval = pd.Timedelta(cdp["feat_timelag"]["lag_interval"])
     lag_count = cdp["feat_timelag"]["lag_count"]

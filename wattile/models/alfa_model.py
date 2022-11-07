@@ -933,3 +933,50 @@ class AlfaModel(AlgoMainRNNBase):
                 "horizon": [window_width_futurecast],
             },
         )
+
+    def get_input_window_for_output_time(self, datetime):
+        """Given the time for which we want to predict, return the time window of the required
+        input.
+        :param output_time: the time for which we want to predict
+        :type output_time: datatime
+        :return: earliest time input should include, latest time input should include.
+        :rtype: dt.datetime, datetime
+        """
+
+        # set prediction time with pandas timedelta
+        timestamp_cast = pd.to_datetime(datetime)  # current time needs to go in here
+
+        # set parameters
+        config_data_processing = self.configs["data_processing"]
+        lag_interval = config_data_processing["feat_timelag"]["lag_interval"]
+        lag_count = config_data_processing["feat_timelag"]["lag_count"]
+
+        # calculating offsets
+        window_offset = pd.Timedelta(lag_interval) * lag_count
+
+        # calculating start and end time windows for input data
+        prediction_window_start_time = timestamp_cast - window_offset
+        prediction_window_end_time = timestamp_cast
+
+        return prediction_window_start_time, prediction_window_end_time
+
+    def get_prediction_vector_for_time(self):
+        """Given the time for which we want to predict, return a vector of actual timestamps
+        corresponding to the predictions returned by the model
+
+        :param output_time: the time for which we want to predict
+        :type output_time: datetime
+        :return: a vector of actual timestamps corresponding to the predictions
+        :rtype: List[timedelta]
+        """
+
+        # set up variables
+        config_data_processing = self.configs["data_processing"]
+        window_width_futurecast = config_data_processing["input_output_window"][
+            "window_width_futurecast"
+        ]
+
+        # set future horizon vector
+        future_horizon_vector = [pd.Timedelta(window_width_futurecast)]
+
+        return future_horizon_vector

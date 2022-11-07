@@ -666,3 +666,66 @@ class CharlieModel:
         total = t1 - t0
         print("\nTIME ELAPSED: {} seconds OR {} minutes".format(total, total / 60.0))
         print("\nEnd of run")
+
+    def get_input_window_for_output_time(self, datetime):
+        """Given the time for which we want to predict, return the time window of the required
+        input.
+
+        :param output_time: the time for which we want to predict
+        :type output_time: datatime
+        :return: earliest time input should include, latest time input should include.
+        :rtype: dt.datetime, datetime
+        """
+
+        # set prediction time with pandas timedelta
+        timestamp_cast = pd.to_datetime(datetime)  # current time needs to go in here
+
+        # set parameters
+        config_data_processing = self.configs["data_processing"]
+        config_input_output_window = config_data_processing["input_output_window"]
+        window_width_source = config_input_output_window["window_width_source"]
+
+        # calculating offsets
+        window_offset = pd.Timedelta(window_width_source)
+
+        # calculating start and end time windows for input data
+        prediction_window_start_time = timestamp_cast - window_offset
+        prediction_window_end_time = timestamp_cast
+
+        return prediction_window_start_time, prediction_window_end_time
+
+    def get_prediction_vector_for_time(self):
+        """Given the time for which we want to predict, return a vector of actual timestamps
+        corresponding to the predictions returned by the model
+
+        :param output_time: the time for which we want to predict
+        :type output_time: datetime
+        :return: a vector of actual timestamps corresponding to the predictions
+        :rtype: List[timedelta]
+        """
+
+        # initialize horizon vector
+        future_horizon_vector = []
+
+        # set up variables
+        config_data_processing = self.configs["data_processing"]
+        resample_interval = config_data_processing["resample"]["bin_interval"]
+        window_start_delta = config_data_processing["input_output_window"][
+            "window_width_futurecast"
+        ]
+        window_width_target = config_data_processing["input_output_window"][
+            "window_width_target"
+        ]
+
+        # calculate future time horizon count
+        count_horizon = (
+            pd.Timedelta(window_width_target) // pd.Timedelta(resample_interval) + 1
+        )
+
+        # create horizon vector by adding timedelta via loop
+        timedelta = pd.Timedelta(window_start_delta)
+        for i in range(count_horizon):
+            future_horizon_vector.append(timedelta)
+            timedelta = pd.Timedelta(timedelta) + pd.Timedelta(resample_interval)
+
+        return future_horizon_vector
