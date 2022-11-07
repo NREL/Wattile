@@ -11,6 +11,7 @@ import pandas as pd
 import psutil
 import torch
 import torch.utils.data as data_utils
+import xarray as xr
 from psutil import virtual_memory
 from torch.autograd import Variable
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -917,7 +918,15 @@ class AlfaModel(AlgoMainRNNBase):
                 )
             )
 
-        return final_preds
+        return xr.DataArray(
+            data=final_preds,
+            dims=["timestamp", "quantile", "horizon"],
+            coords={
+                "timestamp": val_df.index.to_list(),
+                "quantile": self.configs["learning_algorithm"]["quantiles"],
+                "horizon": [window_width_futurecast],
+            },
+        )
 
     def get_input_window_for_output_time(self, datetime):
         """Given the time for which we want to predict, return the time window of the required
@@ -965,3 +974,5 @@ class AlfaModel(AlgoMainRNNBase):
         future_horizon_vector = [pd.Timedelta(window_width_futurecast)]
 
         return future_horizon_vector
+
+        

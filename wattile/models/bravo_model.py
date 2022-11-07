@@ -11,6 +11,7 @@ import pandas as pd
 import psutil
 import torch
 import torch.utils.data as data_utils
+import xarray as xr
 from psutil import virtual_memory
 from torch.autograd import Variable
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -1044,7 +1045,28 @@ class BravoModel(AlgoMainRNNBase):
             )
         )
 
-        return final_preds
+        cdp = self.configs["data_processing"]
+        window_width_futurecast = cdp["input_output_window"]["window_width_futurecast"]
+        window_width_target = pd.Timedelta(
+            cdp["input_output_window"]["window_width_target"]
+        )
+        bin_interval = pd.Timedelta(cdp["resample"]["bin_interval"])
+        quantiles = self.configs["learning_algorithm"]["quantiles"]
+
+        num_lagged_targets = int(window_width_target / bin_interval) + 1
+
+        return xr.DataArray(
+            data=final_preds,
+            dims=["timestamp", "quantile", "horizon"],
+            coords={
+                "timestamp": val_df.index.to_list(),
+                "quantile": quantiles,
+                "horizon": [
+                    window_width_futurecast + bin_interval * i
+                    for i in range(num_lagged_targets)
+                ],
+            },
+        )
 
     def get_input_window_for_output_time(self, datetime):
         """Given the time for which we want to predict, return the time window of the required
@@ -1104,3 +1126,4 @@ class BravoModel(AlgoMainRNNBase):
         ).tolist()
 
         return future_horizon_vector
+        
