@@ -1126,4 +1126,3 @@ class BravoModel(AlgoMainRNNBase):
         ).tolist()
 
         return future_horizon_vector
-        

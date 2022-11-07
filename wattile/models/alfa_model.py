@@ -918,6 +918,12 @@ class AlfaModel(AlgoMainRNNBase):
                 )
             )
 
+        window_width_futurecast = pd.Timedelta(
+            self.configs["data_processing"]["input_output_window"][
+                "window_width_futurecast"
+            ]
+        )
+
         return xr.DataArray(
             data=final_preds,
             dims=["timestamp", "quantile", "horizon"],
@@ -974,5 +980,3 @@ class AlfaModel(AlgoMainRNNBase):
         future_horizon_vector = [pd.Timedelta(window_width_futurecast)]
 
         return future_horizon_vector
-
-        
