@@ -11,7 +11,7 @@ ENV PYTHONPATH=${PYTHONPATH}:${PWD}
 # Install Dependices
 COPY ./poetry.lock /wattile
 COPY ./pyproject.toml /wattile
-RUN pip3 install poetry
+RUN pip3 install poetry==1.1.13
 RUN poetry config virtualenvs.create false
 RUN cd /wattile && poetry install --no-dev
 
