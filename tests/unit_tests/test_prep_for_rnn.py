@@ -33,14 +33,21 @@ def test_prep_for_rnn(config_for_tests, tmpdir):
     exp_dir.mkdir(parents=True, exist_ok=True)
 
     # get data
-    data, config_for_tests = read_dataset_from_file(config_for_tests)
+    data = read_dataset_from_file(config_for_tests)
 
     # creat data frame
     train_df, val_df = prep_for_rnn(config_for_tests, data)
 
+    # set predictors
+    if config_for_tests["data_input"]["predictor_columns"] != []:
+        predictors = config_for_tests["data_input"]["predictor_columns"]
+    else:
+        predictors = list(data.columns)
+        predictors.remove(config_for_tests["data_input"]["target_var"])
+
     excepted_data_columns = []
     # add weather columns
-    for pred in config_for_tests["data_input"]["predictor_columns"]:
+    for pred in predictors:
         excepted_data_columns += [f"{pred}_{m}" for m in ["max", "min", "mean"]]
         excepted_data_columns += [
             f"{pred}_{m}_lag{lag + 1}"
