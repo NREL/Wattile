@@ -86,7 +86,7 @@ def _get_dataset_config(configs):
 
     df_inputdata["path"] = str(dataset_dir) + "/" + df_inputdata["filename"]
 
-    return df_inputdata
+    return df_inputdata, configs_input
 
 
 def read_dataset_from_file(configs):
@@ -97,7 +97,7 @@ def read_dataset_from_file(configs):
     :param configs: (Dictionary)
     :return: (DataFrame)
     """
-    df_inputdata = _get_dataset_config(configs)
+    df_inputdata, configs_input = _get_dataset_config(configs)
 
     # only read from files that's timespan intersects with the configs
     # the extra will be removed in `prep_for_rnn`
@@ -122,6 +122,7 @@ def read_dataset_from_file(configs):
         needed_columns=configs["data_input"]["predictor_columns"],
     )
 
+    # save all predictor names back to the configs for later use
     if configs["data_input"]["predictor_columns"] == []:
         configs["data_input"]["predictor_columns"] = list(data_full_p.columns)
 
