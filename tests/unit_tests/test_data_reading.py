@@ -45,7 +45,7 @@ def test_create_input_dataframe(config_for_tests, tmpdir):
     # assert predictors saved
     with open(exp_dir / "predictors config.json", "r") as read_file:
         saved_predictors_json = json.load(read_file)
-        saved_predictors = pd.DataFrame(saved_predictors_json["column"])
+        saved_predictors = pd.DataFrame(saved_predictors_json)
 
     dataset_dir = pathlib.Path(config_for_tests["data_input"]["data_dir"])
     configs_file_inputdata = dataset_dir / config_for_tests["data_input"]["data_config"]

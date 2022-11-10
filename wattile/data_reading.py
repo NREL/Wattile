@@ -61,7 +61,7 @@ def _get_dataset_config(configs):
     :param configs: configs
     :type configs: dict
     :return: dataset config
-    :rtype: pd.DataFrame
+    :rtype: Tuple[pd.DataFrame, List[Dict]]
     """
     dataset_dir = Path(configs["data_input"]["data_dir"])
     configs_file_inputdata = dataset_dir / configs["data_input"]["data_config"]
@@ -75,6 +75,7 @@ def _get_dataset_config(configs):
     with open(configs_file_inputdata, "r") as read_file:
         configs_input = json.load(read_file)
         df_inputdata = pd.DataFrame(configs_input["files"])
+        predictors_data = configs_input["predictors"]
 
     # converting date time column into pandas datetime (raw format based on ISO 8601)
     df_inputdata["start"] = pd.to_datetime(
@@ -86,7 +87,7 @@ def _get_dataset_config(configs):
 
     df_inputdata["path"] = str(dataset_dir) + "/" + df_inputdata["filename"]
 
-    return df_inputdata, configs_input
+    return df_inputdata, predictors_data
 
 
 def read_dataset_from_file(configs):
@@ -97,7 +98,7 @@ def read_dataset_from_file(configs):
     :param configs: (Dictionary)
     :return: (DataFrame)
     """
-    df_inputdata, configs_input = _get_dataset_config(configs)
+    df_inputdata, predictors_data = _get_dataset_config(configs)
 
     # only read from files that's timespan intersects with the configs
     # the extra will be removed in `prep_for_rnn`
@@ -122,20 +123,14 @@ def read_dataset_from_file(configs):
         needed_columns=configs["data_input"]["predictor_columns"],
     )
 
-    # create list of final predictors with the same format in data_config
-    predictor_final_temp = []
-    for entry in configs_input["predictors"]:
-        if entry["column"] in list(data_full_p.columns):
-            predictor_final_temp.append(entry)
-    predictor_final = {}
-    predictor_final["column"] = predictor_final_temp
-
-    # create separate json file including final predictors
-    path = os.path.join(
-        Path(configs["data_output"]["exp_dir"]), "predictors config.json"
-    )
-    with open(path, "w") as fp:
-        json.dump(predictor_final, fp, indent=1)
+    predictor_path = Path(configs["data_output"]["exp_dir"]) / "predictors config.json"
+    with open(predictor_path, "w") as fp:
+        final_predictors_data = [
+            p
+            for p in predictors_data
+            if p["column"] in configs["data_input"]["predictor_columns"]
+        ]
+        json.dump(final_predictors_data, fp)
 
     # read in target data
     target_data_info = df_inputdata[df_inputdata.contentType == "targets"]
