@@ -122,10 +122,6 @@ def read_dataset_from_file(configs):
         needed_columns=configs["data_input"]["predictor_columns"],
     )
 
-    # save all predictor names back to the configs for later use
-    if configs["data_input"]["predictor_columns"] == []:
-        configs["data_input"]["predictor_columns"] = list(data_full_p.columns)
-
     # create list of final predictors with the same format in data_config
     predictor_final_temp = []
     for entry in configs_input["predictors"]:
@@ -169,4 +165,4 @@ def read_dataset_from_file(configs):
     else:
         data_full = pd.merge(data_full_p, data_full_t, how="outer", on="Timestamp")
 
-    return data_full, configs
+    return data_full
