@@ -126,6 +126,21 @@ def read_dataset_from_file(configs):
     if configs["data_input"]["predictor_columns"] == []:
         configs["data_input"]["predictor_columns"] = list(data_full_p.columns)
 
+    # create list of final predictors with the same format in data_config
+    predictor_final_temp = []
+    for entry in configs_input["predictors"]:
+        if entry["column"] in list(data_full_p.columns):
+            predictor_final_temp.append(entry)
+    predictor_final = {}
+    predictor_final["column"] = predictor_final_temp
+
+    # create separate json file including final predictors
+    path = os.path.join(
+        Path(configs["data_output"]["exp_dir"]), "predictors config.json"
+    )
+    with open(path, "w") as fp:
+        json.dump(predictor_final, fp, indent=1)
+
     # read in target data
     target_data_info = df_inputdata[df_inputdata.contentType == "targets"]
     data_full_t = _concat_data_from_files(
