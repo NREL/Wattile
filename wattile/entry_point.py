@@ -57,7 +57,7 @@ def create_input_dataframe(configs):
     ):
         data = pd.read_hdf(os.path.join(local_results_dir, "internal_test.h5"))
     else:
-        data, configs = read_dataset_from_file(configs)
+        data = read_dataset_from_file(configs)
 
     train_df, val_df = bp.prep_for_rnn(configs, data)
 

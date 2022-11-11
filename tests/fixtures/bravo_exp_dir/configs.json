@@ -23,9 +23,15 @@
  },
  "data_processing": {
   "feat_time": {
-   "month_of_year": ["sincos"],
-   "day_of_week": ["binary_reg"],
-   "hour_of_day": ["sincos"],
+   "month_of_year": [
+    "sincos"
+   ],
+   "day_of_week": [
+    "binary_reg"
+   ],
+   "hour_of_day": [
+    "sincos"
+   ],
    "holidays": false
   },
   "resample": {
@@ -42,10 +48,10 @@
    "lag_count": 12
   },
   "input_output_window": {
-    "window_width_source": "180min",
-    "window_width_futurecast":"0min",
-    "window_width_target": "1080min"
-   },
+   "window_width_source": "180min",
+   "window_width_futurecast": "0min",
+   "window_width_target": "1080min"
+  },
   "random_seed": 1,
   "sequential_splicer": {
    "active": true,
@@ -87,5 +93,8 @@
   "eval_frequency": 2,
   "test_method": "external"
  },
- "input_dim": 54
+ "input_dim": 54,
+ "target_feat_name": [
+  "Synthetic Site Electricity Main Total Power"
+ ]
 }

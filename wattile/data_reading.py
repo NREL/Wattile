@@ -61,7 +61,7 @@ def _get_dataset_config(configs):
     :param configs: configs
     :type configs: dict
     :return: dataset config
-    :rtype: pd.DataFrame
+    :rtype: Tuple[pd.DataFrame, List[Dict]]
     """
     dataset_dir = Path(configs["data_input"]["data_dir"])
     configs_file_inputdata = dataset_dir / configs["data_input"]["data_config"]
@@ -75,6 +75,7 @@ def _get_dataset_config(configs):
     with open(configs_file_inputdata, "r") as read_file:
         configs_input = json.load(read_file)
         df_inputdata = pd.DataFrame(configs_input["files"])
+        predictors_data = configs_input["predictors"]
 
     # converting date time column into pandas datetime (raw format based on ISO 8601)
     df_inputdata["start"] = pd.to_datetime(
@@ -86,7 +87,7 @@ def _get_dataset_config(configs):
 
     df_inputdata["path"] = str(dataset_dir) + "/" + df_inputdata["filename"]
 
-    return df_inputdata
+    return df_inputdata, predictors_data
 
 
 def read_dataset_from_file(configs):
@@ -97,7 +98,7 @@ def read_dataset_from_file(configs):
     :param configs: (Dictionary)
     :return: (DataFrame)
     """
-    df_inputdata = _get_dataset_config(configs)
+    df_inputdata, predictors_data = _get_dataset_config(configs)
 
     # only read from files that's timespan intersects with the configs
     # the extra will be removed in `prep_for_rnn`
@@ -122,8 +123,14 @@ def read_dataset_from_file(configs):
         needed_columns=configs["data_input"]["predictor_columns"],
     )
 
-    if configs["data_input"]["predictor_columns"] == []:
-        configs["data_input"]["predictor_columns"] = list(data_full_p.columns)
+    predictor_path = Path(configs["data_output"]["exp_dir"]) / "predictors_config.json"
+    with open(predictor_path, "w") as fp:
+        final_predictors_data = [
+            p
+            for p in predictors_data
+            if p["column"] in configs["data_input"]["predictor_columns"]
+        ]
+        json.dump(final_predictors_data, fp)
 
     # read in target data
     target_data_info = df_inputdata[df_inputdata.contentType == "targets"]
@@ -153,4 +160,4 @@ def read_dataset_from_file(configs):
     else:
         data_full = pd.merge(data_full_p, data_full_t, how="outer", on="Timestamp")
 
-    return data_full, configs
+    return data_full
