@@ -123,7 +123,7 @@ def read_dataset_from_file(configs):
         needed_columns=configs["data_input"]["predictor_columns"],
     )
 
-    predictor_path = Path(configs["data_output"]["exp_dir"]) / "predictors config.json"
+    predictor_path = Path(configs["data_output"]["exp_dir"]) / "predictors_config.json"
     with open(predictor_path, "w") as fp:
         final_predictors_data = [
             p
