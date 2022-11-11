@@ -52,10 +52,10 @@ def test_create_input_dataframe(config_for_tests, tmpdir):
     with open(configs_file_inputdata, "r") as read_file:
         configs_input = json.load(read_file)
         all_predictors = pd.DataFrame(configs_input["predictors"])
-        excepted_predictors = all_predictors[
+        expected_predictors = all_predictors[
             all_predictors["column"].isin(
                 config_for_tests["data_input"]["predictor_columns"]
             )
         ]
 
-    assert_frame_equal(saved_predictors, excepted_predictors)
+    assert_frame_equal(saved_predictors, expected_predictors)
