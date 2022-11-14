@@ -135,7 +135,7 @@ def read_dataset_from_file(configs):
             if p["column"] in list(data_full_p.columns)
         ]
         final_predictors_data["target"] = configs_input["targets"][0]
-        json.dump(final_predictors_data, fp)
+        json.dump(final_predictors_data, fp, ensure_ascii=False)
 
     # read in target data
     target_data_info = df_inputdata[df_inputdata.contentType == "targets"]
