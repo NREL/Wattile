@@ -124,11 +124,11 @@ def read_dataset_from_file(configs):
     )
 
     predictor_path = Path(configs["data_output"]["exp_dir"]) / "predictors_config.json"
+    final_predictors_data = {}
+    final_predictors_data["predictors"] = []
     with open(predictor_path, "w") as fp:
-        final_predictors_data = [
-            p
-            for p in predictors_data
-            if p["column"] in configs["data_input"]["predictor_columns"]
+        final_predictors_data["predictors"] = [
+            p for p in predictors_data if p["column"] in list(data_full_p.columns)
         ]
         json.dump(final_predictors_data, fp)
 
