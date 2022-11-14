@@ -134,7 +134,9 @@ def read_dataset_from_file(configs):
             for p in configs_input["predictors"]
             if p["column"] in list(data_full_p.columns)
         ]
-        final_predictors_data["target"] = configs_input["targets"][0]
+        for t in configs_input["targets"]:
+            if t["column"] == configs["data_input"]["target_var"]:
+                final_predictors_data["target"] = t
         json.dump(final_predictors_data, fp, ensure_ascii=False)
 
     # read in target data
