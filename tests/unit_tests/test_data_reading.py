@@ -43,7 +43,7 @@ def test_create_input_dataframe(config_for_tests, tmpdir):
     assert data.shape == (10080, 8)
 
     # assert predictors saved
-    with open(exp_dir / "predictors_config.json", "r") as read_file:
+    with open(exp_dir / "predictors_target_config.json", "r") as read_file:
         saved_predictors_json = json.load(read_file)
         saved_predictors = pd.DataFrame(saved_predictors_json["predictors"])
 
