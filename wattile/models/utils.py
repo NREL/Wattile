@@ -62,7 +62,7 @@ def load_model(configs):
     model = init_model(configs)
 
     filepath = pathlib.Path(configs["data_output"]["exp_dir"]) / "torch_model"
-    checkpoint = torch.load(filepath)
+    checkpoint = torch.load(filepath, map_location='cpu')
 
     model.load_state_dict(checkpoint["model_state_dict"])
     resume_num_epoch = checkpoint["epoch_num"]
