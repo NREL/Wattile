@@ -58,87 +58,87 @@
   "files": [
     {
       "filename": "Synthetic Site Targets 2021-12-01.csv",
+      "contentType": "targets",
       "start": "t:2021-12-01T00:00:00-07:00 Denver",
-      "end": "t:2021-12-02T00:00:00-07:00 Denver",
-      "contentType": "targets"
+      "end": "t:2021-12-02T00:00:00-07:00 Denver"
     },
     {
       "filename": "Synthetic Site Targets 2021-12-02.csv",
+      "contentType": "targets",
       "start": "t:2021-12-02T00:00:00-07:00 Denver",
-      "end": "t:2021-12-03T00:00:00-07:00 Denver",
-      "contentType": "targets"
+      "end": "t:2021-12-03T00:00:00-07:00 Denver"
     },
     {
       "filename": "Synthetic Site Targets 2021-12-03.csv",
+      "contentType": "targets",
       "start": "t:2021-12-03T00:00:00-07:00 Denver",
-      "end": "t:2021-12-04T00:00:00-07:00 Denver",
-      "contentType": "targets"
+      "end": "t:2021-12-04T00:00:00-07:00 Denver"
     },
     {
       "filename": "Synthetic Site Targets 2021-12-04.csv",
+      "contentType": "targets",
       "start": "t:2021-12-04T00:00:00-07:00 Denver",
-      "end": "t:2021-12-05T00:00:00-07:00 Denver",
-      "contentType": "targets"
+      "end": "t:2021-12-05T00:00:00-07:00 Denver"
     },
     {
       "filename": "Synthetic Site Targets 2021-12-05.csv",
+      "contentType": "targets",
       "start": "t:2021-12-05T00:00:00-07:00 Denver",
-      "end": "t:2021-12-06T00:00:00-07:00 Denver",
-      "contentType": "targets"
+      "end": "t:2021-12-06T00:00:00-07:00 Denver"
     },
     {
       "filename": "Synthetic Site Targets 2021-12-06.csv",
+      "contentType": "targets",
       "start": "t:2021-12-06T00:00:00-07:00 Denver",
-      "end": "t:2021-12-07T00:00:00-07:00 Denver",
-      "contentType": "targets"
+      "end": "t:2021-12-07T00:00:00-07:00 Denver"
     },
     {
       "filename": "Synthetic Site Targets 2021-12-07.csv",
+      "contentType": "targets",
       "start": "t:2021-12-07T00:00:00-07:00 Denver",
-      "end": "t:2021-12-08T00:00:00-07:00 Denver",
-      "contentType": "targets"
+      "end": "t:2021-12-08T00:00:00-07:00 Denver"
     },
     {
       "filename": "Synthetic Site Predictors 2021-12-01.csv",
+      "contentType": "predictors",
       "start": "t:2021-12-01T00:00:00-07:00 Denver",
-      "end": "t:2021-12-02T00:00:00-07:00 Denver",
-      "contentType": "predictors"
+      "end": "t:2021-12-02T00:00:00-07:00 Denver"
     },
     {
       "filename": "Synthetic Site Predictors 2021-12-02.csv",
+      "contentType": "predictors",
       "start": "t:2021-12-02T00:00:00-07:00 Denver",
-      "end": "t:2021-12-03T00:00:00-07:00 Denver",
-      "contentType": "predictors"
+      "end": "t:2021-12-03T00:00:00-07:00 Denver"
     },
     {
       "filename": "Synthetic Site Predictors 2021-12-03.csv",
+      "contentType": "predictors",
       "start": "t:2021-12-03T00:00:00-07:00 Denver",
-      "end": "t:2021-12-04T00:00:00-07:00 Denver",
-      "contentType": "predictors"
+      "end": "t:2021-12-04T00:00:00-07:00 Denver"
     },
     {
       "filename": "Synthetic Site Predictors 2021-12-04.csv",
+      "contentType": "predictors",
       "start": "t:2021-12-04T00:00:00-07:00 Denver",
-      "end": "t:2021-12-05T00:00:00-07:00 Denver",
-      "contentType": "predictors"
+      "end": "t:2021-12-05T00:00:00-07:00 Denver"
     },
     {
       "filename": "Synthetic Site Predictors 2021-12-05.csv",
+      "contentType": "predictors",
       "start": "t:2021-12-05T00:00:00-07:00 Denver",
-      "end": "t:2021-12-06T00:00:00-07:00 Denver",
-      "contentType": "predictors"
+      "end": "t:2021-12-06T00:00:00-07:00 Denver"
     },
     {
       "filename": "Synthetic Site Predictors 2021-12-06.csv",
+      "contentType": "predictors",
       "start": "t:2021-12-06T00:00:00-07:00 Denver",
-      "end": "t:2021-12-07T00:00:00-07:00 Denver",
-      "contentType": "predictors"
+      "end": "t:2021-12-07T00:00:00-07:00 Denver"
     },
     {
       "filename": "Synthetic Site Predictors 2021-12-07.csv",
+      "contentType": "predictors",
       "start": "t:2021-12-07T00:00:00-07:00 Denver",
-      "end": "t:2021-12-08T00:00:00-07:00 Denver",
-      "contentType": "predictors"
+      "end": "t:2021-12-08T00:00:00-07:00 Denver"
     }
   ],
   "export_options": {
