@@ -18,6 +18,7 @@ def get_dummy_data(start, end, iterval):
 CONFIGS = {
     "data_input": {"predictor_columns": ["var_1"], "target_var": "target_var"},
     "data_processing": {
+        "random_seed": 0,
         "feat_time": {
             "hour_of_day": [],
             "day_of_week": [],

@@ -19,16 +19,26 @@ logger = logging.getLogger(str(os.getpid()))
 class AlgoMainRNNBase(ABC):
     def __init__(self, configs):
         self.configs = configs
+
+        # Create exp_dir and writer
         self.file_prefix = Path(configs["data_output"]["exp_dir"])
         self.file_prefix.mkdir(parents=True, exist_ok=True)
+        self.writer = SummaryWriter(self.file_prefix)
 
-    def size_the_batches(
-        self,
-        train_data,
-        val_data,
-        tr_desired_batch_size,
-        te_desired_batch_size,
-    ):
+        # Setting random seed with constant
+        torch.manual_seed(self.configs["data_processing"]["random_seed"])
+
+        # log creation
+        logger.info(
+            f"{self.__class__.__name__} model created."
+            f"Writing to {self.file_prefix}."
+        )
+
+    def __del__(self):
+        self.writer.flush()
+        self.writer.close()
+
+    def size_the_batches(self, train_data, val_data):
         """
         Compute the batch sizes for training and val set
 
@@ -38,6 +48,8 @@ class AlgoMainRNNBase(ABC):
         :param te_desired_batch_size: (int)
         :return:
         """
+        tr_desired_batch_size = self.configs["learning_algorithm"]["train_batch_size"]
+        te_desired_batch_size = self.configs["learning_algorithm"]["val_batch_size"]
 
         if self.configs["learning_algorithm"]["use_case"] == "train":
             # Find factors of the length of train and val df's
@@ -51,8 +63,6 @@ class AlgoMainRNNBase(ABC):
             val_bth = factors(val_data.shape[0])
             val_num_batches = min(val_bth, key=lambda x: abs(x - te_desired_batch_size))
             val_bt_size = int(val_data.shape[0] / val_num_batches)
-
-            num_train_data = train_data.shape[0]
 
             # logger.info(
             #     "Train size: {}, val size: {}, split {}%:{}%".format(
@@ -78,11 +88,10 @@ class AlgoMainRNNBase(ABC):
         else:
             val_bt_size = val_data.shape[0]
             train_bt_size = 0
-            num_train_data = 0
 
-        return train_bt_size, val_bt_size, num_train_data
+        return train_bt_size, val_bt_size
 
-    def data_transform(self, train_data, val_data, transformation_method, run_train):
+    def data_transform(self, train_data, val_data):
         """
         Normalize the training and val data according to a user-defined criteria
 
@@ -92,6 +101,11 @@ class AlgoMainRNNBase(ABC):
         :param run_train: Boolean
         :return:
         """
+        transformation_method = self.configs["learning_algorithm"][
+            "transformation_method"
+        ]
+        run_train = self.configs["learning_algorithm"]["use_case"] == "train"
+
         if run_train:
             # For the result de-normalization purpose, saving the max and min values of the
             # STM_Xcel_Meter columns
@@ -154,108 +168,33 @@ class AlgoMainRNNBase(ABC):
         :param val_df: (DataFrame)
         :return: None
         """
-
-        transformation_method = self.configs["learning_algorithm"][
-            "transformation_method"
-        ]
-        run_train = self.configs["learning_algorithm"]["use_case"] == "train"
-        num_epochs = self.configs["learning_algorithm"]["num_epochs"]
-        run_resume = self.configs["learning_algorithm"]["run_resume"]
-        tr_desired_batch_size = self.configs["learning_algorithm"]["train_batch_size"]
-        te_desired_batch_size = self.configs["learning_algorithm"]["val_batch_size"]
-
-        # Setting random seed with constant
-        torch.manual_seed(self.configs["data_processing"]["random_seed"])
-
-        # Create writer object for TensorBoard
-        writer_path = str(self.file_prefix)
-        writer = SummaryWriter(writer_path)
-        logger.info("Writer path: {}".format(writer_path))
-
-        # Reset DataFrame index
-        if run_train:
-            train_data = train_df.copy(deep=True)
-            train_data.reset_index(drop=True, inplace=True)
-            train_df.reset_index(drop=True, inplace=True)
-        else:
-            train_data = train_df
-        val_data = val_df.copy(deep=True)
-        val_data.reset_index(drop=True, inplace=True)
-
         # Normalization transformation
-        train_data, val_data = self.data_transform(
-            train_data, val_data, transformation_method, run_train
-        )
-        logger.info(
-            "Data transformed using {} as transformation method".format(
-                transformation_method
-            )
-        )
+        train_data, val_data = self.data_transform(train_df, val_df)
 
         # Size the batches
-        (train_batch_size, val_batch_size, num_train_data,) = self.size_the_batches(
-            train_data,
-            val_data,
-            tr_desired_batch_size,
-            te_desired_batch_size,
-        )
+        train_batch_size, val_batch_size = self.size_the_batches(train_data, val_data)
 
         # Already did sequential padding: Convert to iterable dataset (DataLoaders)
         train_loader, val_loader = self.data_iterable_random(
             train_data,
             val_data,
-            run_train,
             train_batch_size,
             val_batch_size,
         )
-        logger.info("Data converted to iterable dataset")
 
-        if self.configs["learning_algorithm"]["use_case"] == "train":
-            self.run_training(
-                train_loader,
-                val_loader,
-                val_df,
-                num_epochs,
-                run_resume,
-                writer,
-                transformation_method,
-                train_batch_size,
-                val_batch_size,
-                self.configs["data_processing"]["feat_timelag"]["lag_count"] + 1,
-                num_train_data,
-            )
+        use_case = self.configs["learning_algorithm"]["use_case"]
+        if use_case == "train":
+            self.run_training(train_loader, val_loader, val_df)
 
-            # When training is done, wrap up the tensorboard files
-            writer.flush()
-            writer.close()
+        elif use_case == "validation":
+            self.run_validation(val_loader, val_df)
 
-            # Create visualization
-            if self.configs["data_output"]["plot_comparison"]:
-                timeseries_comparison(self.configs, 0)
-
-        elif self.configs["learning_algorithm"]["use_case"] == "validation":
-            self.run_validation(
-                val_loader,
-                val_df,
-                writer,
-                transformation_method,
-                val_batch_size,
-                self.configs["data_processing"]["feat_timelag"]["lag_count"] + 1,
-            )
-
-            # Create visualization
-            if self.configs["data_output"]["plot_comparison"]:
-                timeseries_comparison(self.configs, 0)
-
-        elif self.configs["learning_algorithm"]["use_case"] == "prediction":
-            return self.run_prediction(
-                val_loader,
-                val_df,
-                writer,
-                transformation_method,
-                val_batch_size,
-                self.configs["data_processing"]["feat_timelag"]["lag_count"] + 1,
-            )
+        elif use_case == "prediction":
+            return self.run_prediction(val_loader, val_df)
 
         else:
             raise ValueError
+
+        # Create visualization
+        if self.configs["data_output"]["plot_comparison"]:
+            timeseries_comparison(self.configs, 0)
