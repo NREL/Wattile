@@ -48,149 +48,103 @@ class AlgoMainRNNBase(ABC):
         :param te_desired_batch_size: (int)
         :return:
         """
+        # TODO: maybe we want to break this up and call it in `to_data_loader`
         tr_desired_batch_size = self.configs["learning_algorithm"]["train_batch_size"]
         te_desired_batch_size = self.configs["learning_algorithm"]["val_batch_size"]
 
-        if self.configs["learning_algorithm"]["use_case"] == "train":
-            # Find factors of the length of train and val df's
-            # and pick the closest one to the requested batch sizes
-            train_bth = factors(train_data.shape[0])
-            train_num_batches = min(
-                train_bth, key=lambda x: abs(x - tr_desired_batch_size)
-            )
-            train_bt_size = int(train_data.shape[0] / train_num_batches)
+        # calcuate train batch size
+        train_bth = factors(train_data.shape[0])
+        train_num_batches = min(train_bth, key=lambda x: abs(x - tr_desired_batch_size))
+        train_bt_size = int(train_data.shape[0] / train_num_batches)
 
-            val_bth = factors(val_data.shape[0])
-            val_num_batches = min(val_bth, key=lambda x: abs(x - te_desired_batch_size))
-            val_bt_size = int(val_data.shape[0] / val_num_batches)
+        # calcuate validation batch size
+        val_bth = factors(val_data.shape[0])
+        val_num_batches = min(val_bth, key=lambda x: abs(x - te_desired_batch_size))
+        val_bt_size = int(val_data.shape[0] / val_num_batches)
 
-            # logger.info(
-            #     "Train size: {}, val size: {}, split {}%:{}%".format(
-            #         train_data.shape[0], val_data.shape[0], train_ratio, val_ratio
-            #     )
-            # )
-            logger.info("Available train batch factors: {}".format(sorted(train_bth)))
-            logger.info(
-                "Requested number of batches per epoch - Train: {}, val: {}".format(
-                    tr_desired_batch_size, te_desired_batch_size
-                )
-            )
-            logger.info(
-                "Actual number of batches per epoch - Train: {}, val: {}".format(
-                    train_num_batches, val_num_batches
-                )
-            )
-            logger.info(
-                "Number of data samples in each batch - Train: {}, val: {}".format(
-                    train_bt_size, val_bt_size
-                )
-            )
-        else:
-            val_bt_size = val_data.shape[0]
-            train_bt_size = 0
+        logger.info(
+            f"Available train batch factors: {sorted(train_bth)}"
+            f"Requested number of batches per epoch - Train: \
+                {tr_desired_batch_size}, val: {te_desired_batch_size}"
+            f"Actual number of batches per epoch - Train: \
+                {train_num_batches}, val: {val_num_batches}"
+            f"Number of data samples in each batch - Train: {train_bt_size}, val: {val_bt_size}"
+        )
 
         return train_bt_size, val_bt_size
 
-    def data_transform(self, train_data, val_data):
-        """
-        Normalize the training and val data according to a user-defined criteria
+    def create_normalization(self, train_data: pd.DataFrame) -> None:
+        """writes train stats needed for normatization to disk.
 
-        :param train_data: DataFrame
-        :param val_data: DataFrame
-        :param transformation_method: str
-        :param run_train: Boolean
-        :return:
+        :param train_data: data used for training
+        :type train_data: pd.DataFrame
         """
+        train_stats = {
+            "train_max": train_data.max().to_dict(),
+            "train_min": train_data.min().to_dict(),
+            "train_mean": train_data.mean(axis=0).to_dict(),
+            "train_std": train_data.std(axis=0).to_dict(),
+        }
+
+        train_stats_path = self.file_prefix / "train_stats.json"
+        with open(train_stats_path, "w") as fp:
+            json.dump(train_stats, fp)
+
+    def apply_normalization(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Apply normalization to data using the train stats on disk and the transformation_method
+        in the configs
+
+        :param data: data
+        :type data: pd.DataFrame
+        :raises ConfigsError: if transformation_method is not supported
+        :return: normzalized data
+        :rtype: pd.DataFrame
+        """
+        train_stats_path = self.file_prefix / "train_stats.json"
+        with open(train_stats_path, "r") as f:
+            train_stats = json.load(f)
+
         transformation_method = self.configs["learning_algorithm"][
             "transformation_method"
         ]
-        run_train = self.configs["learning_algorithm"]["use_case"] == "train"
-
-        if run_train:
-            # For the result de-normalization purpose, saving the max and min values of the
-            # STM_Xcel_Meter columns
-            train_stats = {}
-            train_stats["train_max"] = train_data.max().to_dict()
-            train_stats["train_min"] = train_data.min().to_dict()
-            train_stats["train_mean"] = train_data.mean(axis=0).to_dict()
-            train_stats["train_std"] = train_data.std(axis=0).to_dict()
-            path = os.path.join(self.file_prefix, "train_stats.json")
-            with open(path, "w") as fp:
-                json.dump(train_stats, fp)
-
-            if transformation_method == "minmaxscale":
-                train_data = (train_data - train_data.min()) / (
-                    train_data.max() - train_data.min()
-                )
-
-            elif transformation_method == "standard":
-                train_data = (train_data - train_data.mean(axis=0)) / train_data.std(
-                    axis=0
-                )
-
-            else:
-                raise ConfigsError(
-                    "{} is not a supported form of data normalization".format(
-                        transformation_method
-                    )
-                )
-
-        # Reading back the train stats for normalizing val data w.r.t to train data
-        file_loc = os.path.join(self.file_prefix, "train_stats.json")
-        with open(file_loc, "r") as f:
-            train_stats = json.load(f)
-
-        # get statistics for training data
-        train_max = pd.DataFrame(train_stats["train_max"], index=[1]).iloc[0]
-        train_min = pd.DataFrame(train_stats["train_min"], index=[1]).iloc[0]
-        train_mean = pd.DataFrame(train_stats["train_mean"], index=[1]).iloc[0]
-        train_std = pd.DataFrame(train_stats["train_std"], index=[1]).iloc[0]
-
-        # Normalize data
         if transformation_method == "minmaxscale":
-            val_data = (val_data - train_min) / (train_max - train_min)
+            train_max = pd.DataFrame(train_stats["train_max"], index=[1]).iloc[0]
+            train_min = pd.DataFrame(train_stats["train_min"], index=[1]).iloc[0]
+
+            data = (data - train_min) / (train_max - train_min)
+
         elif transformation_method == "standard":
-            val_data = (val_data - train_mean) / train_std
+            train_mean = pd.DataFrame(train_stats["train_mean"], index=[1]).iloc[0]
+            train_std = pd.DataFrame(train_stats["train_std"], index=[1]).iloc[0]
+
+            data = (data - train_mean) / train_std
+
         else:
             raise ConfigsError(
-                "{} is not a supported form of data normalization".format(
-                    transformation_method
-                )
+                f"{transformation_method} is not a supported form of data normalization"
             )
 
-        return train_data, val_data
+        return data
 
     def main(self, train_df, val_df):
         """
         Main executable for prepping data for input to RNN model.
 
+        This function is on it's way out. use train, validate, or predict.
+
         :param train_df: (DataFrame)
         :param val_df: (DataFrame)
         :return: None
         """
-        # Normalization transformation
-        train_data, val_data = self.data_transform(train_df, val_df)
-
-        # Size the batches
-        train_batch_size, val_batch_size = self.size_the_batches(train_data, val_data)
-
-        # Already did sequential padding: Convert to iterable dataset (DataLoaders)
-        train_loader, val_loader = self.data_iterable_random(
-            train_data,
-            val_data,
-            train_batch_size,
-            val_batch_size,
-        )
-
         use_case = self.configs["learning_algorithm"]["use_case"]
         if use_case == "train":
-            self.run_training(train_loader, val_loader, val_df)
+            self.train(train_df, val_df)
 
         elif use_case == "validation":
-            self.run_validation(val_loader, val_df)
+            self.validate(train_df, val_df)
 
         elif use_case == "prediction":
-            return self.run_prediction(val_loader, val_df)
+            return self.predict(train_df, val_df)
 
         else:
             raise ValueError
@@ -198,3 +152,36 @@ class AlgoMainRNNBase(ABC):
         # Create visualization
         if self.configs["data_output"]["plot_comparison"]:
             timeseries_comparison(self.configs, 0)
+
+    def train(self, train_df, val_df):
+        # Normalization transformation
+        self.create_normalization(train_df)
+        train_data = self.apply_normalization(train_df)
+        val_data = self.apply_normalization(val_df.copy())
+
+        # Put data into DataLoaders
+        train_batch_size, val_batch_size = self.size_the_batches(train_data, val_data)
+        train_loader = self.to_data_loader(train_data, train_batch_size, shuffle=True)
+        val_loader = self.to_data_loader(val_data, val_batch_size, shuffle=True)
+
+        self.run_training(train_loader, val_loader, val_df)
+
+    def validate(self, train_df, val_df):
+        val_data = self.apply_normalization(val_df.copy())
+
+        # only 1 batch during validation
+        val_loader = self.to_data_loader(
+            val_data, batch_size=val_data.shape[0], shuffle=True
+        )
+
+        self.run_validation(val_loader, val_df)
+
+    def predict(self, train_df, val_df):
+        val_data = self.apply_normalization(val_df.copy())
+
+        # only 1 batch during prediction
+        val_loader = self.to_data_loader(
+            val_data, batch_size=val_data.shape[0], shuffle=True
+        )
+
+        return self.run_prediction(val_loader, val_df)

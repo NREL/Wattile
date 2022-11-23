@@ -10,12 +10,11 @@ import numpy as np
 import pandas as pd
 import psutil
 import torch
-import torch.utils.data as data_utils
 import xarray as xr
 from psutil import virtual_memory
 from torch.autograd import Variable
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torch.utils.data.dataloader import DataLoader
+from torch.utils.data import DataLoader, TensorDataset
 
 from wattile.error import ConfigsError
 from wattile.models.AlgoMainRNNBase import AlgoMainRNNBase
@@ -25,88 +24,30 @@ logger = logging.getLogger(str(os.getpid()))
 
 
 class BravoModel(AlgoMainRNNBase):
-    def data_iterable_random(
-        self, train_data, val_data, train_batch_size, val_batch_size
-    ):
-        """
-        Converts train and val data to torch data types (used only if splitting training and val set
-        randomly)
-
-        :param train_data: (DataFrame)
-        :param val_data: (DataFrame)
-        :param run_train: (Boolean)
-        :param train_batch_size: (int)
-        :param val_batch_size: (int)
-        :return:
-        """
-        run_train = self.configs["learning_algorithm"]["use_case"] == "train"
-
-        # Check for GPU
+    def to_data_loader(self, data, batch_size, shuffle):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        # self.configs["device"] = device
-        logger.info("Training on {}".format(device))
 
-        # # Set default floating point precision
-        # if torch.cuda.is_available():
-        #     default_dtype = torch.cuda.FloatTensor
-        #     torch.set_default_tensor_type(default_dtype)
-        # else:
-        #     default_dtype = torch.FloatTensor
-        #     torch.set_default_tensor_type(default_dtype)
-
-        if run_train:
-            # Define input feature matrix
-            X_train = train_data.drop(
-                train_data.filter(
-                    like=self.configs["data_input"]["target_var"], axis=1
-                ).columns,
-                axis=1,
-            ).values.astype(dtype="float32")
-
-            # Output variable (batch*72), then (batch*(72*num of qs))
-            y_train = train_data[
-                train_data.filter(
-                    like=self.configs["data_input"]["target_var"], axis=1
-                ).columns
-            ].values.astype(dtype="float32")
-            y_train = np.tile(
-                y_train, len(self.configs["learning_algorithm"]["quantiles"])
-            )
-
-            # Convert to iterable tensors
-            train_feat_tensor = torch.from_numpy(X_train).to(device)
-            train_target_tensor = torch.from_numpy(y_train).to(device)
-            train = data_utils.TensorDataset(train_feat_tensor, train_target_tensor)
-            train_loader = data_utils.DataLoader(
-                train, batch_size=train_batch_size, shuffle=True
-            )  # Contains features and targets
-
-        else:
-            train_loader = []
-
-        # Do the same as above, but for the val set
-        # X_val = val_data.drop(self.configs['target_var'], axis=1).values.astype(dtype='float32')
-        X_val = val_data.drop(
-            val_data.filter(
-                like=self.configs["data_input"]["target_var"], axis=1
-            ).columns,
+        # Define input feature matrix
+        features = data.drop(
+            data.filter(like=self.configs["data_input"]["target_var"], axis=1).columns,
             axis=1,
         ).values.astype(dtype="float32")
 
-        y_val = val_data[
-            val_data.filter(
-                like=self.configs["data_input"]["target_var"], axis=1
-            ).columns
+        # Output variable (batch*72), then (batch*(72*num of qs))
+        targets = data[
+            data.filter(like=self.configs["data_input"]["target_var"], axis=1).columns
         ].values.astype(dtype="float32")
-        y_val = np.tile(y_val, len(self.configs["learning_algorithm"]["quantiles"]))
+        targets = np.tile(targets, len(self.configs["learning_algorithm"]["quantiles"]))
 
-        val_feat_tensor = torch.from_numpy(X_val).to(device)
-        val_target_tensor = torch.from_numpy(y_val).to(device)
+        # Convert to iterable tensors
+        feature_tensor = torch.from_numpy(features).to(device)
+        target_tensor = torch.from_numpy(targets).to(device)
 
-        val = data_utils.TensorDataset(val_feat_tensor, val_target_tensor)
-        val_loader = DataLoader(dataset=val, batch_size=val_batch_size, shuffle=True)
-
-        return train_loader, val_loader
+        return DataLoader(
+            dataset=TensorDataset(feature_tensor, target_tensor),
+            batch_size=batch_size,
+            shuffle=shuffle,
+        )
 
     def pinball_np(self, output, target):
         window_width_target = self.configs["data_processing"]["input_output_window"][
