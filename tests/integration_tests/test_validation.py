@@ -4,7 +4,9 @@ import shutil
 
 import pytest
 
-import wattile.entry_point as epb
+from wattile.buildings_processing import prep_for_rnn
+from wattile.data_reading import read_dataset_from_file
+from wattile.models import MODELS_DICT
 
 TESTS_PATH = pathlib.Path(__file__).parents[1]
 TESTS_FIXTURES_PATH = TESTS_PATH / "fixtures"
@@ -48,7 +50,14 @@ def test_validation(config_for_tests, tmpdir, config_patch, test_exp_dir):
     config_for_tests["data_output"]["exp_dir"] = str(exp_dir)
     shutil.copytree(test_exp_dir, exp_dir)
 
-    epb.main(config_for_tests)
+    model_class = MODELS_DICT.get(
+        config_for_tests["learning_algorithm"]["arch_version"]
+    )
+    model = model_class(config_for_tests)
+
+    data = read_dataset_from_file(config_for_tests)
+    train_df, val_df = prep_for_rnn(config_for_tests, data)
+    model.validate(train_df, val_df)
 
     assert (exp_dir / "output.out").exists()
     assert (exp_dir / "error_stats_test.json").exists()
