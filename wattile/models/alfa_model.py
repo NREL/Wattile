@@ -10,12 +10,11 @@ import numpy as np
 import pandas as pd
 import psutil
 import torch
-import torch.utils.data as data_utils
 import xarray as xr
 from psutil import virtual_memory
 from torch.autograd import Variable
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torch.utils.data.dataloader import DataLoader
+from torch.utils.data import DataLoader, TensorDataset
 
 from wattile.error import ConfigsError
 from wattile.models.AlgoMainRNNBase import AlgoMainRNNBase
@@ -25,76 +24,31 @@ logger = logging.getLogger(str(os.getpid()))
 
 
 class AlfaModel(AlgoMainRNNBase):
-    def data_iterable_random(
-        self, train_data, val_data, run_train, train_batch_size, val_batch_size
-    ):
-        """
-        Converts train and val data to torch data types (used only if splitting training and val set
-        randomly)
-
-        :param train_data: (DataFrame)
-        :param val_data: (DataFrame)
-        :param run_train: (Boolean)
-        :param train_batch_size: (int)
-        :param val_batch_size: (int)
-        :return:
-        """
-
-        # Check for GPU
+    def to_data_loader(self, data, batch_size, shuffle):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        logger.info("Training on {}".format(device))
 
-        if run_train:
-            # Define input feature matrix
-            X_train = train_data.drop(
-                self.configs["data_input"]["target_var"], axis=1
-            ).values.astype(dtype="float32")
-
-            # Output variable
-            y_train = train_data[self.configs["data_input"]["target_var"]]
-            y_train = y_train.values.astype(dtype="float32")
-            y_train = np.tile(
-                y_train, (len(self.configs["learning_algorithm"]["quantiles"]), 1)
-            )
-            y_train = np.transpose(y_train)
-
-            # Convert to iterable tensors
-            train_feat_tensor = torch.from_numpy(X_train).to(device)
-            train_target_tensor = torch.from_numpy(y_train).to(device)
-            train = data_utils.TensorDataset(train_feat_tensor, train_target_tensor)
-            train_loader = data_utils.DataLoader(
-                train, batch_size=train_batch_size, shuffle=True
-            )  # Contains features and targets
-
-        else:
-            train_loader = []
-
-        # Do the same as above, but for the val set
-        X_val = val_data.drop(
+        # Define input feature matrix
+        features = data.drop(
             self.configs["data_input"]["target_var"], axis=1
         ).values.astype(dtype="float32")
 
-        y_val = val_data[self.configs["data_input"]["target_var"]]
-        y_val = y_val.values.astype(dtype="float32")
-        y_val = np.tile(
-            y_val, (len(self.configs["learning_algorithm"]["quantiles"]), 1)
+        # Output variable
+        targets = data[self.configs["data_input"]["target_var"]]
+        targets = targets.values.astype(dtype="float32")
+        targets = np.tile(
+            targets, (len(self.configs["learning_algorithm"]["quantiles"]), 1)
         )
-        y_val = np.transpose(y_val)
+        targets = np.transpose(targets)
 
-        val_feat_tensor = torch.from_numpy(X_val).to(device)
-        val_target_tensor = torch.from_numpy(y_val).to(device)
+        # Convert to iterable tensors
+        features_tensor = torch.from_numpy(features).to(device)
+        target_tensor = torch.from_numpy(targets).to(device)
 
-        val = data_utils.TensorDataset(val_feat_tensor, val_target_tensor)
-        if self.configs["learning_algorithm"]["use_case"] == "train":
-            shuffle = True
-        elif (
-            self.configs["learning_algorithm"]["use_case"] == "validation"
-            or self.configs["learning_algorithm"]["use_case"] == "prediction"
-        ):
-            shuffle = False
-        val_loader = DataLoader(dataset=val, batch_size=val_batch_size, shuffle=shuffle)
-
-        return train_loader, val_loader
+        return DataLoader(
+            dataset=TensorDataset(features_tensor, target_tensor),
+            batch_size=batch_size,
+            shuffle=shuffle,
+        )
 
     def pinball_np(self, output, target):
         resid = target - output
@@ -140,12 +94,10 @@ class AlfaModel(AlgoMainRNNBase):
 
     def test_processing(
         self,
-        val_df,
         val_loader,
         model,
         seq_dim,
         input_dim,
-        val_batch_size,
         transformation_method,
         last_run,
         device,
@@ -158,7 +110,6 @@ class AlfaModel(AlgoMainRNNBase):
         :param model: (Pytorch model)
         :param seq_dim: ()
         :param input_dim:
-        :param val_batch_size:
         :param transformation_method:
         :return:
         """
@@ -342,18 +293,7 @@ class AlfaModel(AlgoMainRNNBase):
         return predictions, targets, errors, Q_vals, hist_data
 
     def run_training(  # noqa: C901 TODO: remove no qa
-        self,
-        train_loader,
-        val_loader,
-        val_df,
-        num_epochs,
-        run_resume,
-        writer,
-        transformation_method,
-        train_batch_size,
-        val_batch_size,
-        seq_dim,
-        num_train_data,
+        self, train_loader, val_loader, val_df
     ):
         """
         Contains main training process for RNN
@@ -361,22 +301,18 @@ class AlfaModel(AlgoMainRNNBase):
         :param train_loader: (Pytorch DataLoader)
         :param val_loader: (Pytorch DataLoader)
         :param val_df: (DataFrame)
-        :param num_epochs: (int)
-        :param run_train: (Boolean)
-        :param run_resume: (Boolean)
-        :param writer: (SummaryWriter object)
-        :param transformation_method: (str)
-        :param train_batch_size: (Float)
-        :param val_batch_size: (Float)
-        :param seq_dim: (Int)
-        :param num_train_data: (Float)
         :return: None
         """
-        num_epochs = num_epochs
+        num_epochs = self.configs["learning_algorithm"]["num_epochs"]
+        run_resume = self.configs["learning_algorithm"]["run_resume"]
         weight_decay = float(
             self.configs["learning_algorithm"]["optimizer_config"]["weight_decay"]
         )
         input_dim = self.configs["input_dim"]
+        transformation_method = self.configs["learning_algorithm"][
+            "transformation_method"
+        ]
+        seq_dim = self.configs["data_processing"]["feat_timelag"]["lag_count"] + 1
 
         # Write the configurations used for this training process to a json file
         path = os.path.join(self.file_prefix, "configs.json")
@@ -437,7 +373,7 @@ class AlfaModel(AlgoMainRNNBase):
                 min_lr=self.configs["learning_algorithm"]["optimizer_config"]["min"],
                 patience=int(
                     self.configs["learning_algorithm"]["optimizer_config"]["patience"]
-                    * (num_train_data / train_batch_size)
+                    * len(train_loader)
                 ),
                 verbose=True,
             )
@@ -566,7 +502,7 @@ class AlfaModel(AlgoMainRNNBase):
                 train_iter.append(n_iter)
 
                 # Print to terminal and save training loss
-                writer.add_scalars("Loss", {"Train": loss.data.item()}, n_iter)
+                self.writer.add_scalars("Loss", {"Train": loss.data.item()}, n_iter)
 
                 time4 = timeit.default_timer()
 
@@ -591,7 +527,7 @@ class AlfaModel(AlgoMainRNNBase):
 
                 # Compute time per iteration
                 time6 = timeit.default_timer()
-                writer.add_scalars(
+                self.writer.add_scalars(
                     "Iteration_time",
                     {
                         "Package_variables": time2 - time1,
@@ -618,12 +554,10 @@ class AlfaModel(AlgoMainRNNBase):
                         Q_vals,
                         hist_data,
                     ) = self.test_processing(
-                        val_df,
                         val_loader,
                         model,
                         seq_dim,
                         input_dim,
-                        val_batch_size,
                         transformation_method,
                         False,
                         device,
@@ -636,7 +570,9 @@ class AlfaModel(AlgoMainRNNBase):
                     )
 
                     val_iter.append(n_iter)
-                    writer.add_scalars("Loss", {"val": errors["pinball_loss"]}, n_iter)
+                    self.writer.add_scalars(
+                        "Loss", {"val": errors["pinball_loss"]}, n_iter
+                    )
 
                     # Add parody plot to TensorBoard
                     fig1, ax1 = plt.subplots()
@@ -663,7 +599,7 @@ class AlfaModel(AlgoMainRNNBase):
                     ax1.axhline(y=0, color="k")
                     ax1.axvline(x=0, color="k")
                     ax1.axis("equal")
-                    writer.add_figure("Parody", fig1, n_iter)
+                    self.writer.add_figure("Parody", fig1, n_iter)
 
                     # Add QQ plot to TensorBoard
                     fig2, ax2 = plt.subplots()
@@ -673,7 +609,7 @@ class AlfaModel(AlgoMainRNNBase):
                     ax2.set_ylabel("Actual")
                     ax2.set_xlim(left=0, right=1)
                     ax2.set_ylim(bottom=0, top=1)
-                    writer.add_figure("QQ", fig2, n_iter)
+                    self.writer.add_figure("QQ", fig2, n_iter)
 
                     logger.info(
                         "Epoch: {} Iteration: {}. Train_loss: {}. val_loss: {}, LR: {}".format(
@@ -692,12 +628,10 @@ class AlfaModel(AlgoMainRNNBase):
 
         # Once model is done training, process a final val set
         predictions, targets, errors, Q_vals, hist_data = self.test_processing(
-            val_df,
             val_loader,
             model,
             seq_dim,
             input_dim,
-            val_batch_size,
             transformation_method,
             True,
             device,
@@ -736,8 +670,8 @@ class AlfaModel(AlgoMainRNNBase):
         # If a training history csv file does not exist, make one
         if not pathlib.Path("Training_history.csv").exists():
             with open(r"Training_history.csv", "a") as f:
-                writer = csv.writer(f, lineterminator="\n")
-                writer.writerow(
+                csv_writer = csv.writer(f, lineterminator="\n")
+                csv_writer.writerow(
                     [
                         "File Path",
                         "RMSE",
@@ -752,8 +686,8 @@ class AlfaModel(AlgoMainRNNBase):
                 )
         # Save the errors statistics to a central results csv once everything is done
         with open(r"Training_history.csv", "a") as f:
-            writer = csv.writer(f, lineterminator="\n")
-            writer.writerow(
+            csv_writer = csv.writer(f, lineterminator="\n")
+            csv_writer.writerow(
                 [
                     self.file_prefix,
                     errors["rmse"],
@@ -779,22 +713,19 @@ class AlfaModel(AlgoMainRNNBase):
         self,
         val_loader,
         val_df,
-        writer,
-        transformation_method,
-        val_batch_size,
-        seq_dim,
     ):
         """
         run prediction
 
         :param val_loader: (Pytorch DataLoader)
         :param val_df: (DataFrame)
-        :param writer: (SummaryWriter object)
-        :param transformation_method: (str)
-        :param val_batch_size: (Float)
-        :param seq_dim: (Int)
         :return: None
         """
+        transformation_method = self.configs["learning_algorithm"][
+            "transformation_method"
+        ]
+        seq_dim = self.configs["data_processing"]["feat_timelag"]["lag_count"] + 1
+
         # If you just want to immediately val the model on the existing (saved) model
         model, _, _ = load_model(self.configs)
         logger.info("Loaded model from file, given run_train=False\n")
@@ -803,12 +734,10 @@ class AlfaModel(AlgoMainRNNBase):
 
         # Run val
         predictions, targets, errors, Q_vals, hist_data = self.test_processing(
-            val_df,
             val_loader,
             model,
             seq_dim,
             self.configs["input_dim"],
-            val_batch_size,
             transformation_method,
             True,
             device,
@@ -839,14 +768,14 @@ class AlfaModel(AlgoMainRNNBase):
         train_history_path = self.file_prefix / "Testing_history.csv"
         if not train_history_path.exists():
             with open(train_history_path, "a") as f:
-                writer = csv.writer(f, lineterminator="\n")
-                writer.writerow(
+                csv_writer = csv.writer(f, lineterminator="\n")
+                csv_writer.writerow(
                     ["File Path", "RMSE", "CV(RMSE)", "NMBE", "GOF", "QS", "ACE", "IS"]
                 )
         # Save the errors statistics to a central results csv once everything is done
         with open(train_history_path, "a") as f:
-            writer = csv.writer(f, lineterminator="\n")
-            writer.writerow(
+            csv_writer = csv.writer(f, lineterminator="\n")
+            csv_writer.writerow(
                 [
                     self.file_prefix,
                     errors["rmse"],
@@ -863,11 +792,12 @@ class AlfaModel(AlgoMainRNNBase):
         self,
         val_loader,
         val_df,
-        writer,
-        transformation_method,
-        val_batch_size,
-        seq_dim,
     ):
+        transformation_method = self.configs["learning_algorithm"][
+            "transformation_method"
+        ]
+        seq_dim = self.configs["data_processing"]["feat_timelag"]["lag_count"] + 1
+
         model, _, _ = load_model(self.configs)
         model.eval()
 
