@@ -56,8 +56,8 @@ def test_validation(config_for_tests, tmpdir, config_patch, test_exp_dir):
     model = model_class(config_for_tests)
 
     data = read_dataset_from_file(config_for_tests)
-    train_df, val_df = prep_for_rnn(config_for_tests, data)
-    model.validate(train_df, val_df)
+    _, val_df = prep_for_rnn(config_for_tests, data)
+    model.validate(val_df)
 
     assert (exp_dir / "output.out").exists()
     assert (exp_dir / "error_stats_test.json").exists()

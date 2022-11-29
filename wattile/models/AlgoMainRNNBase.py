@@ -141,19 +141,15 @@ class AlgoMainRNNBase(ABC):
             self.train(train_df, val_df)
 
         elif use_case == "validation":
-            self.validate(train_df, val_df)
+            self.validate(val_df)
 
         elif use_case == "prediction":
-            return self.predict(train_df, val_df)
+            return self.predict(val_df)
 
         else:
             raise ValueError
 
-        # Create visualization
-        if self.configs["data_output"]["plot_comparison"]:
-            timeseries_comparison(self.configs, 0)
-
-    def train(self, train_df, val_df):
+    def train(self, train_df: pd.DataFrame, val_df: pd.DataFrame) -> None:
         # Normalization transformation
         self.create_normalization(train_df)
         train_data = self.apply_normalization(train_df)
@@ -166,17 +162,25 @@ class AlgoMainRNNBase(ABC):
 
         self.run_training(train_loader, val_loader, val_df)
 
-    def validate(self, train_df, val_df):
+        # Create visualization
+        if self.configs["data_output"]["plot_comparison"]:
+            timeseries_comparison(self.configs, 0)
+
+    def validate(self, val_df: pd.DataFrame) -> None:
         val_data = self.apply_normalization(val_df.copy())
 
         # only 1 batch during validation
         val_loader = self.to_data_loader(
-            val_data, batch_size=val_data.shape[0], shuffle=True
+            val_data, batch_size=val_data.shape[0], shuffle=False
         )
 
         self.run_validation(val_loader, val_df)
 
-    def predict(self, train_df, val_df):
+        # Create visualization
+        if self.configs["data_output"]["plot_comparison"]:
+            timeseries_comparison(self.configs, 0)
+
+    def predict(self, val_df: pd.DataFrame) -> None:
         val_data = self.apply_normalization(val_df.copy())
 
         # only 1 batch during prediction

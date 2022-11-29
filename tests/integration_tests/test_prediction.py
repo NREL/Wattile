@@ -68,9 +68,9 @@ def test_prediction_alfa(config_for_tests, tmpdir):
 
     # ACTION
     data = read_dataset_from_file(config_for_tests)
-    train_df, val_df = prep_for_rnn(config_for_tests, data)
+    _, val_df = prep_for_rnn(config_for_tests, data)
     model = AlfaModel(config_for_tests)
-    results = model.predict(train_df, val_df)
+    results = model.predict(val_df)
 
     # ASSERTION
     window_width_futurecast = pd.Timedelta(
@@ -113,9 +113,9 @@ def test_prediction_bravo(config_for_tests, tmpdir):
 
     # ACTION
     data = read_dataset_from_file(config_for_tests)
-    train_df, val_df = prep_for_rnn(config_for_tests, data)
+    _, val_df = prep_for_rnn(config_for_tests, data)
     model = BravoModel(config_for_tests)
-    results = model.predict(train_df, val_df)
+    results = model.predict(val_df)
 
     # ASSERTION
     cdp = config_for_tests["data_processing"]
