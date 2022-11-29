@@ -7,7 +7,7 @@ import pandas as pd
 
 import wattile.buildings_processing as bp
 from wattile.data_reading import read_dataset_from_file
-from wattile.models import MODELS_DICT
+from wattile.models import ModelFactory
 
 PACKAGE_PATH = pathlib.Path(__file__).parent
 CONFIGS_PATH = PACKAGE_PATH / "configs" / "configs.json"
@@ -104,11 +104,7 @@ def run_model(configs, train_df, val_df):
 
     # Choose what ML architecture to use and execute the corresponding script
     if configs["learning_algorithm"]["arch_type"] == "RNN":
-        model_class = MODELS_DICT.get(configs["learning_algorithm"]["arch_version"])
-        if model_class is None:
-            raise ValueError(f"Invalid arch version {configs['arch_version']}")
-        else:
-            model = model_class(configs)
+        model = ModelFactory.create_model(configs)
 
         logger.info(
             "training with arch version {}".format(
