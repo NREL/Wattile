@@ -6,7 +6,9 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from wattile.entry_point import create_input_dataframe, run_model
+from wattile.buildings_processing import prep_for_rnn
+from wattile.data_reading import read_dataset_from_file
+from wattile.models import AlfaModel, BravoModel
 
 TESTS_PATH = pathlib.Path(__file__).parents[1]
 TESTS_FIXTURES_PATH = TESTS_PATH / "fixtures"
@@ -65,8 +67,10 @@ def test_prediction_alfa(config_for_tests, tmpdir):
     popluate_test_data_dir_with_prediction_data(data_dir)
 
     # ACTION
-    train_df, val_df, configs = create_input_dataframe(config_for_tests)
-    results = run_model(configs, train_df, val_df)
+    data = read_dataset_from_file(config_for_tests)
+    _, val_df = prep_for_rnn(config_for_tests, data)
+    model = AlfaModel(config_for_tests)
+    results = model.predict(val_df)
 
     # ASSERTION
     window_width_futurecast = pd.Timedelta(
@@ -108,11 +112,13 @@ def test_prediction_bravo(config_for_tests, tmpdir):
     popluate_test_data_dir_with_prediction_data(data_dir)
 
     # ACTION
-    train_df, val_df, configs = create_input_dataframe(config_for_tests)
-    results = run_model(configs, train_df, val_df)
+    data = read_dataset_from_file(config_for_tests)
+    _, val_df = prep_for_rnn(config_for_tests, data)
+    model = BravoModel(config_for_tests)
+    results = model.predict(val_df)
 
     # ASSERTION
-    cdp = configs["data_processing"]
+    cdp = config_for_tests["data_processing"]
     window_width_futurecast = cdp["input_output_window"]["window_width_futurecast"]
     window_width_target = pd.Timedelta(
         cdp["input_output_window"]["window_width_target"]

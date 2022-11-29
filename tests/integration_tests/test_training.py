@@ -3,7 +3,9 @@ import pathlib
 
 import pytest
 
-import wattile.entry_point as epb
+from wattile.buildings_processing import prep_for_rnn
+from wattile.data_reading import read_dataset_from_file
+from wattile.models import ModelFactory
 
 TESTS_PATH = pathlib.Path(__file__).parents[1]
 TESTS_FIXTURES_PATH = TESTS_PATH / "fixtures"
@@ -75,10 +77,12 @@ def test_model_trains(config_for_tests, tmpdir, config_patch):
     config_for_tests["data_output"]["exp_dir"] = str(exp_dir)
 
     # train model
-    epb.main(config_for_tests)
+    model = ModelFactory.create_model(config_for_tests)
+    data = read_dataset_from_file(config_for_tests)
+    train_df, val_df = prep_for_rnn(config_for_tests, data)
+    model.train(train_df, val_df)
 
     # check result file were created
-    assert (exp_dir / "output.out").exists()
     assert (exp_dir / "torch_model").exists()
     if config_for_tests["learning_algorithm"]["arch_version"] != "charlie":
         assert (exp_dir / "train_stats.json").exists()

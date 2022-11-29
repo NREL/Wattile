@@ -5,70 +5,54 @@
   },
   "predictors": [
     {
-      "site": "Synthetic Site",
-      "column": "Synthetic Weather Station Dew Point Temperature",
       "id": "r:278f8943-6a199bd7 Synthetic Weather Station Dew Point Temperature",
-      "description": "Synthetic Weather Station Dew Point Temperature",
-      "unit": "°F",
-      "pv": false
+      "dis": "Synthetic Weather Station Dew Point Temperature",
+      "column": "Synthetic Weather Station Dew Point Temperature",
+      "unit": "°F"
     },
     {
-      "site": "Synthetic Site",
-      "column": "Synthetic Weather Station Diffuse Horizontal Irradiance",
       "id": "r:278f79c0-03da5abc Synthetic Weather Station Diffuse Horizontal Irradiance",
-      "description": "Synthetic Weather Station Diffuse Horizontal Irradiance",
-      "unit": "W/m²_irr",
-      "pv": false
+      "dis": "Synthetic Weather Station Diffuse Horizontal Irradiance",
+      "column": "Synthetic Weather Station Diffuse Horizontal Irradiance",
+      "unit": "W/m²_irr"
     },
     {
-      "site": "Synthetic Site",
-      "column": "Synthetic Weather Station Direct Normal Irradiance",
       "id": "r:278f79c0-4fe536b4 Synthetic Weather Station Direct Normal Irradiance",
-      "description": "Synthetic Weather Station Direct Normal Irradiance",
-      "unit": "W/m²_irr",
-      "pv": false
+      "dis": "Synthetic Weather Station Direct Normal Irradiance",
+      "column": "Synthetic Weather Station Direct Normal Irradiance",
+      "unit": "W/m²_irr"
     },
     {
-      "site": "Synthetic Site",
-      "column": "Synthetic Weather Station Dry Bulb Temperature",
       "id": "r:278f79c0-8a8f26b0 Synthetic Weather Station Dry Bulb Temperature",
-      "description": "Synthetic Weather Station Dry Bulb Temperature",
-      "unit": "°F",
-      "pv": false
+      "dis": "Synthetic Weather Station Dry Bulb Temperature",
+      "column": "Synthetic Weather Station Dry Bulb Temperature",
+      "unit": "°F"
     },
     {
-      "site": "Synthetic Site",
-      "column": "Synthetic Weather Station Global Horizontal Irradiance",
       "id": "r:278f79c0-8d722bdb Synthetic Weather Station Global Horizontal Irradiance",
-      "description": "Synthetic Weather Station Global Horizontal Irradiance",
-      "unit": "W/m²_irr",
-      "pv": false
+      "dis": "Synthetic Weather Station Global Horizontal Irradiance",
+      "column": "Synthetic Weather Station Global Horizontal Irradiance",
+      "unit": "W/m²_irr"
     },
     {
-      "site": "Synthetic Site",
-      "column": "Synthetic Weather Station Relative Humidity",
       "id": "r:278f79c0-e7db4305 Synthetic Weather Station Relative Humidity",
-      "description": "Synthetic Weather Station Relative Humidity",
-      "unit": "%RH",
-      "pv": false
+      "dis": "Synthetic Weather Station Relative Humidity",
+      "column": "Synthetic Weather Station Relative Humidity",
+      "unit": "%RH"
     },
     {
-      "site": "Synthetic Site",
-      "column": "Synthetic Weather Station Wind Speed",
       "id": "r:278f79c0-c1f48e5c Synthetic Weather Station Wind Speed",
-      "description": "Synthetic Weather Station Wind Speed",
-      "unit": "mph",
-      "pv": false
+      "dis": "Synthetic Weather Station Wind Speed",
+      "column": "Synthetic Weather Station Wind Speed",
+      "unit": "mph"
     }
   ],
   "targets": [
     {
-      "site": "Synthetic Site",
-      "column": "Synthetic Site Electricity Main Total Power",
       "id": "r:294fd256-a17bb5c7 Synthetic Site Electricity Main Total Power",
-      "description": "Synthetic Site Electricity Main Total Power",
-      "unit": "kW",
-      "pv": false
+      "dis": "Synthetic Site Electricity Main Total Power",
+      "column": "Synthetic Site Electricity Main Total Power",
+      "unit": "kW"
     }
   ],
   "files": [
@@ -158,9 +142,11 @@
     }
   ],
   "export_options": {
-    "path": "u:io/Training/",
-    "predictorFilter": "(air and temp) or (dewPoint and temp) or humidity or ((global or direct or diffuse) and irradiance) or (wind and speed)",
-    "format": "CSV",
+    "interpolate": false,
+    "clean": false,
+    "appendUnits": false,
+    "name": "Synthetic Site",
+    "jsonVersion": "v3",
     "interval": "n:1 min",
     "splitBy": "day"
   }
