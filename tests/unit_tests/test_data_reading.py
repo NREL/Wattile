@@ -3,7 +3,7 @@ import pathlib
 
 import pandas as pd
 import pytest
-from pandas.testing import assert_frame_equal
+from pandas.testing import assert_frame_equal, assert_series_equal
 
 from wattile.data_reading import read_dataset_from_file
 
@@ -43,19 +43,30 @@ def test_create_input_dataframe(config_for_tests, tmpdir):
     assert data.shape == (10080, 8)
 
     # assert predictors saved
+    # open predictors_target_config
     with open(exp_dir / "predictors_target_config.json", "r") as read_file:
-        saved_predictors_json = json.load(read_file)
-        saved_predictors = pd.DataFrame(saved_predictors_json["predictors"])
+        predictors_target_config = json.load(read_file)
+        saved_predictors = pd.DataFrame(predictors_target_config["predictors"])
+        saved_target = pd.Series(predictors_target_config["target"])
 
+    # open data config
     dataset_dir = pathlib.Path(config_for_tests["data_input"]["data_dir"])
     configs_file_inputdata = dataset_dir / config_for_tests["data_input"]["data_config"]
     with open(configs_file_inputdata, "r") as read_file:
         configs_input = json.load(read_file)
-        all_predictors = pd.DataFrame(configs_input["predictors"])
-        expected_predictors = all_predictors[
-            all_predictors["column"].isin(
-                config_for_tests["data_input"]["predictor_columns"]
-            )
-        ]
 
+    # get used columns
+    all_predictors = pd.DataFrame(configs_input["predictors"])
+    expected_predictors = all_predictors[
+        all_predictors["column"].isin(
+            config_for_tests["data_input"]["predictor_columns"]
+        )
+    ]
+    all_targets = pd.DataFrame(configs_input["targets"])
+    expected_target = all_targets[
+        all_targets.column == config_for_tests["data_input"]["target_var"]
+    ].iloc[0]
+
+    # assert
     assert_frame_equal(saved_predictors, expected_predictors)
+    assert_series_equal(saved_target, expected_target, check_names=False)
