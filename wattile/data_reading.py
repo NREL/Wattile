@@ -75,7 +75,6 @@ def _get_dataset_config(configs):
     with open(configs_file_inputdata, "r") as read_file:
         configs_input = json.load(read_file)
         df_inputdata = pd.DataFrame(configs_input["files"])
-        predictors_data = configs_input["predictors"]
 
     # converting date time column into pandas datetime (raw format based on ISO 8601)
     df_inputdata["start"] = pd.to_datetime(
@@ -87,7 +86,7 @@ def _get_dataset_config(configs):
 
     df_inputdata["path"] = str(dataset_dir) + "/" + df_inputdata["filename"]
 
-    return df_inputdata, predictors_data
+    return df_inputdata, configs_input
 
 
 def read_dataset_from_file(configs):
@@ -98,7 +97,7 @@ def read_dataset_from_file(configs):
     :param configs: (Dictionary)
     :return: (DataFrame)
     """
-    df_inputdata, predictors_data = _get_dataset_config(configs)
+    df_inputdata, configs_input = _get_dataset_config(configs)
 
     # only read from files that's timespan intersects with the configs
     # the extra will be removed in `prep_for_rnn`
@@ -123,13 +122,21 @@ def read_dataset_from_file(configs):
         needed_columns=configs["data_input"]["predictor_columns"],
     )
 
-    predictor_path = Path(configs["data_output"]["exp_dir"]) / "predictors_config.json"
+    # save final input data based on data config format
+    predictor_path = (
+        Path(configs["data_output"]["exp_dir"]) / "predictors_target_config.json"
+    )
+    final_predictors_data = {}
+    final_predictors_data["predictors"] = []
     with open(predictor_path, "w") as fp:
-        final_predictors_data = [
+        final_predictors_data["predictors"] = [
             p
-            for p in predictors_data
-            if p["column"] in configs["data_input"]["predictor_columns"]
+            for p in configs_input["predictors"]
+            if p["column"] in list(data_full_p.columns)
         ]
+        for t in configs_input["targets"]:
+            if t["column"] == configs["data_input"]["target_var"]:
+                final_predictors_data["target"] = t
         json.dump(final_predictors_data, fp, ensure_ascii=False)
 
     # read in target data
