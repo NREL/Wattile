@@ -731,6 +731,7 @@ class AlfaModel(AlgoMainRNNBase):
         logger.info("Loaded model from file, given run_train=False\n")
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        model.to(device)
 
         # Run val
         predictions, targets, errors, Q_vals, hist_data = self.test_processing(
