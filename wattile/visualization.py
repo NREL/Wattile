@@ -37,8 +37,8 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
     """
     set colors
     """
-    len_quantiles = len(predictions.columns)
-    len_colors = int((len_quantiles - 1) / 2)
+    len_predictions = len(predictions.columns)
+    len_colors = int((len(quantiles) - 1) / 2)
     if len_colors == 1:
         list_color = [color_outer]
     else:
@@ -141,7 +141,7 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
             if configs["learning_algorithm"]["arch_version"] == "alfa":
 
                 idx_col_low_start = qntl
-                idx_col_high_start = len_quantiles - idx_col_low_start - 1
+                idx_col_high_start = len_predictions - idx_col_low_start - 1
                 prediction_qntl_low = predictions.iloc[:, idx_col_low_start].to_numpy()
                 prediction_qntl_high = predictions.iloc[
                     :, idx_col_high_start
@@ -151,8 +151,8 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
 
                 idx_col_low_start = qntl * initial_num
                 idx_col_low_end = qntl * initial_num + initial_num
-                idx_col_high_start = (len_quantiles - idx_col_low_start) - initial_num
-                idx_col_high_end = len_quantiles - idx_col_low_start
+                idx_col_high_start = (len_predictions - idx_col_low_start) - initial_num
+                idx_col_high_end = len_predictions - idx_col_low_start
                 prediction_qntl_low = predictions.iloc[
                     :, idx_col_low_start:idx_col_low_end
                 ].to_numpy()
@@ -170,9 +170,9 @@ def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
                     qntl * window_target_size_count + window_target_size_count
                 )
                 idx_col_high_start = (
-                    len_quantiles - idx_col_low_start
+                    len_predictions - idx_col_low_start
                 ) - window_target_size_count
-                idx_col_high_end = len_quantiles - idx_col_low_start
+                idx_col_high_end = len_predictions - idx_col_low_start
                 prediction_qntl_low = predictions.iloc[
                     :, idx_col_low_start:idx_col_low_end
                 ].to_numpy()
