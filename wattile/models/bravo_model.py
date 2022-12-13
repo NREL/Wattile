@@ -819,6 +819,7 @@ class BravoModel(AlgoMainRNNBase):
         logger.info("Loaded model from file, given run_train=False\n")
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        model.to(device)
         predictions, errors, measured, Q_vals = self.test_processing(
             val_loader,
             model,
