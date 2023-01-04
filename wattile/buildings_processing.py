@@ -383,7 +383,6 @@ def corr_heatmap(data):
 
 def correct_predictor_columns(configs, data):
     """assert we have the correct columns and order them
-
     :param configs: configs
     :type configs: dict
     :param data: data
@@ -392,23 +391,29 @@ def correct_predictor_columns(configs, data):
     :return: data with correct columns
     :rtype: pandas.DataFrame
     """
-    keep_cols = configs["data_input"]["predictor_columns"] + [
-        configs["data_input"]["target_var"]
-    ]
+    if configs["data_input"]["predictor_columns"] != []:
 
-    # raise error if missing columns
-    missing_colums = set(keep_cols).difference(set(data.columns))
-    if len(missing_colums) > 0:
-        raise ConfigsError(f"data is missing predictor_columns: {missing_colums}")
+        keep_cols = configs["data_input"]["predictor_columns"] + [
+            configs["data_input"]["target_var"]
+        ]
 
-    # remove extra columns
-    extra_colums = set(data.columns).difference(set(keep_cols))
-    if len(extra_colums) > 0:
-        data = data[keep_cols]
-        logger.info(
-            f"Removed columns from data that are not specified in \
-            configs['predictor_columns']: {extra_colums}"
-        )
+        # raise error if missing columns
+        missing_colums = set(keep_cols).difference(set(data.columns))
+        if len(missing_colums) > 0:
+            raise ConfigsError(f"data is missing predictor_columns: {missing_colums}")
+
+        # remove extra columns
+        extra_colums = set(data.columns).difference(set(keep_cols))
+        if len(extra_colums) > 0:
+            data = data[keep_cols]
+            logger.info(
+                f"Removed columns from data that are not specified in \
+                configs['predictor_columns']: {extra_colums}"
+            )
+
+    else:
+        # not validating pre-defined predictor list
+        keep_cols = list(data.columns)
 
     # sort columns
     return data.reindex(keep_cols, axis="columns")
