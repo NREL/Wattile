@@ -7,8 +7,8 @@ from wattile.buildings_processing import _preprocess_data
 from wattile.models import AlfaModel
 
 
-def get_dummy_data(start, end, iterval):
-    data = pd.DataFrame(index=pd.date_range(start, end, freq=iterval))
+def get_dummy_data(start, end, iterval, label):
+    data = pd.DataFrame(index=pd.date_range(start, end, freq=iterval, inclusive=label))
     data["var_1"] = data.index.hour * 100 + data.index.minute
     data["target_var"] = -1 * (data.index.hour * 100 + data.index.minute)
 
@@ -75,6 +75,7 @@ def test_get_input_window_for_output_time(tmpdir, data_processing_configs):
     configs["data_output"] = {"exp_dir": tmpdir}
     configs["data_processing"].update(data_processing_configs)
 
+    bin_label = pd.Timedelta(data_processing_configs["resample"]["bin_label"])
     lag_interval = pd.Timedelta(data_processing_configs["feat_timelag"]["lag_interval"])
 
     # ACTION
@@ -91,7 +92,10 @@ def test_get_input_window_for_output_time(tmpdir, data_processing_configs):
     # When data with given start and end time is fed to _preprocess_data,
     # it should return one row, where the index is nominal_prediction_time
     data = get_dummy_data(
-        prediction_window_start_time, prediction_window_end_time, lag_interval
+        prediction_window_start_time,
+        prediction_window_end_time,
+        lag_interval,
+        bin_label,
     )
     configs["data_input"]["start_time"] = str(prediction_window_start_time)
     configs["data_input"]["end_time"] = str(prediction_window_end_time)
