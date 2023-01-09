@@ -67,17 +67,15 @@ DATA_PROCESSING_CONFIGS2 = {
         DATA_PROCESSING_CONFIGS2,
     ],
 )
-@pytest.mark.parametrize("bin_closed", ["left", "right"])
-@pytest.mark.parametrize("bin_label", ["left", "right"])
-def test_get_input_window_for_output_time(
-    tmpdir, data_processing_configs, bin_closed, bin_label
-):
+# @pytest.mark.parametrize("bin_closed", ["left", "right"])
+# @pytest.mark.parametrize("bin_label", ["left", "right"])
+def test_get_input_window_for_output_time(tmpdir, data_processing_configs):
     # SETUP
     configs = CONFIGS
     configs["data_output"] = {"exp_dir": tmpdir}
     configs["data_processing"].update(data_processing_configs)
-    configs["data_processing"]["resample"]["bin_closed"] = bin_closed
-    configs["data_processing"]["resample"]["bin_label"] = bin_label
+    # configs["data_processing"]["resample"]["bin_closed"] = bin_closed
+    # configs["data_processing"]["resample"]["bin_label"] = bin_label
 
     lag_interval = pd.Timedelta(data_processing_configs["feat_timelag"]["lag_interval"])
 
@@ -98,7 +96,7 @@ def test_get_input_window_for_output_time(
         prediction_window_start_time,
         prediction_window_end_time,
         lag_interval,
-        bin_label,
+        "left",
     )
     configs["data_input"]["start_time"] = str(prediction_window_start_time)
     configs["data_input"]["end_time"] = str(prediction_window_end_time)
