@@ -517,7 +517,8 @@ def resample_or_rolling_stats(data, configs):
     bin_closed = configs["data_processing"]["resample"]["bin_closed"]
     bin_label = configs["data_processing"]["resample"]["bin_label"]
     window_width = configs["data_processing"]["feat_stats"]["window_width"]
-    window_position = "backward"  # forward, center, backward
+    window_position = "backward"  # hard-coding for backward rolling window
+    bin_closed_rolling = "right"  # hard-coding for backward rolling window
 
     if configs["data_processing"]["feat_stats"]["active"]:
 
@@ -555,7 +556,7 @@ def resample_or_rolling_stats(data, configs):
             window=window_width,
             min_periods=1,
             center=arg_center,
-            closed=bin_closed,
+            closed=bin_closed_rolling,
         ).min()
 
         # adding rolling window statistics: maximum
@@ -563,7 +564,7 @@ def resample_or_rolling_stats(data, configs):
             window=window_width,
             min_periods=1,
             center=arg_center,
-            closed=bin_closed,
+            closed=bin_closed_rolling,
         ).max()
 
         # adding rolling window statistics: sum
@@ -571,7 +572,7 @@ def resample_or_rolling_stats(data, configs):
             window=window_width,
             min_periods=1,
             center=arg_center,
-            closed=bin_closed,
+            closed=bin_closed_rolling,
         ).sum()
 
         # adding rolling window statistics: count
@@ -579,7 +580,7 @@ def resample_or_rolling_stats(data, configs):
             window=window_width,
             min_periods=1,
             center=arg_center,
-            closed=bin_closed,
+            closed=bin_closed_rolling,
         ).sum()  # this has to be sum for proper count calculation
 
         # adding rolling window statistics: mean
