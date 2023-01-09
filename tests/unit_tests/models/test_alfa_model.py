@@ -25,11 +25,6 @@ CONFIGS = {
             "month_of_year": [],
             "holidays": False,
         },
-        "resample": {
-            "bin_interval": "15min",
-            "bin_closed": "right",
-            "bin_label": "right",
-        },
         "feat_stats": {
             "active": False,
             "window_width": "15min",
@@ -69,13 +64,18 @@ DATA_PROCESSING_CONFIGS2 = {
         DATA_PROCESSING_CONFIGS2,
     ],
 )
-def test_get_input_window_for_output_time(tmpdir, data_processing_configs):
+@pytest.mark.parametrize("bin_closed", ["left", "right"])
+@pytest.mark.parametrize("bin_label", ["left", "right"])
+def test_get_input_window_for_output_time(
+    tmpdir, data_processing_configs, bin_closed, bin_label
+):
     # SETUP
     configs = CONFIGS
     configs["data_output"] = {"exp_dir": tmpdir}
     configs["data_processing"].update(data_processing_configs)
+    configs["data_processing"]["resample"]["bin_closed"] = bin_closed
+    configs["data_processing"]["resample"]["bin_label"] = bin_label
 
-    bin_label = pd.Timedelta(data_processing_configs["resample"]["bin_label"])
     lag_interval = pd.Timedelta(data_processing_configs["feat_timelag"]["lag_interval"])
 
     # ACTION
