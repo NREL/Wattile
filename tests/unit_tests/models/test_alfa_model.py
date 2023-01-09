@@ -38,18 +38,21 @@ CONFIGS = {
 
 DATA_PROCESSING_CONFIGS0 = {
     "feat_timelag": {"lag_interval": "15min", "lag_count": 0},
+    "resample": {"bin_interval": "15min", "bin_closed": "left", "bin_label": "left"},
     "input_output_window": {
         "window_width_futurecast": "0min",
     },
 }
 DATA_PROCESSING_CONFIGS1 = {
     "feat_timelag": {"lag_interval": "15min", "lag_count": 4},
+    "resample": {"bin_interval": "15min", "bin_closed": "left", "bin_label": "left"},
     "input_output_window": {
         "window_width_futurecast": "0min",
     },
 }
 DATA_PROCESSING_CONFIGS2 = {
     "feat_timelag": {"lag_interval": "15min", "lag_count": 4},
+    "resample": {"bin_interval": "15min", "bin_closed": "left", "bin_label": "left"},
     "input_output_window": {
         "window_width_futurecast": "30min",
     },
