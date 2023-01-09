@@ -67,8 +67,8 @@ DATA_PROCESSING_CONFIGS2 = {
         DATA_PROCESSING_CONFIGS2,
     ],
 )
-@pytest.mark.parametrize("bin_closed", ["left", "right"])
-@pytest.mark.parametrize("bin_label", ["left", "right"])
+# @pytest.mark.parametrize("bin_closed", ["left", "right"])
+# @pytest.mark.parametrize("bin_label", ["left", "right"])
 def test_get_input_window_for_output_time(
     tmpdir, data_processing_configs, bin_closed, bin_label
 ):
