@@ -430,7 +430,16 @@ def correct_timestamps(configs, data):
     # TODO: think about timezones.
     start_time = dt.datetime.fromisoformat(configs["data_input"]["start_time"])
     end_time = dt.datetime.fromisoformat(configs["data_input"]["end_time"])
-    data = data[start_time:end_time]
+    if configs["data_processing"]["resample"]["bin_closed"] == "left":
+        data = data.loc[
+            (data.start < end_time) & (data.end >= start_time),
+            :,
+        ]
+    elif configs["data_processing"]["resample"]["bin_closed"] == "right":
+        data = data.loc[
+            (data.start <= end_time) & (data.end > start_time),
+            :,
+        ]
 
     if data.shape[0] == 0:
         raise ConfigsError(
