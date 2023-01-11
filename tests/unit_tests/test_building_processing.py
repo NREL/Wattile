@@ -10,7 +10,7 @@ from pandas.testing import assert_frame_equal, assert_index_equal, assert_series
 from wattile.buildings_processing import (
     correct_predictor_columns,
     correct_timestamps,
-    resample_or_rolling_stats,
+    roll_data,
     roll_predictors_target,
     timelag_predictors,
     timelag_predictors_target,
@@ -24,7 +24,8 @@ JULY_14_CONFIG = {
     "data_input": {
         "start_time": "1997-07-14T00:00:00-00:00",
         "end_time": "1997-07-15T00:00:00-00:00",
-    }
+    },
+    "data_processing": {"resample": {"bin_closed": "left"}},
 }
 JULY_14_MIDNIGHT = pd.Timestamp(year=1997, month=7, day=14, tz=dt.timezone.utc)
 Y2K = pd.Timestamp(year=2000, month=1, day=1, tz=dt.timezone.utc)
@@ -134,7 +135,7 @@ def test_rolling_stats():
     input["ts"] = pd.to_datetime(input["ts"], exact=False, utc=True)
     input = input.set_index("ts")
 
-    output = resample_or_rolling_stats(
+    output = roll_data(
         input,
         configs={
             "data_input": {"target_var": "target_var"},

@@ -1000,19 +1000,28 @@ class BravoModel(AlgoMainRNNBase):
         """
 
         # set prediction time with pandas timedelta
-        timestamp_cast = pd.to_datetime(datetime)  # current time needs to go in here
+        nominal_time = pd.to_datetime(datetime)
 
         # set parameters
         config_data_processing = self.configs["data_processing"]
         lag_interval = config_data_processing["feat_timelag"]["lag_interval"]
         lag_count = config_data_processing["feat_timelag"]["lag_count"]
+        bin_label = config_data_processing["resample"]["bin_label"]
+        bin_interval = config_data_processing["resample"]["bin_interval"]
 
         # calculating offsets
-        window_offset = pd.Timedelta(lag_interval) * lag_count
+        window_offset_start = (pd.Timedelta(lag_interval) * (lag_count)) + pd.Timedelta(
+            bin_interval
+        )
+        window_offset_end = pd.Timedelta("0min")
+
+        if bin_label == "left":
+            window_offset_start -= pd.Timedelta(bin_interval)
+            window_offset_end -= pd.Timedelta(bin_interval)
 
         # calculating start and end time windows for input data
-        prediction_window_start_time = timestamp_cast - window_offset
-        prediction_window_end_time = timestamp_cast
+        prediction_window_start_time = nominal_time - window_offset_start
+        prediction_window_end_time = nominal_time - window_offset_end
 
         return prediction_window_start_time, prediction_window_end_time
 

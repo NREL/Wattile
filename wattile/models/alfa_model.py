@@ -885,16 +885,18 @@ class AlfaModel(AlgoMainRNNBase):
         bin_interval = config_data_processing["resample"]["bin_interval"]
 
         # calculating offsets
-        if bin_label == "right":
-            window_offset_start = pd.Timedelta(lag_interval) * (lag_count + 1)
-            window_offset_end = pd.Timedelta("0min")
+        window_offset_start = (pd.Timedelta(lag_interval) * (lag_count)) + pd.Timedelta(
+            bin_interval
+        )
+        window_offset_end = pd.Timedelta("0min")
+
         if bin_label == "left":
-            window_offset_start = pd.Timedelta(lag_interval) * (lag_count)
-            window_offset_end = pd.Timedelta(bin_interval)
+            window_offset_start -= pd.Timedelta(bin_interval)
+            window_offset_end -= pd.Timedelta(bin_interval)
 
         # calculating start and end time windows for input data
         prediction_window_start_time = nominal_time - window_offset_start
-        prediction_window_end_time = nominal_time + window_offset_end
+        prediction_window_end_time = nominal_time - window_offset_end
 
         return prediction_window_start_time, prediction_window_end_time
 

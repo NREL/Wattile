@@ -430,16 +430,19 @@ def correct_timestamps(configs, data):
     # TODO: think about timezones.
     start_time = dt.datetime.fromisoformat(configs["data_input"]["start_time"])
     end_time = dt.datetime.fromisoformat(configs["data_input"]["end_time"])
+
     if configs["data_processing"]["resample"]["bin_closed"] == "left":
-        data = data.loc[
-            (data.start < end_time) & (data.end >= start_time),
-            :,
-        ]
+        mask = (data.index >= start_time) & (data.index < end_time)
+
     elif configs["data_processing"]["resample"]["bin_closed"] == "right":
-        data = data.loc[
-            (data.start <= end_time) & (data.end > start_time),
-            :,
-        ]
+        mask = (data.index > start_time) & (data.index <= end_time)
+
+    else:
+        raise ConfigsError(
+            'configs["data_processing"]["resample"]["bin_closed"] must be "left" or "right"'
+        )
+
+    data = data.loc[mask]
 
     if data.shape[0] == 0:
         raise ConfigsError(
@@ -471,7 +474,10 @@ def _preprocess_data(configs, data):
     data = add_processed_time_columns(data, configs)
 
     # Add statistics features
-    data = resample_or_rolling_stats(data, configs)
+    if configs["data_processing"]["feat_stats"]["active"]:
+        data = roll_data(data, configs)
+    else:
+        data = resample_data(data, configs)
 
     # Add lag features
     configs["input_dim"] = data.shape[1] - 1
@@ -516,108 +522,57 @@ def prep_for_rnn(configs, data):
     return train_df, val_df
 
 
-def resample_or_rolling_stats(data, configs):
-
+def roll_data(data, configs):
     # reading configuration parameters.
-    # default is right labeled and right-closed window.
-    # window_position is hard coded for now.
-    # default is right-closed and backward-looking window.
     bin_interval = configs["data_processing"]["resample"]["bin_interval"]
     bin_closed = configs["data_processing"]["resample"]["bin_closed"]
     bin_label = configs["data_processing"]["resample"]["bin_label"]
     window_width = configs["data_processing"]["feat_stats"]["window_width"]
-    window_position = "backward"  # hard-coding for backward rolling window
-    bin_closed_rolling = "right"  # hard-coding for backward rolling window
 
-    if configs["data_processing"]["feat_stats"]["active"]:
+    # seperate predictors and target
+    target = data[configs["data_input"]["target_var"]]
+    X_data = data.drop(configs["data_input"]["target_var"], axis=1)
 
-        # seperate predictors and target
-        target = data[configs["data_input"]["target_var"]]
-        X_data = data.drop(configs["data_input"]["target_var"], axis=1)
+    # resampling for each statistics separately
+    data_resampler = X_data.resample(
+        rule=bin_interval, closed=bin_closed, label=bin_label
+    )
+    data_resample_min = data_resampler.min().add_suffix("_min")
+    data_resample_max = data_resampler.max().add_suffix("_max")
+    data_resample_sum = data_resampler.sum().add_suffix("_sum")
+    data_resample_count = data_resampler.count().add_suffix("_count")
 
-        # resampling for each statistics separately
-        data_resampler = X_data.resample(
-            rule=bin_interval, closed=bin_closed, label=bin_label
-        )
-        data_resample_min = data_resampler.min().add_suffix("_min")
-        data_resample_max = data_resampler.max().add_suffix("_max")
-        data_resample_sum = data_resampler.sum().add_suffix("_sum")
-        data_resample_count = data_resampler.count().add_suffix("_count")
+    # adding rolling window statistics: minimum
+    mins = data_resample_min.rolling(window=window_width, min_periods=1).min()
 
-        # setting configuration settings depending on window_position and bin_closed
-        if window_position == "backward":
-            arg_center = False
-        elif window_position == "center":
-            arg_center = True
-        elif window_position == "forward":
-            arg_center = False
-            data_resample_min = data_resample_min[::-1]
-            data_resample_max = data_resample_max[::-1]
-            data_resample_sum = data_resample_sum[::-1]
-            data_resample_count = data_resample_count[::-1]
-            if bin_closed == "left":
-                bin_closed = "right"
-            elif bin_closed == "right":
-                bin_closed = "left"
+    # adding rolling window statistics: maximum
+    maxs = data_resample_max.rolling(window=window_width, min_periods=1).max()
 
-        # adding rolling window statistics: minimum
-        mins = data_resample_min.rolling(
-            window=window_width,
-            min_periods=1,
-            center=arg_center,
-            closed=bin_closed_rolling,
-        ).min()
+    # adding rolling window statistics: sum
+    sums = data_resample_sum.rolling(window=window_width, min_periods=1).sum()
 
-        # adding rolling window statistics: maximum
-        maxs = data_resample_max.rolling(
-            window=window_width,
-            min_periods=1,
-            center=arg_center,
-            closed=bin_closed_rolling,
-        ).max()
+    # adding rolling window statistics: count
+    counts = data_resample_count.rolling(
+        window=window_width, min_periods=1
+    ).sum()  # this has to be sum for proper count calculation
 
-        # adding rolling window statistics: sum
-        sums = data_resample_sum.rolling(
-            window=window_width,
-            min_periods=1,
-            center=arg_center,
-            closed=bin_closed_rolling,
-        ).sum()
+    # adding rolling window statistics: mean
+    means = sums.copy()
+    means.columns = means.columns.str.replace("_sum", "_mean")
+    np.seterr(invalid="ignore")  # supress/hide the warning
+    means.loc[:, :] = sums.values / counts.values
 
-        # adding rolling window statistics: count
-        counts = data_resample_count.rolling(
-            window=window_width,
-            min_periods=1,
-            center=arg_center,
-            closed=bin_closed_rolling,
-        ).sum()  # this has to be sum for proper count calculation
+    # combining min and max stats
+    data = pd.concat([mins, maxs, means], axis=1)
 
-        # adding rolling window statistics: mean
-        means = sums.copy()
-        means.columns = means.columns.str.replace("_sum", "_mean")
-        np.seterr(invalid="ignore")  # supress/hide the warning
-        means.loc[:, :] = sums.values / counts.values
-
-        # combining min and max stats
-        data = pd.concat([mins, maxs, means], axis=1)
-
-        # reordering dataframe based on window_position
-        if window_position == "forward":
-            data = data[::-1]
-
-        # adding resampled target back to the dataframe
-        target = _resample_data(target, configs)
-        data[configs["data_input"]["target_var"]] = target
-
-    else:
-
-        # resample data
-        data = _resample_data(data, configs)
+    # adding resampled target back to the dataframe
+    target = resample_data(target, configs)
+    data[configs["data_input"]["target_var"]] = target
 
     return data
 
 
-def _resample_data(data, configs):
+def resample_data(data, configs):
 
     # reading configuration parameters.
     bin_interval = configs["data_processing"]["resample"]["bin_interval"]

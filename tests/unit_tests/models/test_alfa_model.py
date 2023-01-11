@@ -38,21 +38,28 @@ CONFIGS = {
 
 DATA_PROCESSING_CONFIGS0 = {
     "feat_timelag": {"lag_interval": "15min", "lag_count": 0},
-    "resample": {"bin_interval": "15min", "bin_closed": "left", "bin_label": "left"},
+    "resample": {"bin_interval": "15min"},
     "input_output_window": {
         "window_width_futurecast": "0min",
     },
 }
 DATA_PROCESSING_CONFIGS1 = {
     "feat_timelag": {"lag_interval": "15min", "lag_count": 4},
-    "resample": {"bin_interval": "15min", "bin_closed": "left", "bin_label": "left"},
+    "resample": {"bin_interval": "15min"},
     "input_output_window": {
         "window_width_futurecast": "0min",
     },
 }
 DATA_PROCESSING_CONFIGS2 = {
     "feat_timelag": {"lag_interval": "15min", "lag_count": 4},
-    "resample": {"bin_interval": "15min", "bin_closed": "left", "bin_label": "left"},
+    "resample": {"bin_interval": "5min"},
+    "input_output_window": {
+        "window_width_futurecast": "30min",
+    },
+}
+DATA_PROCESSING_CONFIGS3 = {
+    "feat_timelag": {"lag_interval": "15min", "lag_count": 4},
+    "resample": {"bin_interval": "5min"},
     "input_output_window": {
         "window_width_futurecast": "30min",
     },
@@ -65,12 +72,14 @@ DATA_PROCESSING_CONFIGS2 = {
         DATA_PROCESSING_CONFIGS0,
         DATA_PROCESSING_CONFIGS1,
         DATA_PROCESSING_CONFIGS2,
+        DATA_PROCESSING_CONFIGS3,
     ],
 )
 @pytest.mark.parametrize("bin_closed", ["left", "right"])
 @pytest.mark.parametrize("bin_label", ["left", "right"])
+@pytest.mark.parametrize("feat_stats_active", [True, False])
 def test_get_input_window_for_output_time(
-    tmpdir, data_processing_configs, bin_closed, bin_label
+    tmpdir, data_processing_configs, bin_closed, bin_label, feat_stats_active
 ):
     # SETUP
     configs = CONFIGS
@@ -78,6 +87,7 @@ def test_get_input_window_for_output_time(
     configs["data_processing"].update(data_processing_configs)
     configs["data_processing"]["resample"]["bin_closed"] = bin_closed
     configs["data_processing"]["resample"]["bin_label"] = bin_label
+    configs["data_processing"]["feat_stats"]["active"] = feat_stats_active
 
     lag_interval = pd.Timedelta(data_processing_configs["feat_timelag"]["lag_interval"])
 
@@ -97,7 +107,7 @@ def test_get_input_window_for_output_time(
     data = get_dummy_data(
         prediction_window_start_time,
         prediction_window_end_time,
-        lag_interval,
+        lag_interval / 5,
         bin_label,
     )
     configs["data_input"]["start_time"] = str(prediction_window_start_time)
