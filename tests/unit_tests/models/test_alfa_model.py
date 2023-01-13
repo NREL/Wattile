@@ -7,8 +7,8 @@ from wattile.buildings_processing import _preprocess_data
 from wattile.models import AlfaModel
 
 
-def get_dummy_data(start, end, iterval, label):
-    data = pd.DataFrame(index=pd.date_range(start, end, freq=iterval, inclusive=label))
+def get_dummy_data(start, end, interval, label):
+    data = pd.DataFrame(index=pd.date_range(start, end, freq=interval, inclusive=label))
     data["var_1"] = data.index.hour * 100 + data.index.minute
     data["target_var"] = -1 * (data.index.hour * 100 + data.index.minute)
 
