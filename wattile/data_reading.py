@@ -103,9 +103,23 @@ def read_dataset_from_file(configs):
     # the extra will be removed in `prep_for_rnn`
     timestamp_start = dt.datetime.fromisoformat(configs["data_input"]["start_time"])
     timestamp_end = dt.datetime.fromisoformat(configs["data_input"]["end_time"])
-    df_inputdata = df_inputdata.loc[
-        (df_inputdata.start <= timestamp_end) & (df_inputdata.end >= timestamp_start), :
-    ]
+
+    if configs["data_processing"]["resample"]["bin_closed"] == "left":
+        mask = (df_inputdata.start >= timestamp_start) & (
+            df_inputdata.end < timestamp_end
+        )
+
+    elif configs["data_processing"]["resample"]["bin_closed"] == "right":
+        mask = (df_inputdata.start > timestamp_start) & (
+            df_inputdata.end <= timestamp_end
+        )
+
+    else:
+        raise ConfigsError(
+            'configs["data_processing"]["resample"]["bin_closed"] must be "left" or "right"'
+        )
+
+    df_inputdata = df_inputdata.loc[mask]
 
     if df_inputdata.empty:
         logger.info(
