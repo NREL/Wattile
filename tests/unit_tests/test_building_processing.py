@@ -138,7 +138,7 @@ def test_rolling_stats():
     output = roll_data(
         input,
         configs={
-            "data_input": {"target_var": "target_var"},
+            "data_input": {"target_var": "target"},
             "data_processing": {
                 "resample": {
                     "bin_interval": "5min",
