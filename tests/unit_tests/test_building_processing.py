@@ -153,7 +153,9 @@ def test_rolling_stats():
         },
     )
 
-    expected_output = pd.read_csv(TESTS_FIXTURES_PATH / "preprocessing_output_label_right_closed_right_resample.csv")
+    expected_output = pd.read_csv(
+      TESTS_FIXTURES_PATH / "preprocessing_output_label_right_closed_right_resample.csv"
+    )
     expected_output["ts"] = pd.to_datetime(expected_output["ts"], exact=False, utc=True)
     expected_output = expected_output.set_index("ts")
     expected_output = expected_output.asfreq("T")
