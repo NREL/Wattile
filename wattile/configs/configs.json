@@ -30,8 +30,8 @@
    },
    "resample": {
     "bin_interval": "15min",
-    "bin_closed": "right",
-    "bin_label": "right"
+    "bin_closed": "left",
+    "bin_label": "left"
    },
    "feat_stats": {
     "active": true,
@@ -63,15 +63,15 @@
    "hidden_size": 25,
    "num_layers": 1,
    "quantiles": [
-    0.025,
-    0.05,
     0.1,
-    0.25,
+    0.2,
+    0.3,
+    0.4,
     0.5,
-    0.75,
-    0.9,
-    0.95,
-    0.975
+    0.6,
+    0.7,
+    0.8,
+    0.9
    ],
    "transformation_method": "minmaxscale",
    "train_batch_size": 26,
