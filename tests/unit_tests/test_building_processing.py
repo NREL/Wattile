@@ -126,7 +126,7 @@ def test_correct_timestamps_reorder():
 
 
 def test_rolling_stats():
-    input = pd.read_csv(TESTS_FIXTURES_PATH / "rolling_stats_input.csv")
+    input = pd.read_csv(TESTS_FIXTURES_PATH / "preprocessing_input.csv")
     input["var1"] = pd.to_numeric(input["var1"], errors="coerce")
     input["var2"] = pd.to_numeric(input["var2"], errors="coerce")
     input["var1"] = input["var1"].astype(float)
@@ -134,13 +134,15 @@ def test_rolling_stats():
     input["ts"] = pd.to_datetime(input["ts"], exact=False, utc=True)
     input = input.set_index("ts")
 
+    # TO DO: All combos of...
+    # bin_label: left/right, bin_closed: left/right, rolling stats: on/off
     output = resample_or_rolling_stats(
         input,
         configs={
             "data_input": {"target_var": "target_var"},
             "data_processing": {
                 "resample": {
-                    "bin_interval": "1min",
+                    "bin_interval": "5min",
                     "bin_closed": "right",
                     "bin_label": "right",
                 },
@@ -152,7 +154,7 @@ def test_rolling_stats():
         },
     )
 
-    expected_output = pd.read_csv(TESTS_FIXTURES_PATH / "rolling_stats_output.csv")
+    expected_output = pd.read_csv(TESTS_FIXTURES_PATH / "preprocessing_output_label_right_closed_right_resample.csv")
     expected_output["ts"] = pd.to_datetime(expected_output["ts"], exact=False, utc=True)
     expected_output = expected_output.set_index("ts")
     expected_output = expected_output.asfreq("T")
