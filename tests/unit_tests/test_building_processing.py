@@ -10,6 +10,7 @@ from pandas.testing import assert_frame_equal, assert_index_equal, assert_series
 from wattile.buildings_processing import (
     correct_predictor_columns,
     correct_timestamps,
+    resample_data,
     roll_data,
     roll_predictors_target,
     timelag_predictors,
@@ -126,8 +127,12 @@ def test_correct_timestamps_reorder():
     )
 
 
-def test_rolling_stats():
-    input = pd.read_csv(TESTS_FIXTURES_PATH / "preprocessing_input.csv")
+@pytest.mark.parametrize("bin_closed", ["left", "right"])
+@pytest.mark.parametrize("bin_label", ["left", "right"])
+def test_roll_data(bin_closed, bin_label):
+    input = pd.read_csv(
+        TESTS_FIXTURES_PATH / "test_rolling_stats" / "preprocessing_input.csv"
+    )
     input["var1"] = pd.to_numeric(input["var1"], errors="coerce")
     input["var2"] = pd.to_numeric(input["var2"], errors="coerce")
     input["var1"] = input["var1"].astype(float)
@@ -142,8 +147,8 @@ def test_rolling_stats():
             "data_processing": {
                 "resample": {
                     "bin_interval": "5min",
-                    "bin_closed": "right",
-                    "bin_label": "right",
+                    "bin_closed": bin_closed,
+                    "bin_label": bin_label,
                 },
                 "feat_stats": {
                     "active": True,
@@ -153,14 +158,72 @@ def test_rolling_stats():
         },
     )
 
+    output_file = (
+        f"preprocessing_output_label_{bin_label}_closed_{bin_closed}_rolling.csv"
+    )
     expected_output = pd.read_csv(
-        TESTS_FIXTURES_PATH / "preprocessing_output_label_right_closed_right_rolling.csv"
+        TESTS_FIXTURES_PATH / "test_rolling_stats" / output_file
     )
     expected_output["ts"] = pd.to_datetime(expected_output["ts"], exact=False, utc=True)
     expected_output = expected_output.set_index("ts")
-    expected_output = expected_output.asfreq("T")
+    expected_output = expected_output.asfreq("5min")
     expected_output = expected_output.astype("float64")
 
+    print(f"-- output_file {output_file} --")
+    print("-- output --")
+    print(output)
+    print("-- expected_output --")
+    print(expected_output)
+    pd.testing.assert_frame_equal(output, expected_output)
+
+
+@pytest.mark.parametrize("bin_closed", ["left", "right"])
+@pytest.mark.parametrize("bin_label", ["left", "right"])
+def test_resample_data(bin_closed, bin_label):
+    input = pd.read_csv(
+        TESTS_FIXTURES_PATH / "test_rolling_stats" / "preprocessing_input.csv"
+    )
+    input["var1"] = pd.to_numeric(input["var1"], errors="coerce")
+    input["var2"] = pd.to_numeric(input["var2"], errors="coerce")
+    input["var1"] = input["var1"].astype(float)
+    input["var2"] = input["var2"].astype(float)
+    input["ts"] = pd.to_datetime(input["ts"], exact=False, utc=True)
+    input = input.set_index("ts")
+
+    output = resample_data(
+        input,
+        configs={
+            "data_input": {"target_var": "target"},
+            "data_processing": {
+                "resample": {
+                    "bin_interval": "5min",
+                    "bin_closed": bin_closed,
+                    "bin_label": bin_label,
+                },
+                "feat_stats": {
+                    "active": False,
+                    "window_width": "5min",
+                },
+            },
+        },
+    )
+
+    output_file = (
+        f"preprocessing_output_label_{bin_label}_closed_{bin_closed}_resample.csv"
+    )
+    expected_output = pd.read_csv(
+        TESTS_FIXTURES_PATH / "test_rolling_stats" / output_file
+    )
+    expected_output["ts"] = pd.to_datetime(expected_output["ts"], exact=False, utc=True)
+    expected_output = expected_output.set_index("ts")
+    expected_output = expected_output.asfreq("5min")
+    expected_output = expected_output.astype("float64")
+
+    print(f"-- output_file {output_file} --")
+    print("-- output --")
+    print(output)
+    print("-- expected_output --")
+    print(expected_output)
     pd.testing.assert_frame_equal(output, expected_output)
 
 
