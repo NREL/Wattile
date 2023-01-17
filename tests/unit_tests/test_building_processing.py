@@ -211,9 +211,7 @@ def test_resample_data(bin_closed, bin_label):
     output_file = (
         f"preprocessing_output_label_{bin_label}_closed_{bin_closed}_resample.csv"
     )
-    expected_output = pd.read_csv(
-        TESTS_FIXTURES_PATH / "test_resample" / output_file
-    )
+    expected_output = pd.read_csv(TESTS_FIXTURES_PATH / "test_resample" / output_file)
     expected_output["ts"] = pd.to_datetime(expected_output["ts"], exact=False, utc=True)
     expected_output = expected_output.set_index("ts")
     expected_output = expected_output.asfreq("5min")
