@@ -169,11 +169,6 @@ def test_roll_data(bin_closed, bin_label):
     expected_output = expected_output.asfreq("5min")
     expected_output = expected_output.astype("float64")
 
-    print(f"-- output_file {output_file} --")
-    print("-- output --")
-    print(output)
-    print("-- expected_output --")
-    print(expected_output)
     pd.testing.assert_frame_equal(output, expected_output)
 
 
@@ -217,11 +212,6 @@ def test_resample_data(bin_closed, bin_label):
     expected_output = expected_output.asfreq("5min")
     expected_output = expected_output.astype("float64")
 
-    print(f"-- output_file {output_file} --")
-    print("-- output --")
-    print(output)
-    print("-- expected_output --")
-    print(expected_output)
     pd.testing.assert_frame_equal(output, expected_output)
 
 
