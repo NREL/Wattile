@@ -181,7 +181,7 @@ def test_roll_data(bin_closed, bin_label):
 @pytest.mark.parametrize("bin_label", ["left", "right"])
 def test_resample_data(bin_closed, bin_label):
     input = pd.read_csv(
-        TESTS_FIXTURES_PATH / "test_rolling_stats" / "preprocessing_input.csv"
+        TESTS_FIXTURES_PATH / "test_resample" / "preprocessing_input.csv"
     )
     input["var1"] = pd.to_numeric(input["var1"], errors="coerce")
     input["var2"] = pd.to_numeric(input["var2"], errors="coerce")
@@ -212,7 +212,7 @@ def test_resample_data(bin_closed, bin_label):
         f"preprocessing_output_label_{bin_label}_closed_{bin_closed}_resample.csv"
     )
     expected_output = pd.read_csv(
-        TESTS_FIXTURES_PATH / "test_rolling_stats" / output_file
+        TESTS_FIXTURES_PATH / "test_resample" / output_file
     )
     expected_output["ts"] = pd.to_datetime(expected_output["ts"], exact=False, utc=True)
     expected_output = expected_output.set_index("ts")
