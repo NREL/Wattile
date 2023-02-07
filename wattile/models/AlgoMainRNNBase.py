@@ -185,7 +185,7 @@ class AlgoMainRNNBase(ABC):
 
         # only 1 batch during prediction
         val_loader = self.to_data_loader(
-            val_data, batch_size=val_data.shape[0], shuffle=True
+            val_data, batch_size=val_data.shape[0], shuffle=False
         )
 
         return self.run_prediction(val_loader, val_df)
