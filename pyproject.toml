@@ -29,7 +29,7 @@ pytest = "^6.2.5"
 pytest-cov = "^3.0.0"
 pre-commit = "^3.0.4"
 black = "^22.3.0"
-isort = "^5.10.1"
+isort = "^5.11.5"
 pyflakes = "2.4.*"
 pylama = "8.2.*"
 
