@@ -172,6 +172,31 @@ def input_data_split(data, configs):
     return train_df, val_df
 
 
+def build_lagging_predictors(predictors, lag_count, lag_interval):
+    temp_holder = list()
+    temp_holder.append(predictors)
+    for i in range(1, lag_count + 1):
+        shifted = (
+            predictors.shift(freq=i * lag_interval)
+            .astype("float32")
+            .add_suffix("_lag{}".format(i))
+        )
+        temp_holder.append(shifted)
+    temp_holder.reverse()
+
+    return pd.concat(temp_holder, axis=1)
+
+
+def build_laggin_targets(target, number_of_lags, bin_interval, target_var):
+    lagging_target = pd.DataFrame()
+    for i in range(0, number_of_lags):
+        lagging_target["{}_lag_{}".format(target_var, i)] = target.shift(
+            freq=(-i * bin_interval)
+        )
+
+    return lagging_target
+
+
 def timelag_predictors(data, configs):
     """
     Create lagged versions of predictor variables in a DataFrame.
@@ -184,34 +209,28 @@ def timelag_predictors(data, configs):
     # reading configuration parameters
     lag_interval = configs["data_processing"]["feat_timelag"]["lag_interval"]
     lag_count = configs["data_processing"]["feat_timelag"]["lag_count"]
-    window_width_futurecast = configs["data_processing"]["input_output_window"][
-        "window_width_futurecast"
-    ]
+    window_width_futurecast = pd.to_timedelta(
+        configs["data_processing"]["input_output_window"]["window_width_futurecast"]
+    )
     target_var = configs["data_input"]["target_var"]
 
     # splitting predictors and target
     target = data[target_var]
-    data = data.drop(target_var, axis=1)
-    data_orig = data
+    predictors = data.drop(target_var, axis=1)
 
-    # padding predictors
-    temp_holder = list()
-    temp_holder.append(data_orig)
-    for i in range(1, lag_count + 1):
-        shifted = (
-            data_orig.shift(freq=i * lag_interval)
-            .astype("float32")
-            .add_suffix("_lag{}".format(i))
-        )
-        temp_holder.append(shifted)
-    temp_holder.reverse()
-    data = pd.concat(temp_holder, axis=1)
+    # lag predictors
+    lagging_predictors = build_lagging_predictors(predictors, lag_count, lag_interval)
 
+    # shift target into furture
     if configs["learning_algorithm"]["use_case"] != "prediction":
-        data[target_var] = target.shift(freq="-" + window_width_futurecast)
+        target = target.shift(freq=-window_width_futurecast)
     else:
-        data[target_var] = 0  # dummy
+        target = pd.DataFrame(
+            0, index=lagging_predictors.index, columns=[target_var]
+        )  # dummy
 
+    # concat and clean
+    data = pd.concat([lagging_predictors, target], axis=1)
     data = data.dropna(how="any")
 
     return data
@@ -229,54 +248,38 @@ def timelag_predictors_target(data, configs):
     # reading configuration parameters
     lag_interval = configs["data_processing"]["feat_timelag"]["lag_interval"]
     lag_count = configs["data_processing"]["feat_timelag"]["lag_count"]
+    window_width_futurecast = pd.to_timedelta(
+        configs["data_processing"]["input_output_window"]["window_width_futurecast"]
+    )
+    target_var = configs["data_input"]["target_var"]
     window_width_target = configs["data_processing"]["input_output_window"][
         "window_width_target"
     ]
-    window_width_futurecast = configs["data_processing"]["input_output_window"][
-        "window_width_futurecast"
-    ]
-    bin_interval = configs["data_processing"]["resample"]["bin_interval"]
-    initial_num = (pd.Timedelta(window_width_target) // pd.Timedelta(bin_interval)) + 1
-    target_var = configs["data_input"]["target_var"]
-    target_temp = data[target_var].copy()
-
-    # shift target for futurecast
-    data[target_var] = target_temp.shift(freq="-" + window_width_futurecast)
+    bin_interval = pd.Timedelta(configs["data_processing"]["resample"]["bin_interval"])
+    number_of_lags = (pd.Timedelta(window_width_target) // bin_interval) + 1
 
     # split predictors and target
     target = data[target_var]
-    data = data.drop(target_var, axis=1)
-    data_orig = data
+    predictors = data.drop(target_var, axis=1)
 
-    # Pad the exogenous variables
-    temp_holder = list()
-    temp_holder.append(data_orig)
-    for i in range(1, lag_count + 1):
-        shifted = (
-            data_orig.shift(freq=i * lag_interval)
-            .astype("float32")
-            .add_suffix("_lag{}".format(i))
-        )
-        temp_holder.append(shifted)
-    temp_holder.reverse()
-    data = pd.concat(temp_holder, axis=1)
+    # lag predictors
+    lagging_predictors = build_lagging_predictors(predictors, lag_count, lag_interval)
 
-    # Do fine padding for future predictions. Create a new df to preserve memory usage.
-    local = pd.DataFrame()
-    for i in range(0, initial_num):
-        if i == 0:
-            local["{}_lag_{}".format(target_var, i)] = target.shift(i)
-        else:
-            local["{}_lag_{}".format(target_var, i)] = target.shift(
-                freq="-" + (i * bin_interval)
-            )
-
+    # shift target into furture and lag
     if configs["learning_algorithm"]["use_case"] != "prediction":
-        data = pd.concat([data, local], axis=1)
-    else:
-        for col in local.columns:
-            data[col] = 0  # dummy
+        target = target.shift(freq=-window_width_futurecast)
+        lagging_target = build_laggin_targets(
+            target, number_of_lags, bin_interval, target_var
+        )
 
+    else:
+        columns = ["{}_lag_{}".format(target_var, i) for i in range(0, number_of_lags)]
+        lagging_target = pd.DataFrame(
+            0, index=lagging_predictors.index, columns=columns
+        )  # dummy
+
+    # concat and clean
+    data = pd.concat([lagging_predictors, lagging_target], axis=1)
     data = data.dropna(how="any")
 
     return data
