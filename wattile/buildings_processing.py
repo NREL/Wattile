@@ -187,7 +187,7 @@ def build_lagging_predictors(predictors, lag_count, lag_interval):
     return pd.concat(temp_holder, axis=1)
 
 
-def build_laggin_targets(target, number_of_lags, bin_interval, target_var):
+def build_lagging_targets(target, number_of_lags, bin_interval, target_var):
     lagging_target = pd.DataFrame()
     for i in range(0, number_of_lags):
         lagging_target["{}_lag_{}".format(target_var, i)] = target.shift(
@@ -268,7 +268,7 @@ def timelag_predictors_target(data, configs):
     # shift target into furture and lag
     if configs["learning_algorithm"]["use_case"] != "prediction":
         target = target.shift(freq=-window_width_futurecast)
-        lagging_target = build_laggin_targets(
+        lagging_target = build_lagging_targets(
             target, number_of_lags, bin_interval, target_var
         )
 
