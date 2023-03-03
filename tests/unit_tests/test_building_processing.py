@@ -406,7 +406,9 @@ def test_timelag_predictors_target(configs):
     # assert columns are correct
     lag_columns = [f"var_1_lag{i}" for i in range(lag_count, 0, -1)]
     num_target_lags = int(window_width_target / bin_interval) + 1
-    target_columns = [f"target_var_lag_{i}" for i in range(num_target_lags)]
+    target_columns = [
+        f"target_var {(i * bin_interval).isoformat()}" for i in range(num_target_lags)
+    ]
     assert list(output.columns) == lag_columns + ["var_1"] + target_columns
 
     # assert indices are correct
@@ -436,16 +438,13 @@ def test_timelag_predictors_target(configs):
     assert_series_equal(output["var_1"], input["var_1"][output.index])
 
     # assert lagged target_vars are right
-    num_lagged_targets = int(window_width_target / bin_interval)
-    for i in range(num_lagged_targets + 1):
-        target_var_with_lag = f"target_var_lag_{i}"
-
+    for target_column in target_columns:
         input_target_var_with_lag = input["target_var"].copy()
-        lag = window_width_futurecast + bin_interval * i
-        input_target_var_with_lag.index -= lag
+        lag = pd.Timedelta(target_column[11:])  # lag on target column
+        input_target_var_with_lag.index -= window_width_futurecast + lag
 
         assert_series_equal(
-            output[target_var_with_lag],
+            output[target_column],
             input_target_var_with_lag[output.index],
             check_names=False,
         )

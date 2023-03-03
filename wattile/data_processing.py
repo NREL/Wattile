@@ -190,8 +190,9 @@ def build_lagging_predictors(predictors, lag_count, lag_interval):
 def build_lagging_targets(target, number_of_lags, bin_interval, target_var):
     lagging_target = pd.DataFrame()
     for i in range(0, number_of_lags):
-        lagging_target["{}_lag_{}".format(target_var, i)] = target.shift(
-            freq=(-i * bin_interval)
+        shift_by = i * bin_interval
+        lagging_target[f"{target_var} {shift_by.isoformat()}"] = target.shift(
+            freq=-shift_by
         )
 
     return lagging_target
@@ -273,7 +274,8 @@ def timelag_predictors_target(data, configs):
         )
 
     else:
-        columns = ["{}_lag_{}".format(target_var, i) for i in range(0, number_of_lags)]
+        lags = [i * bin_interval for i in range(0, number_of_lags)]
+        columns = [f"{target_var} {lag.isoformat()}" for lag in lags]
         lagging_target = pd.DataFrame(
             0, index=lagging_predictors.index, columns=columns
         )  # dummy
