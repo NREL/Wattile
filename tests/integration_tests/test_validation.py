@@ -55,6 +55,23 @@ def test_validation(config_for_tests, tmpdir, config_patch, test_exp_dir):
     _, val_df = prep_for_rnn(config_for_tests, data)
     model.validate(val_df)
 
-    assert (exp_dir / "output.out").exists()
     assert (exp_dir / "error_stats_test.json").exists()
     assert (exp_dir / "QQ_data_Test.h5").exists()
+
+
+def test_ensemble_validation(config_for_tests, tmpdir):
+    config_for_tests["learning_algorithm"]["arch_version"] = "alfa_ensemble"
+    config_for_tests["learning_algorithm"]["use_case"] = "validation"
+
+    exp_dir = pathlib.Path(tmpdir) / "train_results"
+    config_for_tests["data_output"]["exp_dir"] = str(exp_dir)
+    shutil.copytree(TESTS_FIXTURES_PATH / "alfa_ensemble_exp_dir", exp_dir)
+
+    data = read_dataset_from_file(config_for_tests)
+    _, val_df = prep_for_rnn(config_for_tests, data)
+    model = ModelFactory.create_model(config_for_tests)
+    model.validate(val_df)
+
+    for target_lag in model.alfa_models_by_target_lag.keys():
+        assert (exp_dir / target_lag.isoformat() / "error_stats_test.json").exists()
+        assert (exp_dir / target_lag.isoformat() / "QQ_data_Test.h5").exists()

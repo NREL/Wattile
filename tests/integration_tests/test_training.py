@@ -84,3 +84,25 @@ def test_model_trains(config_for_tests, tmpdir, config_patch):
     assert (exp_dir / "torch_model").exists()
     if config_for_tests["learning_algorithm"]["arch_version"] != "charlie":
         assert (exp_dir / "train_stats.json").exists()
+
+
+def test_ensemble_model_trains(config_for_tests, tmpdir):
+    """
+    Run training and verify results are made.
+    """
+    # patch configs and create temporary, unquie output file
+    config_for_tests["learning_algorithm"]["arch_version"] = "alfa_ensemble"
+    exp_dir = pathlib.Path(tmpdir) / "train_results"
+    exp_dir.mkdir()
+    config_for_tests["data_output"]["exp_dir"] = str(exp_dir)
+
+    # train model
+    data = read_dataset_from_file(config_for_tests)
+    train_df, val_df = prep_for_rnn(config_for_tests, data)
+    model = ModelFactory.create_model(config_for_tests)
+    model.train(train_df, val_df)
+
+    # check result file were created
+    for target_lag in model.alfa_models_by_target_lag.keys():
+        assert (exp_dir / target_lag.isoformat() / "torch_model").exists()
+        assert (exp_dir / target_lag.isoformat() / "train_stats.json").exists()
