@@ -1,4 +1,5 @@
 from wattile.error import ConfigsError
+from wattile.models.alfa_ensemble_model import AlfaEnsembleModel
 from wattile.models.alfa_model import AlfaModel
 from wattile.models.AlgoMainRNNBase import AlgoMainRNNBase
 from wattile.models.bravo_model import BravoModel
@@ -18,6 +19,9 @@ class ModelFactory:
         arch_version = configs["learning_algorithm"]["arch_version"]
         if arch_version == "alfa":
             return AlfaModel(configs)
+
+        if arch_version == "alfa_ensemble":
+            return AlfaEnsembleModel(configs)
 
         elif arch_version == "bravo":
             return BravoModel(configs)
