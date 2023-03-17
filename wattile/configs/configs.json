@@ -30,8 +30,8 @@
    },
    "resample": {
     "bin_interval": "60min",
-    "bin_closed": "left",
-    "bin_label": "left"
+    "bin_closed": "right",
+    "bin_label": "right"
    },
    "feat_stats": {
     "active": true,
@@ -46,7 +46,7 @@
     "window_width_futurecast":"0min",
     "window_width_target": "45min"
    },
-   "random_seed": 382,
+   "random_seed": 1,
    "sequential_splicer": {
     "active": false,
     "window_width": "1W"
