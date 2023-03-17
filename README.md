@@ -1,8 +1,7 @@
 Wattile
 ====
 
-Deep learning algorithms for probabilistic forecasting of time series building performance data.
-
+Probabilistic Deep Learning-based Forecasting of Building Energy ConsumptionProbabilistic Deep Learning-based Forecasting of Building Energy Consumption.
 Set Up
 ----
 
