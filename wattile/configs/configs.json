@@ -25,17 +25,17 @@
    "feat_time": {
     "month_of_year": ["sincos"],
     "day_of_week": ["binary_reg", "binary_fuzzy"],
-    "hour_of_day": ["sincos"],
+    "hour_of_day": ["sincos", "binary_reg"],
     "holidays": false
    },
    "resample": {
     "bin_interval": "60min",
-    "bin_closed": "right",
-    "bin_label": "right"
+    "bin_closed": "left",
+    "bin_label": "left"
    },
    "feat_stats": {
     "active": true,
-    "window_width": "180min"
+    "window_width": "60min"
    },
    "feat_timelag": {
     "lag_interval": "60min",
