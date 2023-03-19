@@ -25,7 +25,7 @@
    "feat_time": {
     "month_of_year": ["sincos"],
     "day_of_week": ["binary_reg", "binary_fuzzy"],
-    "hour_of_day": ["sincos", "binary_reg"],
+    "hour_of_day": ["sincos", "binary_reg", "binary_fuzzy"],
     "holidays": false
    },
    "resample": {
