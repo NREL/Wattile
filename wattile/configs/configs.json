@@ -2,17 +2,9 @@
  "data_input": {
    "data_dir": "tests/data/Synthetic Site",
    "data_config": "Synthetic Site Config.json",
-   "start_time": "2000-01-01T00:00:00-07:00",
-   "end_time": "2022-01-01T00:00:00-07:00",
-   "predictor_columns": [
-     "Synthetic Weather Station Dew Point Temperature",
-     "Synthetic Weather Station Diffuse Horizontal Irradiance",
-     "Synthetic Weather Station Direct Normal Irradiance",
-     "Synthetic Weather Station Dry Bulb Temperature",
-     "Synthetic Weather Station Global Horizontal Irradiance",
-     "Synthetic Weather Station Relative Humidity",
-     "Synthetic Weather Station Wind Speed"
-   ],
+   "start_time": "2020-07-01T00:00:00-07:00",
+   "end_time": "2023-04-01T00:00:00-07:00",
+   "predictor_columns": [],
    "target_var": "Synthetic Site Electricity Main Total Power"
  },
  "data_output": {
@@ -44,7 +36,7 @@
    "input_output_window": {
     "window_width_source": "180min",
     "window_width_futurecast":"0min",
-    "window_width_target": "45min"
+    "window_width_target": "60min"
    },
    "random_seed": 1,
    "sequential_splicer": {
@@ -59,7 +51,7 @@
    "arch_version": "alfa",
    "arch_type_variant": "lstm",
    "use_case": "validation",
-   "num_epochs": 100,
+   "num_epochs": 150,
    "hidden_size": 25,
    "num_layers": 1,
    "quantiles": [
