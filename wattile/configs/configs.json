@@ -21,22 +21,22 @@
     "holidays": false
    },
    "resample": {
-    "bin_interval": "60min",
+    "bin_interval": "15min",
     "bin_closed": "left",
     "bin_label": "left"
    },
    "feat_stats": {
     "active": true,
-    "window_width": "60min"
+    "window_width": "15min"
    },
    "feat_timelag": {
-    "lag_interval": "60min",
-    "lag_count": 6
+    "lag_interval": "15min",
+    "lag_count": 24
    },
    "input_output_window": {
     "window_width_source": "180min",
     "window_width_futurecast":"0min",
-    "window_width_target": "60min"
+    "window_width_target": "15min"
    },
    "random_seed": 1,
    "sequential_splicer": {
