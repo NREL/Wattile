@@ -51,7 +51,7 @@
    "arch_version": "alfa",
    "arch_type_variant": "lstm",
    "use_case": "validation",
-   "num_epochs": 150,
+   "num_epochs": 300,
    "hidden_size": 25,
    "num_layers": 1,
    "quantiles": [
