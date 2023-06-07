@@ -2,8 +2,8 @@
  "data_input": {
    "data_dir": "tests/data/Synthetic Site",
    "data_config": "Synthetic Site Config.json",
-   "start_time": "2020-07-01T00:00:00-07:00",
-   "end_time": "2023-04-01T00:00:00-07:00",
+   "start_time": "2016-01-01T00:00:00-07:00",
+   "end_time": "2017-12-31T22:00:00-07:00",
    "predictor_columns": [],
    "target_var": "Synthetic Site Electricity Main Total Power"
  },
