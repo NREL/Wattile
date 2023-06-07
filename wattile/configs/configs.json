@@ -2,8 +2,8 @@
  "data_input": {
    "data_dir": "tests/data/Synthetic Site",
    "data_config": "Synthetic Site Config.json",
-   "start_time": "2016-01-01T00:00:00-07:00",
-   "end_time": "2017-12-31T22:00:00-07:00",
+   "start_time": "2020-07-01T00:00:00-07:00",
+   "end_time": "2023-04-01T00:00:00-07:00",
    "predictor_columns": [],
    "target_var": "Synthetic Site Electricity Main Total Power"
  },
@@ -21,22 +21,22 @@
     "holidays": false
    },
    "resample": {
-    "bin_interval": "15min",
+    "bin_interval": "60min",
     "bin_closed": "left",
     "bin_label": "left"
    },
    "feat_stats": {
     "active": true,
-    "window_width": "15min"
+    "window_width": "60min"
    },
    "feat_timelag": {
-    "lag_interval": "15min",
-    "lag_count": 24
+    "lag_interval": "60min",
+    "lag_count": 6
    },
    "input_output_window": {
     "window_width_source": "180min",
     "window_width_futurecast":"0min",
-    "window_width_target": "15min"
+    "window_width_target": "60min"
    },
    "random_seed": 1,
    "sequential_splicer": {
