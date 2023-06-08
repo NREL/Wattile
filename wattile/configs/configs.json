@@ -9,7 +9,7 @@
   },
   "data_output": {
    "exp_dir": "exp_dir",
-   "plot_comparison":true,
+   "plot_comparison":false,
    "plot_comparison_portion_start":0.0,
    "plot_comparison_portion_end":1.0
   },
