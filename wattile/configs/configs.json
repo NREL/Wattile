@@ -50,7 +50,7 @@
    "arch_type": "RNN",
    "arch_version": "alfa",
    "arch_type_variant": "lstm",
-   "use_case": "validation",
+   "use_case": "train",
    "num_epochs": 200,
    "hidden_size": 25,
    "num_layers": 1,
