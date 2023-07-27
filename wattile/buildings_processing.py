@@ -547,8 +547,7 @@ def roll_data(data, configs):
     )
     data_resample_min = data_resampler.min().add_suffix("_min")
     data_resample_max = data_resampler.max().add_suffix("_max")
-    data_resample_sum = data_resampler.sum().add_suffix("_sum")
-    data_resample_count = data_resampler.count().add_suffix("_count")
+    data_resample_mean = data_resampler.mean().add_suffix("_mean")
 
     # adding rolling window statistics: minimum
     mins = data_resample_min.rolling(window=window_width, min_periods=1).min()
@@ -556,19 +555,7 @@ def roll_data(data, configs):
     # adding rolling window statistics: maximum
     maxs = data_resample_max.rolling(window=window_width, min_periods=1).max()
 
-    # adding rolling window statistics: sum
-    sums = data_resample_sum.rolling(window=window_width, min_periods=1).sum()
-
-    # adding rolling window statistics: count
-    counts = data_resample_count.rolling(
-        window=window_width, min_periods=1
-    ).sum()  # this has to be sum for proper count calculation
-
-    # adding rolling window statistics: mean
-    means = sums.copy()
-    means.columns = means.columns.str.replace("_sum", "_mean")
-    np.seterr(invalid="ignore")  # supress/hide the warning
-    means.loc[:, :] = sums.values / counts.values
+    means = data_resample_mean.rolling(window=window_width, min_periods=1).mean()
 
     # combining min and max stats
     data = pd.concat([mins, maxs, means], axis=1)
