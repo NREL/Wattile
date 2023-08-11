@@ -4,7 +4,7 @@ import torch.nn as nn
 class FeedforwardNeuralNetModel(nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim):
         super(FeedforwardNeuralNetModel, self).__init__()
-
+        self.input_dim = input_dim
         # Linear function 1: 14 -> 56
         self.fc1 = nn.Linear(input_dim, hidden_dim)
         # initializing the weights with xavier weight initialization and bias as 0.01

@@ -121,7 +121,6 @@ class BravoModel(AlgoMainRNNBase):
         val_loader,
         model,
         seq_dim,
-        input_dim,
         transformation_method,
         last_run,
         device,
@@ -133,7 +132,6 @@ class BravoModel(AlgoMainRNNBase):
         :param val_loader: (DataLoader)
         :param model: (Pytorch model)
         :param seq_dim: ()
-        :param input_dim:
         :param transformation_method:
         :return:
         """
@@ -150,7 +148,7 @@ class BravoModel(AlgoMainRNNBase):
             preds = []
             targets = []
             for i, (feats, values) in enumerate(val_loader):
-                features = Variable(feats.view(-1, seq_dim, input_dim))
+                features = Variable(feats.view(-1, seq_dim, model.input_dim))
                 outputs = model(features)
                 # preds.append(outputs.data.numpy())
                 # targets.append(values.data.numpy())
@@ -372,7 +370,6 @@ class BravoModel(AlgoMainRNNBase):
         weight_decay = float(
             self.configs["learning_algorithm"]["optimizer_config"]["weight_decay"]
         )
-        input_dim = self.configs["input_dim"]
         window_width_target = self.configs["data_processing"]["input_output_window"][
             "window_width_target"
         ]
@@ -545,7 +542,7 @@ class BravoModel(AlgoMainRNNBase):
                 time1 = timeit.default_timer()
 
                 # (batches, timesteps, features)
-                features = Variable(feats.view(-1, seq_dim, input_dim))
+                features = Variable(feats.view(-1, seq_dim, model.input_dim))
                 target = Variable(values)  # size: batch size
 
                 time2 = timeit.default_timer()
@@ -623,7 +620,6 @@ class BravoModel(AlgoMainRNNBase):
                         val_loader,
                         model,
                         seq_dim,
-                        input_dim,
                         transformation_method,
                         False,
                         device,
@@ -722,7 +718,6 @@ class BravoModel(AlgoMainRNNBase):
             val_loader,
             model,
             seq_dim,
-            input_dim,
             transformation_method,
             True,
             device,
@@ -824,7 +819,6 @@ class BravoModel(AlgoMainRNNBase):
             val_loader,
             model,
             seq_dim,
-            self.configs["input_dim"],
             transformation_method,
             False,
             device,
@@ -893,7 +887,7 @@ class BravoModel(AlgoMainRNNBase):
         with torch.no_grad():
             preds = []
             for (feats, v) in val_loader:
-                features = Variable(feats.view(-1, seq_dim, self.configs["input_dim"]))
+                features = Variable(feats.view(-1, seq_dim, model.input_dim))
                 outputs = model(features)
                 preds.append(outputs.cpu().numpy())
 

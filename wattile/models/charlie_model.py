@@ -461,7 +461,7 @@ class CharlieModel:
         val_df_predictor = val_df["predictor"].astype(np.float32).copy()
         val_df_target = val_df["target"].astype(np.float32).copy()
 
-        input_dim = self.configs["input_dim"] = train_df_predictor.shape[-1]
+        input_dim = train_df_predictor.shape[-1]
 
         # call the respective model
         if attention_model == "none":

@@ -95,6 +95,5 @@
  },
  "target_feat_name": [
   "Synthetic Site Electricity Main Total Power"
- ],
- "input_dim": 54
+ ] 
 }
