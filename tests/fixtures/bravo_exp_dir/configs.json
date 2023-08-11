@@ -93,7 +93,6 @@
   "eval_frequency": 2,
   "test_method": "external"
  },
- "input_dim": 54,
  "target_feat_name": [
   "Synthetic Site Electricity Main Total Power"
  ]
