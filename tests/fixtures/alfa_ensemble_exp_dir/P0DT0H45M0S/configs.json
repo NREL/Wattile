@@ -92,6 +92,5 @@
   "smoothing_alpha": 0.001,
   "eval_frequency": 2,
   "test_method": "external"
- },
- "input_dim": 54
+ }
 }
