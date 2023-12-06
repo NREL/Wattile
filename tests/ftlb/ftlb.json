@@ -1,0 +1,116 @@
+{
+   "feature_extraction": "no",
+    "scenario_filter": "no",
+    "scenario_wrapper": "no",
+    "metric_relevancy": "none",
+    "metric_wrapper": "Interval Score",
+    "num_cores_wrapper": 1,
+    "mi_rand_frac": 1.0,
+    "threshold_basis": "percentile",
+    "threshold_relevancy": 0.0,
+    "threshold_redundancy": 1.0,
+    "target_clean_size_weeks": 1,
+    "generate_plot": true,
+    "generate_plot_inputdata": true,
+    "data_input": {
+     "data_dir": "tests/ftlb",
+     "data_config": "ftlb_config.json",
+     "start_time": "2020-07-01T00:00:00-07:00",
+     "end_time": "2023-04-01T00:00:00-07:00",
+     "predictor_columns": [
+
+     ],
+     "target_var": "FTLB CHW Meter CHW Energy Rate"
+    },
+    "data_output": {
+     "exp_dir": "exp_dir",
+     "plot_comparison": true,
+     "plot_comparison_portion_start": 0.0,
+     "plot_comparison_portion_end": 1.0
+    },
+    "data_processing": {
+     "feat_time": {
+      "month_of_year": [
+       "sincos"
+      ],
+      "day_of_week": [
+       "sincos"
+      ],
+      "hour_of_day": [
+       "sincos"
+      ],
+      "holidays": false
+     },
+     "resample": {
+      "bin_interval": "15min",
+      "bin_closed": "left",
+      "bin_label": "left"
+     },
+     "feat_stats": {
+      "active": true,
+      "window_width": "15min"
+     },
+     "feat_timelag": {
+      "lag_interval": "15min",
+      "lag_count": 24
+     },
+     "input_output_window": {
+      "window_width_source": "180min",
+      "window_width_futurecast": "0min",
+      "window_width_target": "15min"
+     },
+     "random_seed": 1,
+     "sequential_splicer": {
+      "active": false,
+      "window_width": "1W"
+     },
+     "data_split": "80:20:0",
+     "train_size_factor": 1
+    },
+    "learning_algorithm": {
+     "arch_type": "RNN",
+     "arch_version": "alfa",
+     "arch_type_variant": "lstm",
+     "use_case": "train",
+     "num_epochs": 300,
+     "hidden_size": 25,
+     "num_layers": 1,
+     "quantiles": [
+      0.1,
+      0.2,
+      0.3,
+      0.4,
+      0.5,
+      0.6,
+      0.7,
+      0.8,
+      0.9
+     ],
+     "transformation_method": "minmaxscale",
+     "train_batch_size": 26,
+     "val_batch_size": 1,
+     "run_resume": false,
+     "optimizer_config": {
+      "weight_decay": 0.001,
+      "base": 0.001,
+      "schedule": false,
+      "type": "performance",
+      "factor": 0.1,
+      "min": 1e-05,
+      "patience": 30,
+      "step_size": 75
+     },
+     "smoothing_alpha": 0.001,
+     "eval_frequency": 500,
+     "test_method": "external"
+    },
+    "building": "FTLB",
+    "exp_id": "r1",
+    "scenario_feature_extraction": "yes",
+    "file_prefix": "/projects/intelcamp/repos/WattChoice/results/FTLB/FTLB_FTLBCHWMeterCHWEnergyRate_r1",
+    "final_num_features": 237,
+    "input_dim": 237,
+    "time_elapsed_filter": 0,
+    "t_elapsed_training": 250.979,
+    "t_elapsed_training_wrapper": 0
+   }

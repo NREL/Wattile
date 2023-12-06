@@ -1,0 +1,112 @@
+{
+	"predictors": [
+		{
+			"id": "r:p:stm_campus:r:258b05e3-4095bc0d FTLB CHW Meter CHWST",
+			"dis": "FTLB CHW Meter CHWST",
+			"column": "FTLB CHW Meter CHWST",
+			"unit": "°F"
+		},
+		{
+			"id": "r:p:stm_campus:r:258b05e6-587eadad FTLB HW Meter HWST",
+			"dis": "FTLB HW Meter HWST",
+			"column": "FTLB HW Meter HWST",
+			"unit": "°F"
+		},
+		{
+			"id": "r:p:stm_campus:r:278f8876-5e6f284e SRRL BMS Dew Point Temperature",
+			"dis": "SRRL BMS Dew Point Temperature",
+			"column": "SRRL BMS Dew Point Temperature",
+			"unit": "°F"
+		},
+		{
+			"id": "r:p:stm_campus:r:20ed5df2-fcd031c5 SRRL BMS Diffuse Horizontal Irradiance",
+			"dis": "SRRL BMS Diffuse Horizontal Irradiance",
+			"column": "SRRL BMS Diffuse Horizontal Irradiance",
+			"unit": "W/m²_irr",
+			"minVal": "n:0 W/m²_irr",
+			"defVal": "n:0 W/m²_irr"
+		},
+		{
+			"id": "r:p:stm_campus:r:20ed5df2-687991f6 SRRL BMS Direct Normal Irradiance",
+			"dis": "SRRL BMS Direct Normal Irradiance",
+			"column": "SRRL BMS Direct Normal Irradiance",
+			"unit": "W/m²_irr",
+			"minVal": "n:0 W/m²_irr",
+			"defVal": "n:0 W/m²_irr"
+		},
+		{
+			"id": "r:p:stm_campus:r:20ed5e0a-fe755c80 SRRL BMS Dry Bulb Temperature",
+			"dis": "SRRL BMS Dry Bulb Temperature",
+			"column": "SRRL BMS Dry Bulb Temperature",
+			"unit": "°F"
+		},
+		{
+			"id": "r:p:stm_campus:r:20ed5df2-2c0e126b SRRL BMS Global Horizontal Irradiance",
+			"dis": "SRRL BMS Global Horizontal Irradiance",
+			"column": "SRRL BMS Global Horizontal Irradiance",
+			"unit": "W/m²_irr",
+			"minVal": "n:0 W/m²_irr",
+			"defVal": "n:0 W/m²_irr"
+		},
+		{
+			"id": "r:p:stm_campus:r:20ed5e0a-2e3fa1fa SRRL BMS Rainfall",
+			"dis": "SRRL BMS Rainfall",
+			"column": "SRRL BMS Rainfall",
+			"unit": "in",
+			"minVal": "n:0 in",
+			"defVal": "n:0 in"
+		},
+		{
+			"id": "r:p:stm_campus:r:20ed5e0a-275dbdc2 SRRL BMS Relative Humidity",
+			"dis": "SRRL BMS Relative Humidity",
+			"column": "SRRL BMS Relative Humidity",
+			"unit": "%RH",
+			"minVal": "n:0 %RH",
+			"maxVal": "n:100 %RH"
+		},
+		{
+			"id": "r:p:stm_campus:r:20ed5e0a-f0e16bb6 SRRL BMS Snow Depth",
+			"dis": "SRRL BMS Snow Depth",
+			"column": "SRRL BMS Snow Depth",
+			"unit": "in",
+			"minVal": "n:0 in",
+			"defVal": "n:0 in"
+		},
+		{
+			"id": "r:p:stm_campus:r:24d4aee5-c7e1af4b SRRL BMS Wet Bulb Temperature",
+			"dis": "SRRL BMS Wet Bulb Temperature",
+			"column": "SRRL BMS Wet Bulb Temperature",
+			"unit": "°F"
+		},
+		{
+			"id": "r:p:stm_campus:r:20ed5df2-29fdc219 SRRL BMS Wind Direction at 19'",
+			"dis": "SRRL BMS Wind Direction at 19'",
+			"column": "SRRL BMS Wind Direction at 19'",
+			"unit": "deg",
+			"minVal": "n:0 deg",
+			"maxVal": "n:360 deg"
+		},
+		{
+			"id": "r:p:stm_campus:r:20ed5df2-fd2eecc5 SRRL BMS Wind Speed at 19'",
+			"dis": "SRRL BMS Wind Speed at 19'",
+			"column": "SRRL BMS Wind Speed at 19'",
+			"unit": "mph",
+			"minVal": "n:0 mph",
+			"defVal": "n:0 mph"
+		}
+	],
+	"target": {
+		"id": "r:p:stm_campus:r:258af094-d8f547be FTLB CHW Meter CHW Energy Rate",
+		"dis": "FTLB CHW Meter CHW Energy Rate",
+		"column": "FTLB CHW Meter CHW Energy Rate",
+		"unit": "kBTU/h"
+	},
+	"files": [
+		{
+			"filename": "test_predictor_data.csv",
+			"start": "t:2022-12-31T18:00:00-07:00 Denver",
+			"end": "t:2023-01-01T23:59:43-07:00 Denver",
+			"contentType": "targets"
+		}
+	]
+}

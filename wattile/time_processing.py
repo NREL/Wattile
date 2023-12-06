@@ -61,6 +61,10 @@ def _add_day_based_columns(data, configs):
     """
     day_of_week_configs = configs["data_processing"]["feat_time"]["day_of_week"]
 
+    if "sincos" in day_of_week_configs:
+        data["sin_DOW"] = np.sin(data.index.weekday * (2 * np.pi / 7))
+        data["cos_DOW"] = np.cos(data.index.weekday * (2 * np.pi / 7))
+
     if "binary_reg" in day_of_week_configs:
         for i in range(0, 7):
             data[f"DOW_binary_reg_{i}"] = (data.index.weekday == i).astype(int)

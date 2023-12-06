@@ -1,0 +1,65 @@
+11/29/2023 11:22:13 - INFO     - PID: 81014
+11/29/2023 11:22:13 - INFO     - AlfaModel model created.Writing to /Users/jsmith2/Code/Wattile/tests/fixtures/FTLB_FTLBCHWMeterCHWEnergyRate_r1.
+11/29/2023 11:22:40 - INFO     - PID: 81014
+11/29/2023 11:22:40 - INFO     - AlfaModel model created.Writing to /Users/jsmith2/Code/Wattile/tests/fixtures/FTLB_FTLBCHWMeterCHWEnergyRate_r1.
+11/29/2023 11:37:55 - INFO     - PID: 81014
+11/29/2023 11:37:55 - INFO     - AlfaModel model created.Writing to /Users/jsmith2/Code/Wattile/tests/fixtures/FTLB_FTLBCHWMeterCHWEnergyRate_r1.
+11/29/2023 11:38:10 - INFO     - PID: 81014
+11/29/2023 11:38:10 - INFO     - AlfaModel model created.Writing to /Users/jsmith2/Code/Wattile/tests/fixtures/FTLB_FTLBCHWMeterCHWEnergyRate_r1.
+11/29/2023 11:38:10 - INFO     - Number of features: 198
+11/29/2023 12:29:14 - INFO     - PID: 98644
+11/29/2023 12:29:14 - INFO     - AlfaModel model created.Writing to /Users/jsmith2/Code/IC/Wattile/tests/fixtures/FTLB_FTLBCHWMeterCHWEnergyRate_r1.
+11/29/2023 12:29:14 - INFO     - Number of features: 198
+11/29/2023 12:29:23 - INFO     - PID: 98644
+11/29/2023 12:29:23 - INFO     - AlfaModel model created.Writing to /Users/jsmith2/Code/IC/Wattile/tests/fixtures/FTLB_FTLBCHWMeterCHWEnergyRate_r1.
+11/29/2023 12:29:23 - INFO     - Number of features: 198
+12/04/2023 03:44:03 - INFO     - PID: 98644
+12/04/2023 03:44:03 - INFO     - AlfaModel model created.Writing to /Users/jsmith2/Code/IC/Wattile/tests/fixtures/FTLB_FTLBCHWMeterCHWEnergyRate_r1.
+12/04/2023 03:44:03 - INFO     - Number of features: 237
+12/04/2023 03:44:03 - INFO     - Loaded model from file, given run_train=False
+
+12/04/2023 03:47:30 - INFO     - Number of features: 237
+12/04/2023 03:48:55 - INFO     - Number of features: 237
+12/04/2023 03:58:38 - INFO     - PID: 85509
+12/04/2023 03:58:38 - INFO     - AlfaModel model created.Writing to /Users/jsmith2/Code/IC/Wattile/tests/fixtures/FTLB_FTLBCHWMeterCHWEnergyRate_r1.
+12/04/2023 03:58:38 - INFO     - Number of features: 237
+12/04/2023 03:58:38 - INFO     - Loaded model from file, given run_train=False
+
+12/04/2023 03:59:17 - INFO     - Number of features: 237
+12/04/2023 04:02:17 - INFO     - PID: 85509
+12/04/2023 04:02:17 - INFO     - AlfaModel model created.Writing to /Users/jsmith2/Code/IC/Wattile/tests/fixtures/FTLB_FTLBCHWMeterCHWEnergyRate_r1.
+12/04/2023 04:02:59 - INFO     - PID: 85509
+12/04/2023 04:02:59 - INFO     - AlfaModel model created.Writing to /Users/jsmith2/Code/IC/Wattile/tests/fixtures/FTLB_FTLBCHWMeterCHWEnergyRate_r1.
+12/04/2023 04:02:59 - INFO     - Number of features: 237
+12/04/2023 04:02:59 - INFO     - Loaded model from file, given run_train=False
+
+12/05/2023 09:27:58 - INFO     - PID: 85509
+12/05/2023 09:27:58 - INFO     - AlfaModel model created.Writing to /Users/jsmith2/Code/IC/Wattile/tests/fixtures/FTLB_FTLBCHWMeterCHWEnergyRate_r1.
+12/05/2023 09:27:58 - INFO     - Number of features: 237
+12/05/2023 09:27:58 - INFO     - Loaded model from file, given run_train=False
+
+12/05/2023 09:29:33 - INFO     - PID: 13230
+12/05/2023 09:29:33 - INFO     - AlfaModel model created.Writing to /Users/jsmith2/Code/IC/Wattile/tests/fixtures/FTLB_FTLBCHWMeterCHWEnergyRate_r1.
+12/05/2023 09:29:33 - INFO     - Number of features: 237
+12/05/2023 09:29:33 - INFO     - Loaded model from file, given run_train=False
+
+12/05/2023 09:30:39 - INFO     - Number of features: 237
+12/05/2023 09:31:23 - INFO     - Number of features: 237
+12/05/2023 09:32:09 - INFO     - Number of features: 237
+12/05/2023 09:32:43 - INFO     - Number of features: 237
+12/05/2023 09:33:03 - INFO     - Number of features: 237
+12/05/2023 09:33:31 - INFO     - Number of features: 237
+12/05/2023 09:34:30 - INFO     - Number of features: 237
+12/05/2023 09:35:02 - INFO     - Number of features: 237
+12/05/2023 09:41:23 - INFO     - Number of features: 237
+12/05/2023 09:42:03 - INFO     - Number of features: 237
+12/05/2023 09:43:38 - INFO     - Number of features: 93
+12/05/2023 09:45:40 - INFO     - Number of features: 237
+12/05/2023 09:47:00 - INFO     - Number of features: 237
+12/05/2023 09:49:25 - INFO     - Number of features: 237
+12/05/2023 09:50:52 - INFO     - Number of features: 51
+12/05/2023 09:55:54 - INFO     - PID: 98644
+12/05/2023 09:55:54 - INFO     - AlfaModel model created.Writing to /Users/jsmith2/Code/IC/Wattile/tests/fixtures/FTLB_FTLBCHWMeterCHWEnergyRate_r1.
+12/05/2023 09:55:54 - INFO     - Number of features: 237
+12/05/2023 09:55:54 - INFO     - Loaded model from file, given run_train=False
+
