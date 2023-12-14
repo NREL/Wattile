@@ -488,8 +488,6 @@ def _preprocess_data(configs, data):
         data = resample_data(data, configs)
 
     # Add lag features
-    configs["input_dim"] = data.shape[1] - 1
-    logger.info("Number of features: {}".format(configs["input_dim"]))
     logger.debug("Features: {}".format(data.columns.values))
 
     if configs["learning_algorithm"]["arch_version"] == "alfa":

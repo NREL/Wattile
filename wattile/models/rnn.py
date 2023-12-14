@@ -6,6 +6,7 @@ from torch.autograd import Variable
 class RNNModel(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_layers, output_dim, device):
         super(RNNModel, self).__init__()
+        self.input_dim = input_dim
         # Hidden Dimension
         self.hidden_dim = hidden_dim
 
