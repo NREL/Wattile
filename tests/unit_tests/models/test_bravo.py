@@ -3,7 +3,7 @@ import datetime as dt
 import pandas as pd
 import pytest
 
-from wattile.buildings_processing import _preprocess_data
+from wattile.data_processing import _preprocess_data
 from wattile.models import BravoModel
 
 

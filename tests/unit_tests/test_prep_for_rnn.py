@@ -4,7 +4,7 @@ import pathlib
 import pandas as pd
 import pytest
 
-from wattile.buildings_processing import prep_for_rnn
+from wattile.data_processing import prep_for_rnn
 from wattile.data_reading import read_dataset_from_file
 
 TESTS_PATH = pathlib.Path(__file__).parents[1]
