@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from wattile.buildings_processing import prep_for_rnn
+from wattile.data_processing import prep_for_rnn
 from wattile.data_reading import read_dataset_from_file
 from wattile.models import AlfaModel, BravoModel
 
