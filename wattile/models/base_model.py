@@ -16,7 +16,7 @@ global file_prefix
 logger = logging.getLogger(str(os.getpid()))
 
 
-class AlgoMainRNNBase(ABC):
+class BaseModel(ABC):
     def __init__(self, configs):
         self.configs = configs
 
