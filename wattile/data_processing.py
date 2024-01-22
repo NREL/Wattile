@@ -120,7 +120,11 @@ def input_data_split(data, configs):
     mask_file = os.path.join(file_prefix, "mask.h5")
 
     # assign timestamp and data size depending on arch_version
-    if (arch_version == "alfa") | (arch_version == "bravo"):
+    if (
+        arch_version == "alfa"
+        or arch_version == "bravo"
+        or arch_version == "alfa_ensemble"
+    ):
         timestamp = data.index
         data_size = data.shape[0]
 
@@ -131,7 +135,11 @@ def input_data_split(data, configs):
     msk = _create_split_mask(timestamp, data_size, configs)
 
     # assign train, validation, and test data
-    if (arch_version == "alfa") | (arch_version == "bravo"):
+    if (
+        arch_version == "alfa"
+        or arch_version == "bravo"
+        or arch_version == "alfa_ensemble"
+    ):
         train_df = data[msk == 0]
         val_df = data[msk == 1]
         test_df = data[msk == 2]
@@ -190,8 +198,9 @@ def build_lagging_predictors(predictors, lag_count, lag_interval):
 def build_lagging_targets(target, number_of_lags, bin_interval, target_var):
     lagging_target = pd.DataFrame()
     for i in range(0, number_of_lags):
-        lagging_target["{}_lag_{}".format(target_var, i)] = target.shift(
-            freq=(-i * bin_interval)
+        shift_by = i * bin_interval
+        lagging_target[f"{target_var} {shift_by.isoformat()}"] = target.shift(
+            freq=-shift_by
         )
 
     return lagging_target
@@ -273,7 +282,8 @@ def timelag_predictors_target(data, configs):
         )
 
     else:
-        columns = ["{}_lag_{}".format(target_var, i) for i in range(0, number_of_lags)]
+        lags = [i * bin_interval for i in range(0, number_of_lags)]
+        columns = [f"{target_var} {lag.isoformat()}" for lag in lags]
         lagging_target = pd.DataFrame(
             0, index=lagging_predictors.index, columns=columns
         )  # dummy
@@ -490,12 +500,15 @@ def _preprocess_data(configs, data):
     # Add lag features
     logger.debug("Features: {}".format(data.columns.values))
 
-    if configs["learning_algorithm"]["arch_version"] == "alfa":
+    arch_version = configs["learning_algorithm"]["arch_version"]
+    if arch_version == "alfa":
         data = timelag_predictors(data, configs)
-    elif configs["learning_algorithm"]["arch_version"] == "bravo":
+    elif arch_version == "bravo" or arch_version == "alfa_ensemble":
         data = timelag_predictors_target(data, configs)
-    elif configs["learning_algorithm"]["arch_version"] == "charlie":
+    elif arch_version == "charlie":
         data = roll_predictors_target(data, configs)
+    else:
+        ConfigsError(f"{arch_version} not a valid arch_version")
 
     return data
 

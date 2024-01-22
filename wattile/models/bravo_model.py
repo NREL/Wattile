@@ -379,10 +379,6 @@ class BravoModel(AlgoMainRNNBase):
         ]
         seq_dim = self.configs["data_processing"]["feat_timelag"]["lag_count"] + 1
 
-        initial_num = (
-            pd.Timedelta(window_width_target) // pd.Timedelta(bin_interval)
-        ) + 1
-
         # Write the configurations used for this training process to a json file
         path = os.path.join(self.file_prefix, "configs.json")
         with open(path, "w") as fp:
@@ -640,17 +636,19 @@ class BravoModel(AlgoMainRNNBase):
 
                     # Add parody plot to TensorBoard
                     fig1, ax1 = plt.subplots()
-                    for lag in range(initial_num):
+                    initial_num = (
+                        pd.Timedelta(window_width_target) // pd.Timedelta(bin_interval)
+                    ) + 1
+                    lags = [i * pd.Timedelta(bin_interval) for i in range(initial_num)]
+                    for i, lag in enumerate(lags):
                         ax1.scatter(
                             predictions[
                                 :,
-                                lag
+                                i
                                 * len(self.configs["learning_algorithm"]["quantiles"]),
                             ],
                             val_df[
-                                self.configs["data_input"]["target_var"]
-                                + "_lag_"
-                                + str(lag)
+                                f"{self.configs['data_input']['target_var']} {lag.isoformat()}"
                             ],
                             s=5,
                             alpha=0.3,
