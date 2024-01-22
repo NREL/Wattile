@@ -17,13 +17,13 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, TensorDataset
 
 from wattile.error import ConfigsError
-from wattile.models.AlgoMainRNNBase import AlgoMainRNNBase
+from wattile.models.base_model import BaseModel
 from wattile.models.utils import init_model, load_model, save_model
 
 logger = logging.getLogger(str(os.getpid()))
 
 
-class BravoModel(AlgoMainRNNBase):
+class BravoModel(BaseModel):
     def to_data_loader(self, data, batch_size, shuffle):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

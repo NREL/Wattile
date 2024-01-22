@@ -5,7 +5,7 @@ import pandas as pd
 import xarray as xr
 
 from wattile.models.alfa_model import AlfaModel
-from wattile.models.AlgoMainRNNBase import AlgoMainRNNBase
+from wattile.models.base_model import BaseModel
 
 
 class AlfaEnsembleModelDataBuilder:
@@ -33,7 +33,7 @@ class AlfaEnsembleModelDataBuilder:
         return dataset
 
 
-class AlfaEnsembleModel(AlgoMainRNNBase):
+class AlfaEnsembleModel(BaseModel):
     """A collection of alfa models, one for each target lag in the multi horizon config."""
 
     def __init__(self, configs):
