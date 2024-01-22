@@ -1,16 +1,16 @@
 Wattile
-====
+=
 
 Probabilistic Deep Learning-based Forecasting of Building Energy ConsumptionProbabilistic Deep Learning-based Forecasting of Building Energy Consumption.
-Set Up
-----
+
+# Set Up
 
 Requirements:
 - [Python](https://www.python.org/downloads/) >= 3.7.0
 - [Poetry](https://python-poetry.org/docs/#installation)
 - [Microsoft Visual C++ 14.0](https://visualstudio.microsoft.com/visual-cpp-build-tools/), if you're on Windows
 
-If using conda for python management, use `environment.yml` to make an environment and configure poetry to not create a vitural enviroment.
+If using conda for python management, use `environment.yml` to make an environment and configure poetry to not create a vitural enviroment (else, skip these commands).
 ```
 conda env create -f environment.yml
 poetry config virtualenvs.create false
@@ -28,28 +28,13 @@ poetry run pre-commit install
 
 Quick Start
 ----
+Please see [our example notebooks](./notebooks/examples) to see how to run Wattile out of the box.
 
-Wattile has two main functions:
-- `create_input_dataframe`, which creates a dataframe for model input from the configs file and raw data.
-- `run_model` which runs either training, validation, or prediction on input dataframes according to the configs.
-
-Docs for the configs [here](./docs/Configs.md).
-
-Docs for the format of the raw data is [here](./docs/Data_configs.md).
-
-Docs for the format of the output is [here](./docs/Output.md).
-
+In short, one must prep their data, create the model, and send the data through.
 ```py
-import json 
-
-from wattile.entry_point import create_input_dataframe, run_model
-
-with open("wattile/configs.json", "r") as f:
-    configs = json.load(f)
-
-init_logging(configs["exp_dir"])  
-train_df, val_df = create_input_dataframe(configs)
-run_model(configs, train_df, val_df)
+train_df, val_df = prep_for_rnn(configs, data)
+model = ModelFactory.create_model(configs)
+model.train(train_df, val_df)
 ```
 
 After running, you may use tensordboard on the results.
@@ -57,6 +42,13 @@ After running, you may use tensordboard on the results.
 ```
 tensorboard --logdir=<study directory>
 ```
+Wattile is highly configurable.
+
+Docs for the configs [here](./docs/Configs.md).
+
+Docs for the format of the raw data is [here](./docs/Data_configs.md).
+
+Docs for the format of the output is [here](./docs/Output.md).
 
 Available Models
 ----
@@ -69,6 +61,16 @@ Available Models
 * Vanilla and LSTM variants available
 
 ### [Bravo](./wattile/models/bravo_model.py)
+
+* Probabilistic forecasting 
+* In one training session, predict:
+    * Number of future times: *T*
+    * Number of quantiles per time: *Q*
+* Vanilla and LSTM variants available
+* Supports future time predictions with constant spacing or variable spacing 
+
+
+### [Alfa Ensemble](./wattile/models/alfa_ensemble_model.py)
 
 * Probabilistic forecasting 
 * In one training session, predict:
