@@ -17,13 +17,13 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, TensorDataset
 
 from wattile.error import ConfigsError
-from wattile.models.AlgoMainRNNBase import AlgoMainRNNBase
+from wattile.models.base_model import BaseModel
 from wattile.models.utils import init_model, load_model, save_model
 
 logger = logging.getLogger(str(os.getpid()))
 
 
-class AlfaModel(AlgoMainRNNBase):
+class AlfaModel(BaseModel):
     def to_data_loader(self, data, batch_size, shuffle):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -97,7 +97,6 @@ class AlfaModel(AlgoMainRNNBase):
         val_loader,
         model,
         seq_dim,
-        input_dim,
         transformation_method,
         last_run,
         device,
@@ -109,7 +108,6 @@ class AlfaModel(AlgoMainRNNBase):
         :param val_loader: (DataLoader)
         :param model: (Pytorch model)
         :param seq_dim: ()
-        :param input_dim:
         :param transformation_method:
         :return:
         """
@@ -121,7 +119,7 @@ class AlfaModel(AlgoMainRNNBase):
             preds = []
             targets = []
             for i, (feats, values) in enumerate(val_loader):
-                features = Variable(feats.view(-1, seq_dim, input_dim))
+                features = Variable(feats.view(-1, seq_dim, model.input_dim))
                 outputs = model(features)
                 preds.append(outputs.cpu().numpy())
                 targets.append(values.cpu().numpy())
@@ -308,7 +306,6 @@ class AlfaModel(AlgoMainRNNBase):
         weight_decay = float(
             self.configs["learning_algorithm"]["optimizer_config"]["weight_decay"]
         )
-        input_dim = self.configs["input_dim"]
         transformation_method = self.configs["learning_algorithm"][
             "transformation_method"
         ]
@@ -473,7 +470,7 @@ class AlfaModel(AlgoMainRNNBase):
                 time1 = timeit.default_timer()
 
                 # (batches, timesteps, features)
-                features = Variable(feats.view(-1, seq_dim, input_dim))
+                features = Variable(feats.view(-1, seq_dim, model.input_dim))
                 target = Variable(values)  # size: batch size
 
                 time2 = timeit.default_timer()
@@ -557,7 +554,6 @@ class AlfaModel(AlgoMainRNNBase):
                         val_loader,
                         model,
                         seq_dim,
-                        input_dim,
                         transformation_method,
                         False,
                         device,
@@ -631,7 +627,6 @@ class AlfaModel(AlgoMainRNNBase):
             val_loader,
             model,
             seq_dim,
-            input_dim,
             transformation_method,
             True,
             device,
@@ -738,7 +733,6 @@ class AlfaModel(AlgoMainRNNBase):
             val_loader,
             model,
             seq_dim,
-            self.configs["input_dim"],
             transformation_method,
             True,
             device,
@@ -807,7 +801,7 @@ class AlfaModel(AlgoMainRNNBase):
         with torch.no_grad():
             preds = []
             for (feats, v) in val_loader:
-                features = Variable(feats.view(-1, seq_dim, self.configs["input_dim"]))
+                features = Variable(feats.view(-1, seq_dim, model.input_dim))
                 outputs = model(features)
                 outputs = outputs.cpu().numpy()
                 outputs = outputs.reshape(*outputs.shape, 1)

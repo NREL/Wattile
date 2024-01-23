@@ -1,14 +1,16 @@
-./data
-.ipynb_checkpoints/
+# python/IDE articfacts
 .idea/
-__pycache__/
-Deep_Learning_Prediction_Intervals/
-algorithm_implement.py
-exp_dir/
-data/
-!./tests/data/Synthetic Site
-nsrd_auth.json
-Training_history.csv
+.ipynb_checkpoints/
 .DS_Store
-.coverage
-dist
+__pycache__/
+coverage/
+dist/
+
+# notebook articfacts
+notebooks/examples/exp_dir/
+notebooks/examples/Synthetic Site/
+notebooks/examples/Training_history.csv
+tests/data/Synthetic Site/Synthetic Site Electricity Main Total Power_external_test.h5
+tests/fixtures/alfa_exp_dir/events.out.tfevents.*
+tests/fixtures/alfa_exp_dir/output.out
+Training_history.csv

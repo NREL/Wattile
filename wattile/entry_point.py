@@ -5,7 +5,7 @@ import pathlib
 
 import pandas as pd
 
-import wattile.buildings_processing as bp
+import wattile.data_processing as bp
 from wattile.data_reading import read_dataset_from_file
 from wattile.models import ModelFactory
 

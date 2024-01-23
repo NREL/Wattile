@@ -18,6 +18,38 @@ def save_model(model, epoch_num, n_iter, filepath):
     )
 
 
+def get_input_dim(configs):
+    input_dim = len(configs["data_input"]["predictor_columns"])
+    HOD_configs = configs["data_processing"]["feat_time"]["hour_of_day"]
+    day_of_week_configs = configs["data_processing"]["feat_time"]["day_of_week"]
+
+    if "sincos" in HOD_configs:
+        input_dim += 2
+
+    if "binary_reg" in HOD_configs:
+        input_dim += 24
+
+    if "binary_fuzzy" in HOD_configs:
+        input_dim += 24
+
+    if "binary_reg" in day_of_week_configs:
+        input_dim += 7
+
+    if "binary_fuzzy" in day_of_week_configs:
+        input_dim += 7
+
+    if "sincos" in configs["data_processing"]["feat_time"]["month_of_year"]:
+        input_dim += 2
+
+    if configs["data_processing"]["feat_time"]["holidays"]:
+        input_dim += 2
+
+    if configs["data_processing"]["feat_stats"]["active"]:
+        input_dim *= 3
+
+    return input_dim
+
+
 def _get_output_dim(configs):
 
     window_width_target = configs["data_processing"]["input_output_window"][
@@ -51,7 +83,7 @@ def init_model(configs):
 
     hidden_dim = int(configs["learning_algorithm"]["hidden_size"])
     output_dim = _get_output_dim(configs)
-    input_dim = configs["input_dim"]
+    input_dim = get_input_dim(configs)
     num_layers = configs["learning_algorithm"]["num_layers"]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

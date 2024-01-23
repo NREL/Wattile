@@ -1,13 +1,16 @@
 [tool.poetry]
 name = "wattile"
-version = "0.1.0"
-description = ""
+version = "0.2.0"
+description = """\
+Probabilistic Deep Learning-based Forecasting of Building Energy ConsumptionProbabilistic \
+Deep Learning-based Forecasting of Building Energy Consumption.\
+"""
 authors = ["Your Name <you@example.com>"]
+repository = "https://github.com/NREL/Wattile"
 
 [tool.poetry.dependencies]
 python = "^3.8.0"
 pandas = "^1.4.0"
-requests = "^2.21.0"
 scipy = "^1.9"
 tables = "^3.7.0"
 seaborn = "^0.11.2"
@@ -16,7 +19,7 @@ psutil = "^5.8.0"
 matplotlib = "^3.0"
 torch = "^1.9.0"
 tensorboard = "^2.8.0"
-Pillow = "^9.0.0"
+Pillow = "^10.0.1"
 numpy = "^1.22"
 plotly = "^5.8.2"
 kaleido = "0.2.1"

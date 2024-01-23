@@ -17,13 +17,13 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, TensorDataset
 
 from wattile.error import ConfigsError
-from wattile.models.AlgoMainRNNBase import AlgoMainRNNBase
+from wattile.models.base_model import BaseModel
 from wattile.models.utils import init_model, load_model, save_model
 
 logger = logging.getLogger(str(os.getpid()))
 
 
-class BravoModel(AlgoMainRNNBase):
+class BravoModel(BaseModel):
     def to_data_loader(self, data, batch_size, shuffle):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -121,7 +121,6 @@ class BravoModel(AlgoMainRNNBase):
         val_loader,
         model,
         seq_dim,
-        input_dim,
         transformation_method,
         last_run,
         device,
@@ -133,7 +132,6 @@ class BravoModel(AlgoMainRNNBase):
         :param val_loader: (DataLoader)
         :param model: (Pytorch model)
         :param seq_dim: ()
-        :param input_dim:
         :param transformation_method:
         :return:
         """
@@ -150,7 +148,7 @@ class BravoModel(AlgoMainRNNBase):
             preds = []
             targets = []
             for i, (feats, values) in enumerate(val_loader):
-                features = Variable(feats.view(-1, seq_dim, input_dim))
+                features = Variable(feats.view(-1, seq_dim, model.input_dim))
                 outputs = model(features)
                 # preds.append(outputs.data.numpy())
                 # targets.append(values.data.numpy())
@@ -372,7 +370,6 @@ class BravoModel(AlgoMainRNNBase):
         weight_decay = float(
             self.configs["learning_algorithm"]["optimizer_config"]["weight_decay"]
         )
-        input_dim = self.configs["input_dim"]
         window_width_target = self.configs["data_processing"]["input_output_window"][
             "window_width_target"
         ]
@@ -381,10 +378,6 @@ class BravoModel(AlgoMainRNNBase):
             "transformation_method"
         ]
         seq_dim = self.configs["data_processing"]["feat_timelag"]["lag_count"] + 1
-
-        initial_num = (
-            pd.Timedelta(window_width_target) // pd.Timedelta(bin_interval)
-        ) + 1
 
         # Write the configurations used for this training process to a json file
         path = os.path.join(self.file_prefix, "configs.json")
@@ -545,7 +538,7 @@ class BravoModel(AlgoMainRNNBase):
                 time1 = timeit.default_timer()
 
                 # (batches, timesteps, features)
-                features = Variable(feats.view(-1, seq_dim, input_dim))
+                features = Variable(feats.view(-1, seq_dim, model.input_dim))
                 target = Variable(values)  # size: batch size
 
                 time2 = timeit.default_timer()
@@ -623,7 +616,6 @@ class BravoModel(AlgoMainRNNBase):
                         val_loader,
                         model,
                         seq_dim,
-                        input_dim,
                         transformation_method,
                         False,
                         device,
@@ -644,17 +636,19 @@ class BravoModel(AlgoMainRNNBase):
 
                     # Add parody plot to TensorBoard
                     fig1, ax1 = plt.subplots()
-                    for lag in range(initial_num):
+                    initial_num = (
+                        pd.Timedelta(window_width_target) // pd.Timedelta(bin_interval)
+                    ) + 1
+                    lags = [i * pd.Timedelta(bin_interval) for i in range(initial_num)]
+                    for i, lag in enumerate(lags):
                         ax1.scatter(
                             predictions[
                                 :,
-                                lag
+                                i
                                 * len(self.configs["learning_algorithm"]["quantiles"]),
                             ],
                             val_df[
-                                self.configs["data_input"]["target_var"]
-                                + "_lag_"
-                                + str(lag)
+                                f"{self.configs['data_input']['target_var']} {lag.isoformat()}"
                             ],
                             s=5,
                             alpha=0.3,
@@ -722,7 +716,6 @@ class BravoModel(AlgoMainRNNBase):
             val_loader,
             model,
             seq_dim,
-            input_dim,
             transformation_method,
             True,
             device,
@@ -824,7 +817,6 @@ class BravoModel(AlgoMainRNNBase):
             val_loader,
             model,
             seq_dim,
-            self.configs["input_dim"],
             transformation_method,
             False,
             device,
@@ -893,7 +885,7 @@ class BravoModel(AlgoMainRNNBase):
         with torch.no_grad():
             preds = []
             for (feats, v) in val_loader:
-                features = Variable(feats.view(-1, seq_dim, self.configs["input_dim"]))
+                features = Variable(feats.view(-1, seq_dim, model.input_dim))
                 outputs = model(features)
                 preds.append(outputs.cpu().numpy())
 

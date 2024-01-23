@@ -1,0 +1,96 @@
+{
+ "data_input": {
+  "data_dir": "tests/data/Synthetic Site",
+  "data_config": "Synthetic Site Config.json",
+  "start_time": "2018-01-01T00:00:00-07:00",
+  "end_time": "2022-01-01T00:00:00-07:00",
+  "predictor_columns": [
+   "Synthetic Weather Station Dew Point Temperature",
+   "Synthetic Weather Station Diffuse Horizontal Irradiance",
+   "Synthetic Weather Station Direct Normal Irradiance",
+   "Synthetic Weather Station Dry Bulb Temperature",
+   "Synthetic Weather Station Global Horizontal Irradiance",
+   "Synthetic Weather Station Relative Humidity",
+   "Synthetic Weather Station Wind Speed"
+  ],
+  "target_var": "Synthetic Site Electricity Main Total Power P0DT1H0M0S"
+ },
+ "data_output": {
+  "exp_dir": "tests/fixtures/alfa_ensemble_exp_dir/P0DT1H0M0S",
+  "plot_comparison": true,
+  "plot_comparison_portion_start": 0.0,
+  "plot_comparison_portion_end": 1.0
+ },
+ "data_processing": {
+  "feat_time": {
+   "month_of_year": [
+    "sincos"
+   ],
+   "day_of_week": [
+    "binary_reg"
+   ],
+   "hour_of_day": [
+    "sincos"
+   ],
+   "holidays": false
+  },
+  "resample": {
+   "bin_interval": "15min",
+   "bin_closed": "right",
+   "bin_label": "right"
+  },
+  "feat_stats": {
+   "active": true,
+   "window_width": "15min"
+  },
+  "feat_timelag": {
+   "lag_interval": "15min",
+   "lag_count": 12
+  },
+  "input_output_window": {
+   "window_width_source": "180min",
+   "window_width_futurecast": "0 days 01:00:00",
+   "window_width_target": "60min"
+  },
+  "random_seed": 1,
+  "sequential_splicer": {
+   "active": true,
+   "window_width": "3h"
+  },
+  "data_split": "80:10:10",
+  "train_size_factor": 4
+ },
+ "learning_algorithm": {
+  "arch_type": "RNN",
+  "arch_version": "alfa",
+  "arch_type_variant": "lstm",
+  "use_case": "train",
+  "num_epochs": 1,
+  "hidden_size": 5,
+  "num_layers": 1,
+  "quantiles": [
+   0.025,
+   0.25,
+   0.5,
+   0.75,
+   0.975
+  ],
+  "transformation_method": "minmaxscale",
+  "train_batch_size": 5,
+  "val_batch_size": 1,
+  "run_resume": false,
+  "optimizer_config": {
+   "weight_decay": 0.001,
+   "base": 0.001,
+   "schedule": false,
+   "type": "performance",
+   "factor": 0.1,
+   "min": 1e-05,
+   "patience": 30,
+   "step_size": 75
+  },
+  "smoothing_alpha": 0.001,
+  "eval_frequency": 2,
+  "test_method": "external"
+ }
+}
