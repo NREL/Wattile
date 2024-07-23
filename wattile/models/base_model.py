@@ -12,6 +12,7 @@ from wattile import version as wattile_version
 from wattile.error import ConfigsError
 from wattile.util import factors
 from wattile.visualization import timeseries_comparison
+from wattile.model_registry import ModelRegistry
 
 global file_prefix
 logger = logging.getLogger(str(os.getpid()))
@@ -25,6 +26,7 @@ class BaseModel(ABC):
         self.file_prefix = Path(configs["data_output"]["exp_dir"])
         self.file_prefix.mkdir(parents=True, exist_ok=True)
         self.writer = SummaryWriter(self.file_prefix)
+        self.registry = ModelRegistry(configs)
 
         # Setting random seed with constant
         torch.manual_seed(self.configs["data_processing"]["random_seed"])
@@ -168,8 +170,12 @@ class BaseModel(ABC):
         train_loader = self.to_data_loader(train_data, train_batch_size, shuffle=True)
         val_loader = self.to_data_loader(val_data, val_batch_size, shuffle=True)
 
+        self.registry.start_run()
+        self.registry.log_input(train_data, "train")
+        self.registry.log_input(val_data, "val")
         self.run_training(train_loader, val_loader, val_df)
         self.write_metadata()
+        self.registry.end_run()
 
         # Create visualization
         if self.configs["data_output"]["plot_comparison"]:

@@ -540,6 +540,7 @@ class AlfaModel(BaseModel):
                 if n_iter % self.configs["learning_algorithm"]["eval_frequency"] == 0:
                     filepath = os.path.join(self.file_prefix, "torch_model")
                     save_model(model, epoch, n_iter, filepath)
+                    # self.registry.log_artifact(model, "model")
 
                 # Do a val batch every ___ iterations
                 if n_iter % self.configs["learning_algorithm"]["eval_frequency"] == 0:
@@ -623,6 +624,7 @@ class AlfaModel(BaseModel):
         # Once model training is done, save the current model state
         filepath = os.path.join(self.file_prefix, "torch_model")
         save_model(model, epoch, n_iter, filepath)
+        self.registry.log_model(model, "model")
 
         # Once model is done training, process a final val set
         predictions, targets, errors, Q_vals, hist_data = self.test_processing(
@@ -702,6 +704,8 @@ class AlfaModel(BaseModel):
         errors["train_time"] = train_time
         for k in errors:
             errors[k] = str(errors[k])
+            self.registry.log_metric(k, errors[k])
+
         path = os.path.join(self.file_prefix, "error_stats_train.json")
         with open(path, "w") as fp:
             json.dump(errors, fp, indent=1)
