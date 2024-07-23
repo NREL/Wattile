@@ -6,6 +6,7 @@ import pytest
 from wattile.data_processing import prep_for_rnn
 from wattile.data_reading import read_dataset_from_file
 from wattile.models import ModelFactory
+from wattile.models.charlie_model import CharlieModel
 
 TESTS_PATH = pathlib.Path(__file__).parents[1]
 TESTS_FIXTURES_PATH = TESTS_PATH / "fixtures"
@@ -82,8 +83,7 @@ def test_model_trains(config_for_tests, tmpdir, config_patch):
 
     # check result file were created
     assert (exp_dir / "torch_model").exists()
-    if config_for_tests["learning_algorithm"]["arch_version"] != "charlie":
-        assert (exp_dir / "train_stats.json").exists()
+    assert (exp_dir / "train_stats.json").exists()
 
 
 def test_ensemble_model_trains(config_for_tests, tmpdir):
@@ -106,3 +106,20 @@ def test_ensemble_model_trains(config_for_tests, tmpdir):
     for target_lag in model.alfa_models_by_target_lag.keys():
         assert (exp_dir / target_lag.isoformat() / "torch_model").exists()
         assert (exp_dir / target_lag.isoformat() / "train_stats.json").exists()
+
+
+def test_charlie_model_runs(config_for_tests, tmpdir):
+    config_for_tests["learning_algorithm"]["arch_version"] = "charlie"
+    exp_dir = pathlib.Path(tmpdir) / "train_results"
+    exp_dir.mkdir()
+    config_for_tests["data_output"]["exp_dir"] = str(exp_dir)
+
+    data = read_dataset_from_file(config_for_tests)
+    train_df, val_df = prep_for_rnn(config_for_tests, data)
+
+    charlie = CharlieModel(configs=config_for_tests)
+    charlie.main(train_df, val_df)
+
+    # check result file were created
+    assert (exp_dir / "torch_model").exists()
+    assert (exp_dir / "configs.json").exists()
