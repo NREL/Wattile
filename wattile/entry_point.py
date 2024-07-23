@@ -4,10 +4,10 @@ import os
 import pathlib
 
 import pandas as pd
-
 import wattile.data_processing as bp
 from wattile.data_reading import read_dataset_from_file
 from wattile.models import ModelFactory
+from wattile import version as wattile_version
 
 PACKAGE_PATH = pathlib.Path(__file__).parent
 CONFIGS_PATH = PACKAGE_PATH / "configs" / "configs.json"
@@ -35,6 +35,7 @@ def init_logging(local_results_dir):
     logger.addHandler(hdlr)
     logger.setLevel(logging.INFO)
     logger.info("PID: {}".format(PID))
+    logger.info("Trained with Wattile version: {}".format(wattile_version))
 
 
 def create_input_dataframe(configs):
