@@ -160,26 +160,29 @@ class BaseModel(ABC):
             raise ValueError
 
     def train(self, train_df: pd.DataFrame, val_df: pd.DataFrame) -> None:
+        self.registry.start_run()
+
         # Normalization transformation
         self.create_normalization(train_df)
         train_data = self.apply_normalization(train_df)
         val_data = self.apply_normalization(val_df.copy())
+        self.registry.log_input(train_data, "train")
+        self.registry.log_input(val_data, "val")
 
         # Put data into DataLoaders
         train_batch_size, val_batch_size = self.size_the_batches(train_data, val_data)
         train_loader = self.to_data_loader(train_data, train_batch_size, shuffle=True)
         val_loader = self.to_data_loader(val_data, val_batch_size, shuffle=True)
 
-        self.registry.start_run()
-        self.registry.log_input(train_data, "train")
-        self.registry.log_input(val_data, "val")
         self.run_training(train_loader, val_loader, val_df)
         self.write_metadata()
-        self.registry.end_run()
+        self.registry.log_artifacts(self.file_prefix, "wattile_data")
 
         # Create visualization
         if self.configs["data_output"]["plot_comparison"]:
             timeseries_comparison(self.configs, 0)
+
+        self.registry.end_run()
 
     def validate(self, val_df: pd.DataFrame) -> None:
         val_data = self.apply_normalization(val_df.copy())

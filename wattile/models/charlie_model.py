@@ -542,7 +542,7 @@ class CharlieModel:
                         y_pred, h, encoder_outputs, window_target_size_count
                     )
 
-                # compute lose
+                # compute loss
                 loss_usage = loss_fn(
                     pred,
                     y,
@@ -644,6 +644,7 @@ class CharlieModel:
         # Once model training is done, save the current model state
         filepath = os.path.join(self.file_prefix, "torch_model")
         save_model(model, epoch, n_iter, filepath)
+        self.registry.log_model(model, "model")
 
         # Write the configurations used for this training process to a json file
         path = self.file_prefix / "configs.json"

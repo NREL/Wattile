@@ -627,6 +627,8 @@ class BravoModel(BaseModel):
                     )
 
                     temp_holder = errors
+                    for k in errors:
+                        self.registry.log_metric(k, errors[k], n_iter)
                     temp_holder.update({"n_iter": n_iter, "epoch": epoch})
                     mid_train_error_stats = pd.concat(
                         [mid_train_error_stats, pd.DataFrame([temp_holder])],
@@ -716,6 +718,7 @@ class BravoModel(BaseModel):
         # Once model training is done, save the current model state
         filepath = os.path.join(self.file_prefix, "torch_model")
         save_model(model, epoch, n_iter, filepath)
+        self.registry.log_model(model, "model")
 
         # Once model is done training, process a final val set
         predictions, errors, measured, Q_vals = self.test_processing(
@@ -793,7 +796,9 @@ class BravoModel(BaseModel):
         # Write error statistics to a local json file
         errors["train_time"] = train_time
         for k in errors:
+            self.registry.log_metric(k, errors[k], n_iter)
             errors[k] = str(errors[k])
+
         path = os.path.join(self.file_prefix, "error_stats_train.json")
         with open(path, "w") as fp:
             json.dump(errors, fp, indent=1)

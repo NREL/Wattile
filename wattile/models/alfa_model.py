@@ -540,7 +540,6 @@ class AlfaModel(BaseModel):
                 if n_iter % self.configs["learning_algorithm"]["eval_frequency"] == 0:
                     filepath = os.path.join(self.file_prefix, "torch_model")
                     save_model(model, epoch, n_iter, filepath)
-                    # self.registry.log_artifact(model, "model")
 
                 # Do a val batch every ___ iterations
                 if n_iter % self.configs["learning_algorithm"]["eval_frequency"] == 0:
@@ -561,6 +560,8 @@ class AlfaModel(BaseModel):
                     )
                     predictions = predictions.iloc[:, int(predictions.shape[1] / 2)]
                     temp_holder = errors
+                    for k in errors:
+                        self.registry.log_metric(k, errors[k], n_iter)
                     temp_holder.update({"n_iter": n_iter, "epoch": epoch})
                     mid_train_error_stats = pd.concat(
                         [mid_train_error_stats, pd.DataFrame([temp_holder])],
@@ -643,6 +644,7 @@ class AlfaModel(BaseModel):
             mode="w",
         )
 
+
         # Save the final predictions and measured target to a file
         # predictions.to_csv(self.file_prefix + '/predictions.csv', index=False)
         pd.DataFrame(predictions).to_hdf(
@@ -652,8 +654,10 @@ class AlfaModel(BaseModel):
             os.path.join(self.file_prefix, "measured.h5"), key="df", mode="w"
         )
 
+
         # Save the QQ information to a file
         Q_vals.to_hdf(os.path.join(self.file_prefix, "QQ_data.h5"), key="df", mode="w")
+
 
         # Save the mid-train error statistics to a file
         mid_train_error_stats.to_hdf(
@@ -703,8 +707,8 @@ class AlfaModel(BaseModel):
         # Write error statistics to a local json file
         errors["train_time"] = train_time
         for k in errors:
+            self.registry.log_metric(k, errors[k], n_iter)
             errors[k] = str(errors[k])
-            self.registry.log_metric(k, errors[k])
 
         path = os.path.join(self.file_prefix, "error_stats_train.json")
         with open(path, "w") as fp:
