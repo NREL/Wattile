@@ -4,10 +4,11 @@ import os
 import pathlib
 
 import pandas as pd
+
 import wattile.data_processing as bp
+from wattile import version as wattile_version
 from wattile.data_reading import read_dataset_from_file
 from wattile.models import ModelFactory
-from wattile import version as wattile_version
 
 PACKAGE_PATH = pathlib.Path(__file__).parent
 CONFIGS_PATH = PACKAGE_PATH / "configs" / "configs.json"
