@@ -1,38 +1,94 @@
+from functools import wraps
+
 import mlflow
+import requests
 
 
-class ModelRegistry:
+def check_registry_availability(func_name, func):
+    """
+    Decorator to check if the model registry is available before running a
+    method
+    :param func_name: (str) Name of the function
+    :param func: (function) Function to wrap
+    :return: (function) Wrapped function
+    """
+
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        if not self.log:
+            return
+
+        try:
+            requests.get(self.registry_endpoint)
+            # resetting available flag to True could result in 'dead' runs in
+            # the registry
+            # self.available = True
+        except requests.exceptions.ConnectionError:
+            self.available = False
+
+        if not self.available:
+            print(f"Model registry not available. Skipping {func_name}.")
+            return
+        return func(self, *args, **kwargs)
+
+    return wrapper
+
+
+class ModelRegistryMeta(type):
+    """
+    Metaclass to wrap all methods in the ModelRegistry class with a decorator
+    that checks if the model registry is available before running the method
+    :param type: (type) Type of the class
+    """
+
+    def __new__(cls, name, bases, dct):
+        for attr in dct:
+            if callable(dct[attr]):
+                if not attr.startswith("_"):
+                    dct[attr] = check_registry_availability(attr, dct[attr])
+
+        return super().__new__(cls, name, bases, dct)
+
+
+class ModelRegistry(metaclass=ModelRegistryMeta):
     """
     Model registry class to log runs, metrics, parameters, and artifacts to the
     model registry
+    :param metaclass: (type) Metaclass to wrap all methods in the class
     """
 
     available = False
 
     def __init__(self, configs):
-        self.registry_endpoint = self.get_val_from_config(
+        """
+        Initialize the model registry
+        :param configs: (dict) Dictionary of configurations
+        """
+        self.log = self._get_val_from_config(configs, ["model_registry", "log"])
+        self.registry_endpoint = self._get_val_from_config(
             configs, ["model_registry", "endpoint"]
         )
-        self.experiment_name = self.get_val_from_config(
+        self.experiment_name = self._get_val_from_config(
             configs, ["model_registry", "experiment_name"]
         )
-        self.run_name = self.get_val_from_config(
+        self.run_name = self._get_val_from_config(
             configs, ["model_registry", "run_name"]
         )
-        self.run_description = self.get_val_from_config(
+        self.run_description = self._get_val_from_config(
             configs, ["model_registry", "run_description"]
         )
-        self.run_tags = self.get_val_from_config(
+        self.run_tags = self._get_val_from_config(
             configs, ["model_registry", "run_tags"]
         )
 
         try:
             mlflow.set_tracking_uri(self.registry_endpoint)
+            requests.get(self.registry_endpoint)
             self.available = True
-        except Exception as e:
+        except requests.exceptions.ConnectionError as e:
             print(f"Error setting tracking uri: {e}")
 
-    def get_val_from_config(self, configs, keys, default=None):
+    def _get_val_from_config(self, configs, keys, default=None):
         """
         Get a value from a nested dictionary using a list of keys, ensures
         that the key exists before trying to access it to avoid KeyError
@@ -56,10 +112,6 @@ class ModelRegistry:
         :param run_name: (str) Name of the run
         :return: None
         """
-        if not self.available:
-            print("Model registry not available. Skipping run logging.")
-            return
-
         try:
             mlflow.set_experiment(self.experiment_name)
             mlflow.start_run(
@@ -75,10 +127,6 @@ class ModelRegistry:
         Ends the run in the model registry
         :return: None
         """
-        if not self.available:
-            print("Model registry not available. Skipping run logging.")
-            return
-
         try:
             mlflow.end_run()
         except Exception as e:
@@ -90,12 +138,9 @@ class ModelRegistry:
         Note: Max input size is 65k, will fail to log beyond that, we'll need to
         handle this in the future
         :param input_data: (dict) Dictionary of input data
+        :param context: (dict) Dictionary of context
         :return: None
         """
-        if not self.available:
-            print("Model registry not available. Skipping input logging.")
-            return
-
         try:
             mlflow.log_input(mlflow.data.from_pandas(input_data), context)
         except Exception as e:
@@ -108,10 +153,6 @@ class ModelRegistry:
         :param metric_value: (float) Value of the metric
         :return: None
         """
-        if not self.available:
-            print("Model registry not available. Skipping metric logging.")
-            return
-
         try:
             mlflow.log_metric(metric_name, metric_value, step)
         except Exception as e:
@@ -124,10 +165,6 @@ class ModelRegistry:
         :param param_value: (str) Value of the parameter
         :return: None
         """
-        if not self.available:
-            print("Model registry not available. Skipping parameter logging.")
-            return
-
         try:
             mlflow.log_param(param_name, param_value)
         except Exception as e:
@@ -136,13 +173,10 @@ class ModelRegistry:
     def log_artifact(self, local_path, artifact_path):
         """
         Log an artifact to the model registry
+        :param local_path: (str) Path to the file to write
         :param artifact_path: (str) Path to the artifact
         :return: None
         """
-        if not self.available:
-            print("Model registry not available. Skipping artifact logging.")
-            return
-
         try:
             mlflow.log_artifact(local_path, artifact_path)
         except Exception as e:
@@ -151,13 +185,10 @@ class ModelRegistry:
     def log_artifacts(self, local_dir, artifact_dir):
         """
         Log all artifacts in a directory to the model registry
+        :param local_dir: (str) Path to the directory of artifacts to write
         :param artifact_dir: (str) Path to the directory of artifacts
         :return: None
         """
-        if not self.available:
-            print("Model registry not available. Skipping artifact logging.")
-            return
-
         try:
             mlflow.log_artifacts(local_dir, artifact_dir)
         except Exception as e:
@@ -170,10 +201,6 @@ class ModelRegistry:
         :param model_name: (str) Name of the model
         :return: None
         """
-        if not self.available:
-            print("Model registry not available. Skipping model logging.")
-            return
-
         try:
             mlflow.pytorch.log_model(model, model_name)
         except Exception as e:
