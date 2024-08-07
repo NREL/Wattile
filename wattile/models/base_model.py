@@ -10,9 +10,9 @@ from torch.utils.tensorboard import SummaryWriter
 
 from wattile import version as wattile_version
 from wattile.error import ConfigsError
+from wattile.model_registry import ModelRegistry
 from wattile.util import factors
 from wattile.visualization import timeseries_comparison
-from wattile.model_registry import ModelRegistry
 
 global file_prefix
 logger = logging.getLogger(str(os.getpid()))
