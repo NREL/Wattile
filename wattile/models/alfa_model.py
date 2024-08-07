@@ -644,7 +644,6 @@ class AlfaModel(BaseModel):
             mode="w",
         )
 
-
         # Save the final predictions and measured target to a file
         # predictions.to_csv(self.file_prefix + '/predictions.csv', index=False)
         pd.DataFrame(predictions).to_hdf(
@@ -654,10 +653,8 @@ class AlfaModel(BaseModel):
             os.path.join(self.file_prefix, "measured.h5"), key="df", mode="w"
         )
 
-
         # Save the QQ information to a file
         Q_vals.to_hdf(os.path.join(self.file_prefix, "QQ_data.h5"), key="df", mode="w")
-
 
         # Save the mid-train error statistics to a file
         mid_train_error_stats.to_hdf(
