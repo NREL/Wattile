@@ -8,6 +8,7 @@ import pandas as pd
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
+from wattile import version as wattile_version
 from wattile.error import ConfigsError
 from wattile.util import factors
 from wattile.visualization import timeseries_comparison
@@ -126,6 +127,13 @@ class BaseModel(ABC):
 
         return data
 
+    def write_metadata(self):
+        """Write the metadata to a json file"""
+        path = os.path.join(self.file_prefix, "metadata.json")
+        metadata = {"wattile_version": wattile_version}
+        with open(path, "w") as fp:
+            json.dump(metadata, fp, indent=1)
+
     def main(self, train_df, val_df):
         """
         Main executable for prepping data for input to RNN model.
@@ -161,6 +169,7 @@ class BaseModel(ABC):
         val_loader = self.to_data_loader(val_data, val_batch_size, shuffle=True)
 
         self.run_training(train_loader, val_loader, val_df)
+        self.write_metadata()
 
         # Create visualization
         if self.configs["data_output"]["plot_comparison"]:
