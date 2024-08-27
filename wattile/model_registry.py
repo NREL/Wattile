@@ -66,20 +66,18 @@ class ModelRegistry(metaclass=ModelRegistryMeta):
         """
         self.log = self._get_val_from_config(configs, ["model_registry", "log"])
         self.registry_endpoint = self._get_val_from_config(
-            configs, ["model_registry", "endpoint"]
+            configs, ["model_registry", "endpoint"], "http://localhost:5000"
         )
         self.experiment_name = self._get_val_from_config(
-            configs, ["model_registry", "experiment_name"]
+            configs, ["model_registry", "experiment_name"], "Building ___x___"
         )
         self.run_name = self._get_val_from_config(
-            configs, ["model_registry", "run_name"]
+            configs, ["model_registry", "run_name"], "Run ___x___"
         )
         self.run_description = self._get_val_from_config(
-            configs, ["model_registry", "run_description"]
+            configs, ["model_registry", "run_description"], ""
         )
-        self.run_tags = self._get_val_from_config(
-            configs, ["model_registry", "run_tags"]
-        )
+        self.run_tags = self._get_tags(configs)
 
         try:
             mlflow.set_tracking_uri(self.registry_endpoint)
@@ -105,6 +103,32 @@ class ModelRegistry(metaclass=ModelRegistryMeta):
             else:
                 return default
         return retVal
+
+    def _get_tags(self, configs):
+        """
+        Get tags from the configuration, adding the architecture type, version,
+        and variant for searchability
+        :param configs: (dict) Dictionary of configurations
+        :return: (dict) Dictionary of tags
+        """
+        arch_type = self._get_val_from_config(
+            configs, ["learning_algorithm", "arch_type"]
+        )
+        arch_version = self._get_val_from_config(
+            configs, ["learning_algorithm", "arch_version"]
+        )
+        arch_type_variant = self._get_val_from_config(
+            configs, ["learning_algorithm", "arch_type_variant"]
+        )
+        run_tags = self._get_val_from_config(
+            configs, ["model_registry", "run_tags"], {}
+        )
+        return {
+            **run_tags,
+            "arch_type": arch_type,
+            "arch_version": arch_version,
+            "arch_type_variant": arch_type_variant,
+        }
 
     def start_run(self):
         """

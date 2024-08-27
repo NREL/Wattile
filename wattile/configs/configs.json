@@ -95,10 +95,10 @@
     "log": true,
     "endpoint": "http://localhost:5000",
     "experiment_name": "Wattile Synthetic Site",
-    "run_name": "Synthetic Model Run",
-    "run_description": "Wattile Model Run Description",
+    "run_name": "Model Run Name",
+    "run_description": "Model Run Description",
     "run_tags": {
-      "name": "Synthetic Site Model Run"
+      "building": "Wattile Synthetic Site"
     }
  }
 }
