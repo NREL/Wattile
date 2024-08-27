@@ -33,7 +33,7 @@ pytest-cov = "^5.0.0"
 pre-commit = "^3.0.4"
 black = "^24.8"
 isort = "^5.13"
-pyflakes = "^3.2"
+pyflakes = "^2.4"
 pylama = "8.2.*"
 
 [build-system]
