@@ -95,7 +95,7 @@ def load_model(configs):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     filepath = pathlib.Path(configs["data_output"]["exp_dir"]) / "torch_model"
-    checkpoint = torch.load(filepath, map_location=device)
+    checkpoint = torch.load(filepath, map_location=device, weights_only=False)
 
     model.load_state_dict(checkpoint["model_state_dict"])
     resume_num_epoch = checkpoint["epoch_num"]
