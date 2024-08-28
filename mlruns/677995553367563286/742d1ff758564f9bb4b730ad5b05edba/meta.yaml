@@ -1,0 +1,15 @@
+artifact_uri: mlflow-artifacts:/677995553367563286/742d1ff758564f9bb4b730ad5b05edba/artifacts
+end_time: 1721758383940
+entry_point_name: ''
+experiment_id: '677995553367563286'
+lifecycle_stage: active
+run_id: 742d1ff758564f9bb4b730ad5b05edba
+run_name: casual-skink-573
+run_uuid: 742d1ff758564f9bb4b730ad5b05edba
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1721758338638
+status: 3
+tags: []
+user_id: jsmith2

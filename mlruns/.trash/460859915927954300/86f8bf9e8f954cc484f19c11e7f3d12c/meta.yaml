@@ -1,0 +1,16 @@
+artifact_uri: mlflow-artifacts:/460859915927954300/86f8bf9e8f954cc484f19c11e7f3d12c/artifacts
+deleted_time: 1721758000276
+end_time: 1721757516926
+entry_point_name: ''
+experiment_id: '460859915927954300'
+lifecycle_stage: deleted
+run_id: 86f8bf9e8f954cc484f19c11e7f3d12c
+run_name: Wattile Model Run
+run_uuid: 86f8bf9e8f954cc484f19c11e7f3d12c
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1721757460165
+status: 3
+tags: []
+user_id: jsmith2

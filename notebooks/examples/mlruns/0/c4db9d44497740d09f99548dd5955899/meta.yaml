@@ -1,0 +1,15 @@
+artifact_uri: file:///Users/jsmith2/Code/%40ic/Wattile/notebooks/examples/mlruns/0/c4db9d44497740d09f99548dd5955899/artifacts
+end_time: null
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: c4db9d44497740d09f99548dd5955899
+run_name: bedecked-steed-402
+run_uuid: c4db9d44497740d09f99548dd5955899
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1721759830848
+status: 1
+tags: []
+user_id: jsmith2
