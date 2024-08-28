@@ -561,9 +561,11 @@ class AlfaModel(BaseModel):
                     predictions = predictions.iloc[:, int(predictions.shape[1] / 2)]
                     temp_holder = errors
                     temp_holder.update({"n_iter": n_iter, "epoch": epoch})
-                    mid_train_error_stats = mid_train_error_stats.append(
-                        temp_holder, ignore_index=True
+                    mid_train_error_stats = pd.concat(
+                        [mid_train_error_stats, pd.DataFrame([temp_holder])],
+                        ignore_index=True,
                     )
+                    print("mid_train_error_stats:", mid_train_error_stats)
 
                     val_iter.append(n_iter)
                     self.writer.add_scalars(
@@ -800,7 +802,7 @@ class AlfaModel(BaseModel):
 
         with torch.no_grad():
             preds = []
-            for (feats, v) in val_loader:
+            for feats, v in val_loader:
                 features = Variable(feats.view(-1, seq_dim, model.input_dim))
                 outputs = model(features)
                 outputs = outputs.cpu().numpy()
