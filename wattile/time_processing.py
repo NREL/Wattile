@@ -43,6 +43,9 @@ def _add_hour_based_columns(data, configs):
                 1 - abs(time_as_float - HOD), 0
             )
 
+    print(
+        data[data.columns[pd.Series(data.columns).str.startswith("HOD_")]].loc[0].sum()
+    )
     return data
 
 

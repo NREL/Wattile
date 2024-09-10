@@ -483,7 +483,17 @@ class AlfaModel(BaseModel):
                 # features is     (#batches x timesteps x features)
                 # This command: (960x5x7) --> 960x1
                 # outputs = model(torch.cat((features, train_y_at_t.detach_()), dim=2))
+
+                print("features is nan", features.isnan().any())
                 outputs = model(features)
+                print("outputs is nan", outputs.isnan().any())
+
+                assert not features.isnan().any()
+                assert not outputs.isnan().any()
+                params_contains_nan = torch.stack(
+                    [torch.isnan(p).any() for p in model.parameters()]
+                ).any()
+                assert not params_contains_nan
 
                 time3 = timeit.default_timer()
 

@@ -571,10 +571,13 @@ def roll_data(data, configs):
     # combining min and max stats
     data = pd.concat([mins, maxs, means], axis=1)
 
+    print("pre resample data", data["Richmond, VA Humidity_min"])
     # adding resampled target back to the dataframe
     target = resample_data(target, configs)
+
     data[configs["data_input"]["target_var"]] = target
 
+    print("post resample data", data["Richmond, VA Humidity_min"])
     return data
 
 

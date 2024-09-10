@@ -104,6 +104,7 @@ class BaseModel(ABC):
         train_stats_path = self.file_prefix / "train_stats.json"
         with open(train_stats_path, "r") as f:
             train_stats = json.load(f)
+            # print("train_stats", train_stats)
 
         transformation_method = self.configs["learning_algorithm"][
             "transformation_method"
@@ -111,8 +112,12 @@ class BaseModel(ABC):
         if transformation_method == "minmaxscale":
             train_max = pd.DataFrame(train_stats["train_max"], index=[1]).iloc[0]
             train_min = pd.DataFrame(train_stats["train_min"], index=[1]).iloc[0]
+            print("data pre minmax", data.isna().values.any())
 
             data = (data - train_min) / (train_max - train_min)
+
+            print("data post minmax", data.isna().values.any())
+            print("data cols with nans", data.columns[data.isna().any()].tolist())
 
         elif transformation_method == "standard":
             train_mean = pd.DataFrame(train_stats["train_mean"], index=[1]).iloc[0]
@@ -159,9 +164,13 @@ class BaseModel(ABC):
 
     def train(self, train_df: pd.DataFrame, val_df: pd.DataFrame) -> None:
         # Normalization transformation
+        print("train_df.shape", train_df.shape)
+        print("is nans in train_df", train_df.isna().values.any())
         self.create_normalization(train_df)
         train_data = self.apply_normalization(train_df)
         val_data = self.apply_normalization(val_df.copy())
+        print("train_data.shape", train_data.shape)
+        print("is nans in train_data", train_data.isna().values.any())
 
         # Put data into DataLoaders
         train_batch_size, val_batch_size = self.size_the_batches(train_data, val_data)
