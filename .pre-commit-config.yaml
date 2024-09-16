@@ -1,17 +1,11 @@
 repos:
 -   repo: https://github.com/psf/black
-    rev: 22.3.0
+    rev: 24.8.0
     hooks:
     -   id: black
         entry: black --check
 -   repo: https://github.com/pycqa/isort
-    rev: 5.11.5
+    rev: 5.13.2
     hooks:
     -    id: isort
          entry: isort --check
--   repo: https://github.com/gvanderest/pylama-pre-commit
-    rev: 0.1.2
-    hooks:
-    -   id: pylama
-        additional_dependencies:
-        -   pyflakes==2.4.0

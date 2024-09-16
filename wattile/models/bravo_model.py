@@ -612,7 +612,12 @@ class BravoModel(BaseModel):
                 # Do a val batch every ___ iterations
                 if n_iter % self.configs["learning_algorithm"]["eval_frequency"] == 0:
                     # Evaluate val set
-                    (predictions, errors, measured, Q_vals,) = self.test_processing(
+                    (
+                        predictions,
+                        errors,
+                        measured,
+                        Q_vals,
+                    ) = self.test_processing(
                         val_loader,
                         model,
                         seq_dim,
@@ -623,8 +628,9 @@ class BravoModel(BaseModel):
 
                     temp_holder = errors
                     temp_holder.update({"n_iter": n_iter, "epoch": epoch})
-                    mid_train_error_stats = mid_train_error_stats.append(
-                        temp_holder, ignore_index=True
+                    mid_train_error_stats = pd.concat(
+                        [mid_train_error_stats, pd.DataFrame([temp_holder])],
+                        ignore_index=True,
                     )
 
                     val_iter.append(n_iter)
@@ -884,7 +890,7 @@ class BravoModel(BaseModel):
 
         with torch.no_grad():
             preds = []
-            for (feats, v) in val_loader:
+            for feats, v in val_loader:
                 features = Variable(feats.view(-1, seq_dim, model.input_dim))
                 outputs = model(features)
                 preds.append(outputs.cpu().numpy())
