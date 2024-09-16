@@ -1,0 +1,15 @@
+08/07/2024 11:07:32 - INFO     - PID: 63341
+08/07/2024 11:07:32 - INFO     - AlfaModel model created.Writing to /Users/jsmith2/Code/@ic/Wattile/notebooks/examples/exp_dir.
+08/07/2024 11:07:38 - INFO     - Available train batch factors: [1, 2, 7, 14, 37, 74, 259, 518]Requested number of batches per epoch - Train:                 26, val: 1Actual number of batches per epoch - Train:                 37, val: 1Number of data samples in each batch - Train: 14, val: 130
+08/07/2024 11:07:38 - INFO     - A new lstm RNN model instantiated
+08/07/2024 11:07:39 - INFO     - Number of cores available: 10
+08/07/2024 11:07:39 - INFO     - Number of logical processors available: 10
+08/07/2024 11:07:39 - INFO     - Initial memory statistics (GB): {'total': 68.719476736, 'available': 7.171977216, 'percent': 89.6, 'used': 8.071983104, 'free': 0.1470464}
+08/07/2024 11:07:39 - INFO     - Starting to train the model for 100 epochs!
+08/07/2024 11:07:43 - INFO     - Epoch: 14 Iteration: 500. Train_loss: 0.03660201653838158. val_loss: 0.028353305533225386, LR: 0.001
+08/07/2024 11:07:47 - INFO     - Epoch: 28 Iteration: 1000. Train_loss: 0.020166121423244476. val_loss: 0.0287508123432047, LR: 0.001
+08/07/2024 11:07:52 - INFO     - Epoch: 41 Iteration: 1500. Train_loss: 0.0174389760941267. val_loss: 0.02968014141083662, LR: 0.001
+08/07/2024 11:07:56 - INFO     - Epoch: 55 Iteration: 2000. Train_loss: 0.019406646490097046. val_loss: 0.03064489169517134, LR: 0.001
+08/07/2024 11:08:00 - INFO     - Epoch: 68 Iteration: 2500. Train_loss: 0.01951831579208374. val_loss: 0.03150215974338796, LR: 0.001
+08/07/2024 11:08:05 - INFO     - Epoch: 82 Iteration: 3000. Train_loss: 0.016622301191091537. val_loss: 0.030752943299107844, LR: 0.001
+08/07/2024 11:08:10 - INFO     - Epoch: 95 Iteration: 3500. Train_loss: 0.012720693834125996. val_loss: 0.031284728913531686, LR: 0.001

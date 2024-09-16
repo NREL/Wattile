@@ -90,5 +90,15 @@
    "smoothing_alpha": 0.001,
    "eval_frequency": 500,
    "test_method": "external"
+ },
+ "model_registry": {
+    "log": true,
+    "endpoint": "http://localhost:5000",
+    "experiment_name": "Wattile Synthetic Site",
+    "run_name": "Alpha Model Run",
+    "run_description": "Alpha Model Run Description",
+    "run_tags": {
+      "building": "Wattile Synthetic Site"
+    }
  }
 }

@@ -27,6 +27,7 @@ nbmake = "~1.5"
 setuptools = "~73.0"
 xarray = "~2024.7.0"
 toml = "~0.10.2"
+mlflow = "^2.15.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "~8.3.2"

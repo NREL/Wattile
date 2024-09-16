@@ -542,7 +542,7 @@ class CharlieModel:
                         y_pred, h, encoder_outputs, window_target_size_count
                     )
 
-                # compute lose
+                # compute loss
                 loss_usage = loss_fn(
                     pred,
                     y,

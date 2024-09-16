@@ -1,4 +1,4 @@
-# python/IDE articfacts
+# python/IDE artifacts
 .idea/
 .ipynb_checkpoints/
 .DS_Store
@@ -14,3 +14,8 @@ tests/data/Synthetic Site/Synthetic Site Electricity Main Total Power_external_t
 tests/fixtures/alfa_exp_dir/events.out.tfevents.*
 tests/fixtures/alfa_exp_dir/output.out
 Training_history.csv
+notebooks/exp_dir/
+
+# mlflow artifacts
+mlruns/
+mlartifacts/

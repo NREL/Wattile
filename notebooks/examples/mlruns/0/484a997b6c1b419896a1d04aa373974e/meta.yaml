@@ -1,0 +1,15 @@
+artifact_uri: file:///Users/jsmith2/Code/%40ic/Wattile/notebooks/examples/mlruns/0/484a997b6c1b419896a1d04aa373974e/artifacts
+end_time: 1721759667711
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: 484a997b6c1b419896a1d04aa373974e
+run_name: silent-gull-233
+run_uuid: 484a997b6c1b419896a1d04aa373974e
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1721759622700
+status: 3
+tags: []
+user_id: jsmith2
