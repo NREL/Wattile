@@ -8,7 +8,9 @@ import pandas as pd
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
+from wattile import version as wattile_version
 from wattile.error import ConfigsError
+from wattile.model_registry import ModelRegistry
 from wattile.util import factors
 from wattile.visualization import timeseries_comparison
 
@@ -24,6 +26,7 @@ class BaseModel(ABC):
         self.file_prefix = Path(configs["data_output"]["exp_dir"])
         self.file_prefix.mkdir(parents=True, exist_ok=True)
         self.writer = SummaryWriter(self.file_prefix)
+        self.registry = ModelRegistry(configs)
 
         # Setting random seed with constant
         torch.manual_seed(self.configs["data_processing"]["random_seed"])
@@ -126,6 +129,13 @@ class BaseModel(ABC):
 
         return data
 
+    def write_metadata(self):
+        """Write the metadata to a json file"""
+        path = os.path.join(self.file_prefix, "metadata.json")
+        metadata = {"wattile_version": wattile_version}
+        with open(path, "w") as fp:
+            json.dump(metadata, fp, indent=1)
+
     def main(self, train_df, val_df):
         """
         Main executable for prepping data for input to RNN model.
@@ -150,10 +160,14 @@ class BaseModel(ABC):
             raise ValueError
 
     def train(self, train_df: pd.DataFrame, val_df: pd.DataFrame) -> None:
+        self.registry.start_run()
+
         # Normalization transformation
         self.create_normalization(train_df)
         train_data = self.apply_normalization(train_df)
         val_data = self.apply_normalization(val_df.copy())
+        self.registry.log_input(train_data, "train")
+        self.registry.log_input(val_data, "val")
 
         # Put data into DataLoaders
         train_batch_size, val_batch_size = self.size_the_batches(train_data, val_data)
@@ -161,10 +175,14 @@ class BaseModel(ABC):
         val_loader = self.to_data_loader(val_data, val_batch_size, shuffle=True)
 
         self.run_training(train_loader, val_loader, val_df)
+        self.write_metadata()
+        self.registry.log_artifacts(self.file_prefix, "wattile_data")
 
         # Create visualization
         if self.configs["data_output"]["plot_comparison"]:
             timeseries_comparison(self.configs, 0)
+
+        self.registry.end_run()
 
     def validate(self, val_df: pd.DataFrame) -> None:
         val_data = self.apply_normalization(val_df.copy())

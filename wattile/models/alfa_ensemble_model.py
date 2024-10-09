@@ -4,6 +4,7 @@ from pathlib import Path
 import pandas as pd
 import xarray as xr
 
+from wattile.model_registry import ModelRegistry
 from wattile.models.alfa_model import AlfaModel
 from wattile.models.base_model import BaseModel
 
@@ -39,6 +40,7 @@ class AlfaEnsembleModel(BaseModel):
     def __init__(self, configs):
         """Create an alfa model for each lagged target with approiate configs"""
         self.configs = configs
+        self.registry = ModelRegistry(configs)
 
         # get items from config
         cdp = configs["data_processing"]
@@ -87,6 +89,18 @@ class AlfaEnsembleModel(BaseModel):
         alfa_model_configs["data_input"][
             "target_var"
         ] = f"{target_var} {target_lag.isoformat()}"
+
+        # set run name and tags for registry logging
+        if self.registry.log:
+            alfa_model_configs["model_registry"][
+                "run_name"
+            ] = f"{self.registry.run_name} - {target_lag.isoformat()}"
+            alfa_model_configs["model_registry"]["run_tags"] = {
+                **self.registry.run_tags,
+                "ensemble": "alfa",
+                "ensemble_belongs_to": self.registry.run_name,
+                "ensemble_target_lag": target_lag.isoformat(),
+            }
 
         return alfa_model_configs
 

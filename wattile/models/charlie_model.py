@@ -413,8 +413,8 @@ class CharlieModel:
         loss_function_qs = self.configs["learning_algorithm"]["quantiles"]
         seed = self.configs["data_processing"]["random_seed"]
         bin_interval = self.configs["data_processing"]["resample"]["bin_interval"]
-        window_target_size_count = int(
-            pd.Timedelta(window_target_size) / pd.Timedelta(bin_interval)
+        window_target_size_count = (
+            int(pd.Timedelta(window_target_size) / pd.Timedelta(bin_interval)) + 1
         )
         lr = self.configs["learning_algorithm"]["optimizer_config"]["base"]
         weight_decay = self.configs["learning_algorithm"]["optimizer_config"][
@@ -542,7 +542,7 @@ class CharlieModel:
                         y_pred, h, encoder_outputs, window_target_size_count
                     )
 
-                # compute lose
+                # compute loss
                 loss_usage = loss_fn(
                     pred,
                     y,

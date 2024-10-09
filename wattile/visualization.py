@@ -16,7 +16,6 @@ color_background = "rgb(255,255,255)"
 
 
 def timeseries_comparison(configs, time_ahead):  # noqa: C901 TODO: remove noqa
-
     """
     read measured and prediction files
     """

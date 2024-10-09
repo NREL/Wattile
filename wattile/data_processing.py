@@ -27,7 +27,7 @@ def check_complete(torch_file, des_epochs):
     """
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    torch_model = torch.load(torch_file, map_location=device)
+    torch_model = torch.load(torch_file, map_location=device, weights_only=False)
     check = des_epochs == torch_model["epoch_num"] + 1
     return check
 
