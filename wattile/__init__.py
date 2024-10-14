@@ -1,3 +1,3 @@
-from importlib.metadata import version
+from importlib import metadata
 
-version = version("wattile")
+version = metadata.version("wattile")
