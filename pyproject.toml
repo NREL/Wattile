@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "wattile"
-version = "0.3.0"
+version = "0.3.1"
 description = """\
 Probabilistic Deep Learning-based Forecasting of Building Energy ConsumptionProbabilistic \
 Deep Learning-based Forecasting of Building Energy Consumption.\
