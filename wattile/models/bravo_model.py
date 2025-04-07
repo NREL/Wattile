@@ -993,7 +993,7 @@ class BravoModel(BaseModel):
             },
         )
 
-    def get_input_window_for_output_time(self, datetime):
+    def get_input_window_for_prediction_output_time(self, datetime):
         """Given the time for which we want to predict, return the time window of the required
         input.
         :param output_time: the time for which we want to predict
@@ -1013,7 +1013,7 @@ class BravoModel(BaseModel):
         bin_interval = config_data_processing["resample"]["bin_interval"]
 
         # calculating offsets
-        window_offset_start = (pd.Timedelta(lag_interval) * (lag_count)) + pd.Timedelta(
+        window_offset_start = pd.Timedelta(
             bin_interval
         )
         window_offset_end = pd.Timedelta("0min")

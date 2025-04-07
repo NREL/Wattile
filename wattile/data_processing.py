@@ -224,8 +224,8 @@ def timelag_predictors(data, configs):
     target_var = configs["data_input"]["target_var"]
 
     # splitting predictors and target
-    target = data[target_var]
-    predictors = data.drop(target_var, axis=1)
+    target = data.get(target_var)
+    predictors = data.drop(target_var, axis=1, errors="ignore")
 
     # lag predictors
     lagging_predictors = build_lagging_predictors(predictors, lag_count, lag_interval)
@@ -233,13 +233,8 @@ def timelag_predictors(data, configs):
     # shift target into furture
     if configs["learning_algorithm"]["use_case"] != "prediction":
         target = target.shift(freq=-window_width_futurecast)
-    else:
-        target = pd.DataFrame(
-            0, index=lagging_predictors.index, columns=[target_var]
-        )  # dummy
+        data = pd.concat([lagging_predictors, target], axis=1)
 
-    # concat and clean
-    data = pd.concat([lagging_predictors, target], axis=1)
     data = data.dropna(how="any")
 
     return data
@@ -268,8 +263,8 @@ def timelag_predictors_target(data, configs):
     number_of_lags = (pd.Timedelta(window_width_target) // bin_interval) + 1
 
     # split predictors and target
-    target = data[target_var]
-    predictors = data.drop(target_var, axis=1)
+    target = data.get(target_var)
+    predictors = data.drop(target_var, axis=1, errors="ignore")
 
     # lag predictors
     lagging_predictors = build_lagging_predictors(predictors, lag_count, lag_interval)
@@ -280,16 +275,8 @@ def timelag_predictors_target(data, configs):
         lagging_target = build_lagging_targets(
             target, number_of_lags, bin_interval, target_var
         )
+        data = pd.concat([lagging_predictors, lagging_target], axis=1)
 
-    else:
-        lags = [i * bin_interval for i in range(0, number_of_lags)]
-        columns = [f"{target_var} {lag.isoformat()}" for lag in lags]
-        lagging_target = pd.DataFrame(
-            0, index=lagging_predictors.index, columns=columns
-        )  # dummy
-
-    # concat and clean
-    data = pd.concat([lagging_predictors, lagging_target], axis=1)
     data = data.dropna(how="any")
 
     return data
@@ -406,9 +393,10 @@ def correct_predictor_columns(configs, data):
     """
     if configs["data_input"]["predictor_columns"] != []:
 
-        keep_cols = configs["data_input"]["predictor_columns"] + [
-            configs["data_input"]["target_var"]
-        ]
+        keep_cols = configs["data_input"]["predictor_columns"].copy()
+
+        if configs["learning_algorithm"]["use_case"] != "prediction":
+            keep_cols.append(configs["data_input"]["target_var"])
 
         # raise error if missing columns
         missing_colums = set(keep_cols).difference(set(data.columns))
@@ -549,8 +537,8 @@ def roll_data(data, configs):
     window_width = configs["data_processing"]["feat_stats"]["window_width"]
 
     # seperate predictors and target
-    target = data[configs["data_input"]["target_var"]]
-    X_data = data.drop(configs["data_input"]["target_var"], axis=1)
+    target = data.get(configs["data_input"]["target_var"])
+    X_data = data.drop(configs["data_input"]["target_var"], axis=1, errors="ignore")
 
     # resampling for each statistics separately
     data_resampler = X_data.resample(
@@ -572,8 +560,9 @@ def roll_data(data, configs):
     data = pd.concat([mins, maxs, means], axis=1)
 
     # adding resampled target back to the dataframe
-    target = resample_data(target, configs)
-    data[configs["data_input"]["target_var"]] = target
+    if target is not None:
+        target = resample_data(target, configs)
+        data[configs["data_input"]["target_var"]] = target
 
     return data
 

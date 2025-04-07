@@ -177,7 +177,6 @@ def read_dataset_from_file(configs):
     # TODO: remove if
     if configs["learning_algorithm"]["use_case"] == "prediction":
         data_full = data_full_p
-        data_full[configs["data_input"]["target_var"]] = -999
     else:
         data_full = pd.merge(data_full_p, data_full_t, how="outer", on="Timestamp")
 

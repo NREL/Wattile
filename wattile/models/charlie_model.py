@@ -667,7 +667,7 @@ class CharlieModel:
         print("\nTIME ELAPSED: {} seconds OR {} minutes".format(total, total / 60.0))
         print("\nEnd of run")
 
-    def get_input_window_for_output_time(self, datetime):
+    def get_input_window_for_prediction_output_time(self, datetime):
         """Given the time for which we want to predict, return the time window of the required
         input.
 

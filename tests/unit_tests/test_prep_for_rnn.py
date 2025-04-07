@@ -22,6 +22,7 @@ def config_for_tests():
 
     configs["data_input"]["data_dir"] = str(TESTS_DATA_PATH)
     configs["data_input"]["data_config"] = "Synthetic Site Config.json"
+    configs["learning_algorithm"]["use_case"] = "train"
 
     return configs
 
@@ -32,11 +33,17 @@ def test_prep_for_rnn(config_for_tests, tmpdir):
     config_for_tests["data_output"]["exp_dir"] = str(exp_dir)
     exp_dir.mkdir(parents=True, exist_ok=True)
 
+    assert config_for_tests["data_input"]["target_var"] not in config_for_tests["data_input"]["predictor_columns"]
+
     # get data
     data = read_dataset_from_file(config_for_tests)
 
+    assert config_for_tests["data_input"]["target_var"] not in config_for_tests["data_input"]["predictor_columns"]
+
     # creat data frame
     train_df, val_df = prep_for_rnn(config_for_tests, data)
+
+    assert config_for_tests["data_input"]["target_var"] not in config_for_tests["data_input"]["predictor_columns"]
 
     excepted_data_columns = []
     # add weather columns
