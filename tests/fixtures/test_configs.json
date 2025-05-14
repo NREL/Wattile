@@ -23,6 +23,7 @@
  },
  "data_processing": {
    "feat_time": {
+    "time_zone": "America/Denver",
     "month_of_year": ["sincos"],
     "day_of_week": ["binary_reg"],
     "hour_of_day": ["sincos"],

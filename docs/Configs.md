@@ -38,6 +38,11 @@ Schematic below shows the workflow of wattile (both training and prediction depl
 
     Containing parameters for adding time-based features. Table below shows an example of time-based features generated against three sample timestamps.
 
+  - `timezone`: *str (defaults "UTC")*
+
+      The pytz timezone in which the data should be converted to before data processing. Note,untimestamped incoming data is assumed to be in UTC.
+
+
   - `month_of_year`: *list[str] ("sincos")*
 
       Option for adding month of year (MOY) feature. If empty, this feature is not added. Pandas [day of year](https://pandas.pydata.org/docs/reference/api/pandas.Period.dayofyear.html) calculated from the timestamp is converted (as shown [here](https://github.com/NREL/Wattile/blob/ea02ece4401e29b30aa5c366a741bdf41af2f00f/wattile/time_processing.py#L91-L93)) to periodic (sine and cosine) outputs as shown in the example figure below.
