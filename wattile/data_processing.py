@@ -444,6 +444,7 @@ def correct_timestamps(configs, data):
     :rtype: pandas.DataFrame
     """
     data = data.sort_index()
+    data.index = data.index.tz_convert("UTC")
 
     # TODO: think about timezones.
     start_time = dt.datetime.fromisoformat(configs["data_input"]["start_time"])
