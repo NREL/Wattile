@@ -16,20 +16,23 @@ class AlfaEnsembleModelDataBuilder:
         """Seperate target and predictors"""
         # find target column names
         self.target_var = target_var
-        target_column_names = [
-            c for c in data_frame.columns if c.startswith(target_var)
-        ]
+        target_column_names = (
+            [c for c in data_frame.columns if c.startswith(target_var)]
+            if target_var
+            else []
+        )
 
         # seperate predictors and targets
-        self.target_df = data_frame[target_column_names]
+        self.target_df = data_frame.get(target_column_names)
         self.predictors_df = data_frame.drop(target_column_names, axis=1)
 
     def get_dataset(self, target_lag: pd.Timedelta):
-        target_column_name = f"{self.target_var} {target_lag.isoformat()}"
-        target_column = self.target_df[target_column_name]
-
         dataset = self.predictors_df.copy()
-        dataset[target_column_name] = target_column
+
+        if self.target_var:
+            target_column_name = f"{self.target_var} {target_lag.isoformat()}"
+            target_column = self.target_df[target_column_name]
+            dataset[target_column_name] = target_column
 
         return dataset
 
@@ -128,7 +131,7 @@ class AlfaEnsembleModel(BaseModel):
 
     def predict(self, val_df: pd.DataFrame) -> None:
         """predict all alfa models"""
-        target_var = self.configs["data_input"]["target_var"]
+        target_var = None
         val_data_builder = AlfaEnsembleModelDataBuilder(val_df, target_var)
 
         results = []

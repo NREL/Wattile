@@ -78,7 +78,7 @@ DATA_PROCESSING_CONFIGS3 = {
 @pytest.mark.parametrize("bin_closed", ["left", "right"])
 @pytest.mark.parametrize("bin_label", ["left", "right"])
 @pytest.mark.parametrize("feat_stats_active", [True, False])
-def test_get_input_window_for_output_time(
+def test_get_input_window_for_prediction_output_time(
     tmpdir, data_processing_configs, bin_closed, bin_label, feat_stats_active
 ):
     # SETUP
@@ -99,7 +99,7 @@ def test_get_input_window_for_output_time(
     (
         prediction_window_start_time,
         prediction_window_end_time,
-    ) = alfa_model.get_input_window_for_output_time(nominal_prediction_time)
+    ) = alfa_model.get_input_window_for_prediction_output_time(nominal_prediction_time)
 
     # ASSERTION
     # When data with given start and end time is fed to _preprocess_data,

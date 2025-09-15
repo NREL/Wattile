@@ -22,6 +22,7 @@ def config_for_tests():
 
     configs["data_input"]["data_dir"] = str(TESTS_DATA_PATH)
     configs["data_input"]["data_config"] = "Synthetic Site Config.json"
+    configs["learning_algorithm"]["use_case"] = "train"
 
     return configs
 
