@@ -26,7 +26,10 @@ JULY_14_CONFIG = {
         "start_time": "1997-07-14T00:00:00-00:00",
         "end_time": "1997-07-15T00:00:00-00:00",
     },
-    "data_processing": {"resample": {"bin_closed": "left"}},
+    "data_processing": {
+        "feat_time": {"time_zone": "UTC"},
+        "resample": {"bin_closed": "left"},
+    },
 }
 JULY_14_MIDNIGHT = pd.Timestamp(year=1997, month=7, day=14, tz=dt.timezone.utc)
 Y2K = pd.Timestamp(year=2000, month=1, day=1, tz=dt.timezone.utc)
@@ -125,6 +128,32 @@ def test_correct_timestamps_reorder():
             )
         ),
     )
+
+
+def test_correct_timestamps_timezone():
+    configs = JULY_14_CONFIG
+    data = pd.DataFrame(
+        {},
+        index=[
+            JULY_14_MIDNIGHT,
+        ],
+    )
+
+    configs["data_processing"]["feat_time"]["time_zone"] = "America/Denver"
+    data = correct_timestamps(configs, data)
+    assert_index_equal(
+        data.index, pd.Index([JULY_14_MIDNIGHT.tz_convert("America/Denver")])
+    )
+
+    configs["data_processing"]["feat_time"]["time_zone"] = "Europe/Zurich"
+    data = correct_timestamps(configs, data)
+    assert_index_equal(
+        data.index, pd.Index([JULY_14_MIDNIGHT.tz_convert("Europe/Zurich")])
+    )
+
+    del configs["data_processing"]["feat_time"]["time_zone"]
+    data = correct_timestamps(configs, data)
+    assert_index_equal(data.index, pd.Index([JULY_14_MIDNIGHT.tz_convert("UTC")]))
 
 
 @pytest.mark.parametrize("bin_closed", ["left", "right"])

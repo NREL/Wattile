@@ -16,7 +16,7 @@ print("PROJECT_DIRECTORY = {}".format(PROJECT_DIRECTORY))
 logger = logging.getLogger(str(os.getpid()))
 
 
-def _concat_data_from_files(filepaths, needed_columns):
+def _concat_data_from_files(filepaths, needed_columns, tz="UTC"):
     """Concat the data in the files
 
     Only get the needed columns.
@@ -50,7 +50,7 @@ def _concat_data_from_files(filepaths, needed_columns):
             full_data["Timestamp"], format="%Y-%m-%dT%H:%M:%S%z", exact=False, utc=True
         )
 
-        full_data = full_data.set_index("Timestamp")
+        full_data = full_data.set_index("Timestamp").tz_convert(tz)
 
     return full_data
 
@@ -134,6 +134,7 @@ def read_dataset_from_file(configs):
     data_full_p = _concat_data_from_files(
         predictor_data_info.path,
         needed_columns=configs["data_input"]["predictor_columns"],
+        tz=configs["data_processing"]["feat_time"].get("time_zone", "UTC"),
     )
 
     # save final input data based on data config format
@@ -156,7 +157,9 @@ def read_dataset_from_file(configs):
     # read in target data
     target_data_info = df_inputdata[df_inputdata.contentType == "targets"]
     data_full_t = _concat_data_from_files(
-        target_data_info.path, needed_columns=[configs["data_input"]["target_var"]]
+        target_data_info.path,
+        needed_columns=[configs["data_input"]["target_var"]],
+        tz=configs["data_processing"]["feat_time"].get("time_zone", "UTC"),
     )
 
     if data_full_p.empty:

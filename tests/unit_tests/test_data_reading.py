@@ -70,3 +70,22 @@ def test_create_input_dataframe(config_for_tests, tmpdir):
     # assert
     assert_frame_equal(saved_predictors, expected_predictors)
     assert_series_equal(saved_target, expected_target, check_names=False)
+
+
+def test_read_dataset_from_file_timezones(config_for_tests, tmpdir):
+    # patch configs and create temporary, unquie output file
+    exp_dir = pathlib.Path(tmpdir) / "train_results"
+    config_for_tests["data_output"]["exp_dir"] = str(exp_dir)
+    exp_dir.mkdir(parents=True, exist_ok=True)
+
+    # get data
+    data = read_dataset_from_file(config_for_tests)
+    assert str(data.index[0]) == "2021-12-01 00:00:00-07:00"
+
+    config_for_tests["data_processing"]["feat_time"]["time_zone"] = "Europe/Zurich"
+    data = read_dataset_from_file(config_for_tests)
+    assert str(data.index[0]) == "2021-12-01 08:00:00+01:00"
+
+    del config_for_tests["data_processing"]["feat_time"]["time_zone"]
+    data = read_dataset_from_file(config_for_tests)
+    assert str(data.index[0]) == "2021-12-01 07:00:00+00:00"
