@@ -229,7 +229,9 @@ def _get_time_lag_dummy_data(interval: pd.Timedelta) -> pd.DataFrame:
     :rtype: pd.DataFrame
     """
     data = pd.DataFrame(
-        index=pd.date_range("2000-01-01 00:00:00", "2000-01-01 12:00:00", freq=interval, tz="UTC")
+        index=pd.date_range(
+            "2000-01-01 00:00:00", "2000-01-01 12:00:00", freq=interval, tz="UTC"
+        )
     )
     data["var_1"] = np.arange(len(data), dtype=np.float32)
     data["target_var"] = np.arange(len(data), dtype=np.float64) * 100
@@ -328,8 +330,6 @@ def test_timelag_predictors(configs):
     input_target_var_in_furture = input["target_var"].copy()
     input_target_var_in_furture.index -= window_width_futurecast
     assert_series_equal(output["target_var"], input_target_var_in_furture[output.index])
-
-
 
 
 TIMELAG_PREDICTORS_TARGET_CONFIGS0 = {

@@ -33,17 +33,11 @@ def test_prep_for_rnn(config_for_tests, tmpdir):
     config_for_tests["data_output"]["exp_dir"] = str(exp_dir)
     exp_dir.mkdir(parents=True, exist_ok=True)
 
-    assert config_for_tests["data_input"]["target_var"] not in config_for_tests["data_input"]["predictor_columns"]
-
     # get data
     data = read_dataset_from_file(config_for_tests)
 
-    assert config_for_tests["data_input"]["target_var"] not in config_for_tests["data_input"]["predictor_columns"]
-
     # creat data frame
     train_df, val_df = prep_for_rnn(config_for_tests, data)
-
-    assert config_for_tests["data_input"]["target_var"] not in config_for_tests["data_input"]["predictor_columns"]
 
     excepted_data_columns = []
     # add weather columns

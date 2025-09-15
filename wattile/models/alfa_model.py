@@ -886,9 +886,7 @@ class AlfaModel(BaseModel):
         bin_interval = config_data_processing["resample"]["bin_interval"]
 
         # calculating offsets
-        window_offset_start = pd.Timedelta(
-            bin_interval
-        )
+        window_offset_start = pd.Timedelta(bin_interval)
         window_offset_end = pd.Timedelta("0min")
 
         if bin_label == "left":

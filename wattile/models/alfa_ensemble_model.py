@@ -16,9 +16,11 @@ class AlfaEnsembleModelDataBuilder:
         """Seperate target and predictors"""
         # find target column names
         self.target_var = target_var
-        target_column_names = [
-            c for c in data_frame.columns if c.startswith(target_var)
-        ] if target_var else []
+        target_column_names = (
+            [c for c in data_frame.columns if c.startswith(target_var)]
+            if target_var
+            else []
+        )
 
         # seperate predictors and targets
         self.target_df = data_frame.get(target_column_names)
